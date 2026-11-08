@@ -18,15 +18,17 @@ const BOT = `const ts=['house','house','farm','shop','wind','house','park','saw'
 
 for (const gov of ['demo', 'parl', 'mon']) {
   test(`${gov}: 30 лет разумной игры без сбоев и без свержения`, () => {
-    const r = load()(`setup(1,'${gov}','norm');S.money=20000;grid();const MONTHS_N=360;${BOT};({over:S.over,pop:S.pop,years:S.month/12})`);
+    const r = load()(`setup(1,'${gov}','norm');S.money=20000*CAP;grid();const MONTHS_N=360;${BOT};({over:S.over,pop:S.pop,years:S.month/12})`);
     assert.equal(r.over, null, r.over && r.over.reason);
     assert.ok(r.pop > 100);
   });
 }
 
-test('20 лет на всех картах с полным набором зданий', () => {
+test('20 лет на всех картах с полным набором зданий, деньги сходятся каждый месяц', () => {
   const run = load();
-  for (const mi of [0, 1, 2]) run(`setup(${mi});S.money=50000;grid();const ts2=Object.keys(B).filter(k=>k!=='hall');
-    for(let m=0;m<240&&!S.over;m++){if(m%2==0)near(ts2[m/2%ts2.length],S.hall);const r=tick();computeCov();
-      if(!isFinite(S.money)||!isFinite(S.happy))throw new Error('карта ${mi} месяц '+m)}`);
+  for (const mi of [0, 1, 2]) run(`setup(${mi});S.money=50000*CAP;grid();const ts2=Object.keys(B).filter(k=>k!=='hall');
+    for(let m=0;m<240&&!S.over;m++){if(m%2==0)near(ts2[m/2%ts2.length],S.hall);const t0=S.money+S.hh,r=tick();computeCov();
+      if(!isFinite(S.money)||!isFinite(S.happy)||!isFinite(S.hh)||!isFinite(S.wage))throw new Error('карта ${mi} месяц '+m);
+      if(Math.abs(S.money+S.hh-t0-r.fx)>1e-6*Math.max(1,Math.abs(t0)))throw new Error('карта ${mi}: деньги не сошлись на месяце '+m);
+      if(S.hh<0||S.wage<WAGE.min-1e-9||S.wage>WAGE.max+1e-9)throw new Error('карта ${mi}: кошелёк или ставка вне пределов '+S.hh+' '+S.wage)}`);
 });

@@ -1,7 +1,7 @@
 // Песочница для проверки кошельков и зон (docs/DESIGN.md). Цифры зданий и цен берутся из данных игры, сама игра не меняется.
 import fs from 'fs';import vm from 'vm';
 const root=new URL("../src/",import.meta.url).pathname;let code='';
-for(const f of ['core/constants.js','data/resources.js','data/buildings.js'])code+=fs.readFileSync(root+f,'utf8')+'\n';
+for(const f of ['core/constants.js','core/util.js','data/rules.js','data/resources.js','data/buildings.js'])code+=fs.readFileSync(root+f,'utf8')+'\n';
 code+=';globalThis.__=({B,RES,RK});';const c={};vm.createContext(c);vm.runInContext(code,c);const {B,RES,RK}=c.__;
 const PRI={hall:0,farm:1,veg:1,ranch:1,fish:1,power:2,wind:2,shop:3,store:3,port:3,school:3,clinic:3,police:3,barracks:3,saw:4,coalmine:4,ironmine:4,goldmine:4,coffee:4,cotton:4,factory:5,textile:5,cannery:5};
 const PUBLIC=new Set(['hall','power','wind','store','port','school','clinic','police','barracks']);
@@ -104,6 +104,7 @@ export function sim(cfg){
 // Запуск: node tools/wallet-model.mjs — варианты зон на старте в 150 жителей.
 CITY.start={pop:150,c:{hall:1,farm:3,fish:1,shop:2,wind:2,store:1,port:1,school:1}};
 const AG=['farm','veg','ranch','fish','coffee','cotton'],IN=['saw','coalmine','ironmine','goldmine','factory','textile','cannery'],ALL=[...AG,...IN,'shop'];
-const BASE={k:2.2,w0:15,chain:{goods:1.5,cloth:1.35,cans:1.4},tInc:.15,tBiz:.2,wage:'market',own:'state',city:'start'};
+// Цены в данных игры уже в новом масштабе (0.6.0), поэтому k=1 и без надбавок за передел. Стоимость зданий тоже новая: CAP в rules.js.
+const BASE={k:1,w0:12,chain:{},tInc:.15,tBiz:.2,wage:'market',own:'state',city:'start'};
 const V={'Жители не копят':{zones:1,save:0,allow:ALL},'Копят 10%, без тормоза':{zones:1,save:.1,allow:ALL},'Копят 10%, с тормозом':{zones:1,save:.1,allow:ALL,brake:.9}};
 for(const[n,v]of Object.entries(V)){const r=sim({...BASE,...v});console.log(n,'| первый частник, месяц:',r.firstPriv,'| расхождение денег:',r.расхождение);for(const y of [5,10,20,30])console.log('  год',y,JSON.stringify(r.snaps[y]))}

@@ -52,33 +52,49 @@ function census(){
   return c;
 }
 const addNK=(o,id,k,v)=>{const x=o[id]||(o[id]={});x[k]=(x[k]||0)+v};
+/* Предприятие — здание, которое продаёт продукцию или услугу: поля, добыча, заводы и рынки. У него свой счёт за месяц.
+   Все они пока государственные: итог счёта уходит в казну, убыток казна покрывает. Остальные места с работой — госслужба, зарплаты платит казна. */
+const isFirm=t=>!!B[t].out||t==='shop';
 /* Строки бюджета за месяц. Отчёт показывает ровно их, их сумма равна r.net (стандарт СТ2). */
 function budgetLines(r){return{
-  inc:[['Подоходный налог',r.inc],['Налог на бизнес',r.biz],['Импортные пошлины',r.dImp],['Экспортные пошлины',r.dExp],['Возврат ваших займов',r.loanIn]],
-  out:[['Содержание зданий и дорог',r.up],['Выплаты по займам',r.loanOut],['Проценты по долгу казны',r.int],['Зарплаты министров',r.sal],['Неучтённые расходы',r.theft,'Кто-то из министров ворует. Кто именно, станет ясно при скандале.'],['Гвардия',r.guard]].filter((x,i)=>i<3||x[1]>0)}}
-function upkeep(){let u=0;for(let i=0;i<N*N;i++){const b=S.bld[i];if(b)u+=B[b.t].up;if(S.road[i])u+=S.road[i]===2?ROADK.upBridge:ROADK.upRoad}return u}
+  inc:[['Подоходный налог',r.inc],['Прибыль госпредприятий',r.firmPlus],['Импортные пошлины',r.dImp],['Экспортные пошлины',r.dExp],['Продажа госзапасов',r.stockSale,'Со складов страны продано то, что в этом месяце никто не выпускал.'],['Возврат ваших займов',r.loanIn]].filter((x,i)=>i<4||x[1]>0),
+  out:[['Зарплаты госслужбы',r.pubW,'Ратуша, электростанции, школы, больницы, полиция, склады, порт и казармы.'],['Убытки госпредприятий',r.firmMinus],['Содержание зданий и дорог',r.up],['Уголь для ТЭС',r.fuelCost],['Выплаты по займам',r.loanOut],['Проценты по долгу казны',r.int],['Зарплаты министров',r.sal],['Неучтённые расходы',r.theft,'Кто-то из министров ворует. Кто именно, станет ясно при скандале.'],['Гвардия',r.guard]].filter((x,i)=>i<3||x[1]>0)}}
+/* Деньги из казны, которые уходят жителям страны: стройка, земля, подарки знати. Стандарт СТ1: деньги не исчезают. */
+function spend(v){S.money-=v;S.hh+=v}
+/* Доходы казны от налогов, пошлин и госпредприятий за месяц. */
+const taxIncome=r=>r.inc+r.firmPlus+r.dImp+r.dExp;
 
 function tick(){
   const c=census(),T=S.tax,st=S.stock,z=()=>Object.fromEntries(RK.map(k=>[k,0]));
-  const r={bs:{},impH:0,impB:0,inc:0,biz:0,dImp:0,dExp:0,up:0,int:0,loanIn:0,loanOut:0,sal:0,theft:0,guard:0,auto:0,prod:z(),cons:z(),exp:z(),imp:z(),need:z(),expV:0,impV:0,
-    best:{},dest:{},xn:{},mn:{},sat:{},short:{food:0,inputs:0},run:{},ev:[],mig:{}};
+  const r={bs:{},fin:{},impH:0,inc:0,dImp:0,dExp:0,up:0,int:0,loanIn:0,loanOut:0,sal:0,theft:0,guard:0,auto:0,pubW:0,fuelCost:0,firmPlus:0,firmMinus:0,stockSale:0,shop:0,fx:0,hhBuy:0,
+    prod:z(),cons:z(),exp:z(),imp:z(),need:z(),expV:0,impV:0,best:{},dest:{},xn:{},mn:{},sat:{},short:{food:0,inputs:0},run:{},ev:[],mig:{}};
   if(!S.nat[0].dl.food)refreshMarkets();
   c.ports=Math.round(c.ports*(1+MINK.trdPort*M('trd')));let cap=c.ports;const port=cap>0;
-  const buy=(k,q,who)=>{q=Math.ceil(q);if(!port||!S.trade[k].i||q<=0)return;
+  /* Покупка за рубежом: pay(v) списывает сумму с покупателя, lim — сколько у него денег. Сосед получает цену, казна — пошлину. */
+  const buy=(k,q,pay,lim=Infinity)=>{q=Math.ceil(q);let got=0;if(!port||!S.trade[k].i||q<=0)return 0;
     const ns=S.nat.filter(n=>canTrade(n)&&n.sl[k]>0).sort((a,b)=>natSell(a,k)-natSell(b,k));
-    for(const n of ns){if(q<=0||cap<=0)break;const x=Math.min(q,cap,n.sl[k]);const p=natSell(n,k),v=x*p;
-      const du=n.deal?0:T.imp;n.sl[k]-=x;cap-=x;q-=x;st[k]+=x;r.imp[k]+=x;r.impV+=v;r.dImp+=v*du;n.money+=v;if(who==='h')r.impH+=v*(1+du);else r.impB+=v;r.dest[n.id]=(r.dest[n.id]||0)+v;addNK(r.mn,n.id,k,v)}};
-  // fuel
-  const fuelNeed=c.coalPl*B.power.fuel.coal*(1-MINK.enCoal*M('en'));if(st.coal<fuelNeed)buy('coal',fuelNeed-st.coal);
-  const fr=c.coalPl?Math.min(1,st.coal/fuelNeed):1;st.coal-=fuelNeed*fr;r.cons.coal+=fuelNeed*fr;r.need.coal+=fuelNeed;r.fuel=fr;
+    for(const n of ns){if(q<=0||cap<=0)break;const p=natSell(n,k),du=n.deal?0:T.imp,x=Math.min(q,cap,n.sl[k],Math.floor(lim/(p*(1+du))));if(x<=0)break;const v=x*p;
+      n.sl[k]-=x;cap-=x;q-=x;got+=x;lim-=v*(1+du);st[k]+=x;r.imp[k]+=x;r.impV+=v;r.dImp+=v*du;n.money+=v;r.fx-=v;pay(v*(1+du));r.dest[n.id]=(r.dest[n.id]||0)+v;addNK(r.mn,n.id,k,v)}
+    return got};
+  /* Своя продукция по внутренней цене: деньги идут в общую выручку ресурса, её делят те, кто его выпустил. */
+  const pool=z(),sell=(k,q,pay)=>{if(q<=0)return;const v=q*S.dom[k];st[k]-=q;pool[k]+=v;pay(v)};
+  // зарплаты: одна ставка на страну, со школами выше. Предприятия платят со своего счёта, госслужбу оплачивает казна.
+  const W=S.wage*(1+ECO.schoolWage*c.cv.school);r.W=W;let firmW=0;
+  for(const i of c.list){const t=S.bld[i].t,d=B[t],w=(d.jobs||0)*(c.st[i]||0);
+    if(isFirm(t)){r.fin[i]={rev:0,inp:0,wage:w*W,mgr:0,up:d.up,w};firmW+=w}else r.pubW+=w*W}
+  r.mgr=firmW>0?c.richPop*W*WAGE.richMul:0;if(firmW>0)for(const i in r.fin)r.fin[i].mgr=r.mgr*r.fin[i].w/firmW;
+  r.wages=r.pubW+r.mgr+Object.values(r.fin).reduce((a,f)=>a+f.wage,0);
+  r.inc=Math.min(r.wages,r.wages*T.inc*(1+MINK.fin*M('fin')));S.hh+=r.wages-r.inc;
+  // fuel: ТЭС — госслужба, уголь покупает казна
+  const fuelNeed=c.coalPl*B.power.fuel.coal*(1-MINK.enCoal*M('en')),coal0=st.coal,toFuel=v=>{r.fuelCost+=v};if(st.coal<fuelNeed)buy('coal',fuelNeed-st.coal,toFuel);
+  const fr=c.coalPl?Math.min(1,st.coal/fuelNeed):1,burn=fuelNeed*fr,own=Math.min(coal0,burn);sell('coal',own,toFuel);st.coal-=burn-own;r.cons.coal+=burn;r.need.coal+=fuelNeed;r.fuel=fr;
   c.sup=Math.max(0,c.sup-c.coalSup*(1-fr));c.pr=c.use>0?Math.max(0,Math.min(1,c.sup/c.use)):1;
   // primary production
-  const bizPen=Math.max(0,T.biz-TAXK.bizFree)*TAXK.bizPen,eff=Math.max(0,1-bizPen);r.eff=eff;r.bizPen=bizPen;
   const agg={};
   const small=c.prodN<=PROD.smallCity;let lgSum=0;
   for(const i of c.list){const b=S.bld[i],d=B[b.t];if(!d.out)continue;const lg=small||COV.store[i]?1:PROD.noStore;lgSum+=lg;
-    const P={staff:c.st[i]||0,power:d.pow<0?(PW[i]?c.pr:PROD.noPower):1,commute:dfac(wdist(i)),log:lg,tax:eff,fac:facM(sphereOf(b.t))};
-    const e=P.staff*P.power*P.commute*P.log*P.tax*P.fac;
+    const P={staff:c.st[i]||0,power:d.pow<0?(PW[i]?c.pr:PROD.noPower):1,commute:dfac(wdist(i)),log:lg,fac:facM(sphereOf(b.t))};
+    const e=P.staff*P.power*P.commute*P.log*P.fac;
     if(d.in){P.minister=1+MINK.ind*M('ind');agg[b.t]=(agg[b.t]||0)+e*P.minister;r.bs[i]={P,e:e*P.minister};continue}
     if(d.fert)P.fert=fert(i);if(b.t==='saw')P.forest=PROD.forestBase+PROD.forestAdd*forestNear(i);if(d.dep&&S.type[i]===MOUNT)P.mount=PROD.mount;if(b.t==='cotton'&&regOf(i).warm)P.warm=PROD.warm;
     if(d.out.food||d.out.coffee||d.out.cotton)P.minister=1+MINK.agr*M('agr');else P.minister=1+MINK.ind*M('ind');
@@ -89,17 +105,20 @@ function tick(){
   const served=Math.min(S.pop*c.cv.shop,c.serve),richPop=c.richPop;
   const nF=S.pop*NEED.food;
   // industry
-  for(const t of['factory','textile','cannery']){const a=agg[t];if(!a)continue;const d=B[t];
-    for(const k in d.in){const need=d.in[k]*a;r.need[k]+=need;if(k!=='food'&&st[k]<need)buy(k,need-st[k])}
+  for(const t of['factory','textile','cannery']){const a=agg[t];if(!a)continue;const d=B[t],own0={};let cost=0;const toInp=v=>{cost+=v};
+    for(const k in d.in){const need=d.in[k]*a;r.need[k]+=need;own0[k]=st[k];if(k!=='food'&&st[k]<need)buy(k,need-st[k],toInp)}
     let run=1,lim=null;for(const k in d.in){const av=st[k]-(k==='food'?nF*NEED.canReserve:0),q=Math.max(0,av)/(d.in[k]*a);if(q<run){run=q;lim=k}}r.lim=r.lim||{};r.lim[t]=run<PROD.limRun?lim:null;run=Math.max(0,Math.min(1,run));
-    for(const k in d.in){const u=d.in[k]*a*run;st[k]-=u;r.cons[k]+=u}for(const k in d.out){const o=d.out[k]*a*run;st[k]+=o;r.prod[k]+=o}
+    for(const k in d.in){const u=d.in[k]*a*run,own=Math.min(own0[k],u);sell(k,own,toInp);st[k]-=u-own;r.cons[k]+=u}for(const k in d.out){const o=d.out[k]*a*run;st[k]+=o;r.prod[k]+=o}
     r.run[t]=run;
-    for(const i in r.bs){const x=r.bs[i];if(x.e===undefined||S.bld[i].t!==t)continue;x.run=run;x.out={};x.inp={};x.need={};
+    for(const i in r.bs){const x=r.bs[i];if(x.e===undefined||S.bld[i].t!==t)continue;x.run=run;x.out={};x.inp={};x.need={};r.fin[i].inp+=cost*x.e/a;
       for(const k in d.out)x.out[k]=d.out[k]*x.e*run;for(const k in d.in){x.inp[k]=d.in[k]*x.e*run;x.need[k]=d.in[k]*x.e}}
     if(t!=='cannery'&&run<PROD.shortRun)r.short.inputs=Math.max(r.short.inputs,1-run)}
-  // consumers
+  // consumers: жители платят из своего кошелька, сначала еда. Рынок берёт наценку на товары, ткани и кофе.
   const need={food:nF,goods:served*NEED.goods,cloth:served*NEED.cloth,coffee:served*NEED.coffee+richPop*c.cv.shop*NEED.coffeeRich};
-  for(const k in need){const q=need[k];r.need[k]+=q;if(st[k]<q)buy(k,q-st[k],'h');const e=Math.min(st[k],q);st[k]-=e;r.cons[k]+=e;r.sat[k]=q>0?e/q:1}
+  for(const k in need){const q=need[k],m=SHOPK.goods.includes(k)?SHOPK.margin:0,toHH=v=>{S.hh-=v*(1+m);r.shop+=v*m;r.hhBuy+=v*(1+m)};r.need[k]+=q;
+    const dq=Math.max(0,Math.min(q,st[k],S.hh/(S.dom[k]*(1+m))));sell(k,dq,toHH);
+    let iq=0;if(q-dq>0&&S.hh>0){const h0=S.hh;iq=Math.min(q-dq,buy(k,q-dq,toHH,S.hh/(1+m)));st[k]-=iq;r.impH+=h0-S.hh}
+    r.cons[k]+=dq+iq;r.sat[k]=q>0?(dq+iq)/q:1}
   r.short.food=1-r.sat.food;
   // exports: best price first
   const xf=Math.max(0,1-T.exp*TAXK.expCut),reserve=k=>r.need[k]*TRADEK.reserveMonths;
@@ -110,20 +129,32 @@ function tick(){
     if(!port||!S.trade[k].e)continue;
     let sur=st[k]-reserve(k);
     for(const n of ns){if(sur<1||cap<1)break;const p=natBuy(n,k)*(1+MINK.trdPrice*M('trd')),q=Math.floor(Math.min(sur,cap,n.dl[k],Math.max(0,n.money+TRADEK.debtFloor)/p)*xf);if(q<1)continue;
-      const v=q*p*(1-natTariff(n));n.dl[k]-=q;cap-=q;sur-=q;st[k]-=q;r.exp[k]+=q;r.expV+=v;r.dExp+=v*T.exp;
-      n.money-=q*p;n.rel=Math.min(100,n.rel+q*TRADEK.relPerUnit);r.dest[n.id]=(r.dest[n.id]||0)+v;addNK(r.xn,n.id,k,v)}}
+      const v=q*p*(1-natTariff(n));n.dl[k]-=q;cap-=q;sur-=q;st[k]-=q;r.exp[k]+=q;r.expV+=v;r.dExp+=v*T.exp;pool[k]+=v*(1-T.exp);
+      n.money-=v;r.fx+=v;n.rel=Math.min(100,n.rel+q*TRADEK.relPerUnit);r.dest[n.id]=(r.dest[n.id]||0)+v;addNK(r.xn,n.id,k,v)}}
   for(const k of RK){st[k]=Math.max(0,st[k]);if(st[k]>c.cap){st[k]=c.cap;if(!(S.month%6))r.ev.push(`Склады переполнены: ${RES[k].n.toLowerCase()} портится. Стройте склады или продавайте через порт.`)}}
   r.portUse=c.ports?1-cap/c.ports:0;
   // domestic prices
   for(const k of RK){const sup=Math.max(0,r.prod[k]+r.imp[k]+st[k]*PRICEK.stockShare),dem=Math.max(0,r.need[k]);
     const target=dem<PRICEK.noDemand?RES[k].base*PRICEK.noDemandPrice:RES[k].base*Math.max(PRICEK.min,Math.min(PRICEK.max,Math.pow((dem+PRICEK.pad)/(sup+PRICEK.pad),PRICEK.pow)));S.dom[k]+=(target-S.dom[k])*PRICEK.speed}
-  // budget
-  const sold=RK.reduce((a,k)=>a+r.cons[k]*S.dom[k],0)+r.expV;
-  r.wages=c.emp*ECO.wage*(1+ECO.schoolWage*c.cv.school)+richPop*ECO.richIncome;r.inc=r.wages*T.inc;r.biz=Math.max(0,sold-r.impB)*T.biz*(1+MINK.fin*M('fin'));r.inc*=1+MINK.fin*M('fin');r.up=upkeep();r.int=S.money<0?-S.money*ECO.interest:0;
-  for(const L of S.loans){const p=Math.min(L.left,L.pay);L.left-=p;r.loanOut+=p;natById(L.nid).money+=p}S.loans=S.loans.filter(L=>L.left>ECO.loanDust);
-  for(const L of S.lent){const n=natById(L.nid);if(n.money<0&&Math.random()<ECO.lateChance){r.ev.push(`${ND(n).n} задерживает выплату по вашему займу.`);continue}const p=Math.min(L.left,L.pay);L.left-=p;n.money-=p;r.loanIn+=p}
+  // выручка ресурса делится между теми, кто выпустил его в этом месяце. Если никто не выпускал — продан госзапас, деньги в казну.
+  const outBy=z();for(const i in r.bs){const o=r.bs[i].out;if(o)for(const k in o)outBy[k]+=o[k]}
+  for(const k of RK){if(pool[k]<=0)continue;if(outBy[k]>0){for(const i in r.bs){const o=r.bs[i].out;if(o&&o[k]>0)r.fin[i].rev+=pool[k]*o[k]/outBy[k]}}else r.stockSale+=pool[k]}
+  // наценка рынков делится по тому, скольких покупателей обслужил каждый рынок
+  const shops=Object.keys(r.fin).filter(i=>S.bld[i].t==='shop'&&PW[i]),sw=shops.reduce((a,i)=>a+(c.st[i]||0),0);
+  if(sw>0)for(const i of shops)r.fin[i].rev+=r.shop*(c.st[i]||0)/sw;else r.stockSale+=r.shop;
+  // содержание: предприятия платят сами, остальное казна. Деньги получают жители — те, кто чинит и обслуживает
+  let upF=0;for(let i=0;i<N*N;i++){const b=S.bld[i];if(b&&!r.fin[i])r.up+=B[b.t].up;if(S.road[i])r.up+=S.road[i]===2?ROADK.upBridge:ROADK.upRoad}
+  // итог счёта предприятия уходит в казну, убыток казна покрывает
+  for(const i in r.fin){const f=r.fin[i];upF+=f.up;f.net=f.rev-f.inp-f.wage-f.mgr-f.up;if(f.net>=0)r.firmPlus+=f.net;else r.firmMinus-=f.net}
+  r.int=S.money<0?-S.money*ECO.interest:0;S.hh+=r.up+upF+r.int;
+  for(const L of S.loans){const p=Math.min(L.left,L.pay);L.left-=p;r.loanOut+=p;r.fx-=p;natById(L.nid).money+=p}S.loans=S.loans.filter(L=>L.left>ECO.loanDust);
+  for(const L of S.lent){const n=natById(L.nid);if(n.money<0&&Math.random()<ECO.lateChance){r.ev.push(`${ND(n).n} задерживает выплату по вашему займу.`);continue}const p=Math.min(L.left,L.pay);L.left-=p;n.money-=p;r.loanIn+=p;r.fx+=p}
   S.lent=S.lent.filter(L=>L.left>ECO.loanDust);
-  r.net=r.inc+r.biz+r.dImp+r.dExp+r.loanIn-r.up-r.int-r.loanOut;S.money+=r.net;
+  r.net=r.inc+r.firmPlus+r.dImp+r.dExp+r.stockSale+r.loanIn-r.pubW-r.firmMinus-r.up-r.fuelCost-r.loanOut-r.int;S.money+=r.net;
+  // ставка зарплаты на следующий месяц: доля стоимости, которую создал рабочий предприятия, с поправкой на нехватку рабочих
+  let va=0,vw=0;for(const i in r.fin){if(!B[S.bld[i].t].out)continue;va+=r.fin[i].rev-r.fin[i].inp;vw+=r.fin[i].w}
+  if(vw>0){const tight=c.work>0?c.jobs/c.work:1,f=Math.max(WAGE.tightMin,Math.min(WAGE.tightMax,1+WAGE.tight*(tight-1)));
+    r.vaW=va/vw;r.wageTgt=Math.max(WAGE.min,Math.min(WAGE.max,WAGE.share*r.vaW*f/(1+ECO.schoolWage*c.cv.school)));S.wage+=(r.wageTgt-S.wage)*WAGE.speed}
   // mood
   const unemp=c.work>0?(c.work-c.emp)/c.work:0;
   const sh=S.pop>0?served/S.pop:0;
@@ -191,7 +222,7 @@ function canBuild(tool,i){
   const cost=d.cost+(t===FOREST?ROADK.forestClear:0);return{ok:S.money>=cost,cost,why:S.money<cost?'Не хватает денег':''};
 }
 function place(tool,i){
-  const q=canBuild(tool,i);if(!q.ok)return q;S.money-=q.cost;
+  const q=canBuild(tool,i);if(!q.ok)return q;spend(q.cost);
   if(tool==='bull'){if(S.bld[i])S.bld[i]=null;else S.road[i]=0}
   else if(tool==='road'){S.road[i]=S.type[i]<=SHAL?2:1;if(S.type[i]===FOREST)S.type[i]=GRASS}
   else{S.bld[i]={t:tool};if(S.type[i]===FOREST)S.type[i]=GRASS}
@@ -199,7 +230,7 @@ function place(tool,i){
 }
 function roadPath(a,b){const bx=b%N,by=b/N|0;let x=a%N,y=a/N|0;const p=[y*N+x];
   while(x!==bx){x+=Math.sign(bx-x);p.push(y*N+x)}while(y!==by){y+=Math.sign(by-y);p.push(y*N+x)}return p}
-function buyRegion(k){const g=S.regions[k];if(g.own||S.money<g.price)return false;S.money-=g.price;g.own=1;S.log.unshift({m:S.month,t:`Куплена область «${g.n}» за ${fmt(g.price)} кр.`});return true}
+function buyRegion(k){const g=S.regions[k];if(g.own||S.money<g.price)return false;spend(g.price);g.own=1;S.log.unshift({m:S.month,t:`Куплена область «${g.n}» за ${fmt(g.price)} кр.`});return true}
 function advisor(c){
   const r=S.rep;
   if(S.ev)return'';
@@ -220,7 +251,7 @@ function advisor(c){
   if(c.log<ADV.log)return`Логистика ${Math.round(c.log*100)}%: поставьте склад рядом с предприятиями.`;
   if(r&&r.short.inputs>ADV.inputs)return'Заводам не хватает сырья. Добывайте или закупайте через порт.';
   if(r&&r.sat.goods<ADV.goods&&c.serve>0)return'На рынках мало товаров. Нужен завод или импорт.';
-  if(r&&r.bizPen>0)return`Налог на бизнес выше ${PCT(TAXK.bizFree)}% снижает выработку предприятий.`;
-  if(r&&r.sal&&r.sal+r.theft>(r.inc+r.biz+r.dImp+r.dExp)*ADV.cabinet)return`Кабинет министров обходится в ${Math.round((r.sal+r.theft)/Math.max(1,r.inc+r.biz+r.dImp+r.dExp)*100)}% доходов казны. Для такого города это дорого.`;
+  if(r&&r.firmMinus>r.firmPlus&&r.firmMinus>ADV.firmLoss){const n=Object.values(r.fin).filter(f=>f.net<0).length;return`Госпредприятия в убытке: ${n} ${plural(n,'предприятие','предприятия','предприятий')} теряют ${fmt(r.firmMinus)} кр в месяц. Осмотрите их: нет сбыта, сырья или рабочих.`}
+  if(r&&r.sal&&r.sal+r.theft>taxIncome(r)*ADV.cabinet)return`Кабинет министров обходится в ${Math.round((r.sal+r.theft)/Math.max(1,taxIncome(r))*100)}% доходов казны. Для такого города это дорого.`;
   return'';
 }

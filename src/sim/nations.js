@@ -12,7 +12,7 @@ function refreshMarkets(){for(const n of S.nat){const d=ND(n);
   for(const k of RK){n.dl[k]=Math.round((d.dem[k]||NATK.demOther)*crMul(n,k,'dem')*(n.pop/d.pop));n.sl[k]=Math.round((d.sup[k]||0)*crMul(n,k,'sup'))}}}
 function canTrade(n){return !n.emb}
 /* Месячный итог казны соседа. */
-function natBal(n){return n.pop*(n.happy-NATK.balHappy)/NATK.balDiv-(n.cr?n.pop*NATK.balCrisis:0)}
+function natBal(n){return(n.pop*(n.happy-NATK.balHappy)/NATK.balDiv-(n.cr?n.pop*NATK.balCrisis:0))*NATK.money}
 /* Торговля за последний год: скользящая сумма по ресурсам. */
 function tradeYear(y,cur){for(const k of new Set([...Object.keys(y),...Object.keys(cur||{})])){y[k]=(y[k]||0)*DIPL.decay+(cur&&cur[k]||0);if(y[k]<1)delete y[k]}}
 const sumV=o=>Object.values(o).reduce((a,v)=>a+v,0);
@@ -123,9 +123,9 @@ function evAnswer(yes,silent){
       if(e.t==='order'){S.stock[e.k]-=e.amt;S.money+=sum;n.money-=sum;L(`${d.n}: партия продана за ${fmt(sum)} кр.`)}
       else if(e.t==='bargain'){S.money-=sum;n.money+=sum;S.stock[e.k]+=e.amt;L(`${d.n}: партия куплена за ${fmt(sum)} кр.`)}
       else if(e.t==='relief'){S.stock[e.k]-=e.amt;L(`${d.n}: отправлена помощь, ${RES[e.k].n.toLowerCase()} ${e.amt} ед.`)}
-      else if(e.t==='summit'){S.money-=X.cost;L(`${d.fest[0]}: делегация принята.`)}
+      else if(e.t==='summit'){S.money-=X.cost;n.money+=X.cost;L(`${d.fest[0]}: делегация принята.`)}
       else if(e.t==='dumping'){S.money-=e.cost;n.money+=e.cost;L(`${d.n}: отступные выплачены.`)}
-      else if(e.t==='envoy'){S.money-=X.cost;L(`${d.n}: обменялись послами.`)}
+      else if(e.t==='envoy'){S.money-=X.cost;n.money+=X.cost;L(`${d.n}: обменялись послами.`)}
       else if(e.t==='border'){if(S.fac&&S.fac.mil)S.fac.mil.sat=Math.max(0,S.fac.mil.sat-X.mil);L(`${d.n}: вы принесли извинения.`)}
       else if(e.t==='debt'){const l=S.lent.find(x=>x.nid===n.id);l.left=Math.max(1,l.left-e.amt);L(`${d.n}: списано ${fmt(e.amt)} кр долга.`)}
       else if(e.t==='mediate'){const o=natById(e.oid);o.rel=Math.max(-RELK.max,Math.min(RELK.max,o.rel+X.other));L(`Вы поддержали ${d.n} в споре с ${ND(o).ins}.`)}

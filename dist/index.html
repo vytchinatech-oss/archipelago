@@ -337,20 +337,31 @@ const RELK={ally:50,friend:25,neutral:-15,tense:-50,dealBreak:0,max:100};
 /* Проценты и дроби для текстов: 0,015 → «1,5». */
 const PCT=v=>String(+(v*100).toFixed(1)).replace('.',',');
 const COMMA=v=>String(v).replace('.',',');
-/* Старт новой игры и области. */
-const START={money:4000,pop:18,happy:62,tax:{inc:.10,biz:.12,imp:.10,exp:.05},stock:{food:80,wood:30,coal:20,goods:20}};
-const REGK={base:200,perTile:12,round:50,goldMul:1.3,fertMin:.75,fertRand:.45,tileMin:.85,tileRand:.3};
+/* Масштаб денег (DESIGN.md, «Собственность, кошельки и зоны»). Цены товаров выросли в 2,2 раза, разовые суммы — стройка, земля, награды,
+   займы, подарки, казны соседей — в CAP раз: так поле окупается за 5–6 лет, а не за пару месяцев. */
+const CAP=30;
+/* Старт новой игры и области. hh — сбережения жителей. */
+const START={money:4000*CAP,hh:1000,pop:18,happy:62,tax:{inc:.15,biz:.20,imp:.10,exp:.05},stock:{food:80,wood:30,coal:20,goods:20}};
+const REGK={base:200*CAP,perTile:12*CAP,round:500,goldMul:1.3,fertMin:.75,fertRand:.45,tileMin:.85,tileRand:.3};
 /* Дороги и снос. */
-const ROADK={deep:120,shal:40,forest:15,land:5,forestClear:15,demolish:5,upRoad:.25,upBridge:1};
+const ROADK={deep:120*CAP,shal:40*CAP,forest:15*CAP,land:5*CAP,forestClear:15*CAP,demolish:5*CAP,upRoad:.25,upBridge:1};
+/* Зарплата: одна ставка на страну. Цель — доля share от стоимости, которую рабочий предприятия создаёт за месяц (выручка минус сырьё).
+   При нехватке рабочих цель выше, при безработице ниже: множитель 1 + tight × (мест/рабочих − 1) в пределах tightMin…tightMax.
+   Ставка идёт к цели со скоростью speed. Жители особняков — управляющие, получают ставку × richMul из счёта предприятий. */
+const WAGE={start:12,share:.55,tight:.5,tightMin:.75,tightMax:1.25,min:4,max:80,speed:RATE.slow,richMul:4};
+/* Рынок берёт наценку сверху на товары, ткани и кофе, свои и привозные. Еду жители покупают без наценки. */
+const SHOPK={margin:.2,goods:['goods','cloth','coffee']};
 /* Выработка. nearR: сколько клеток считается «рядом» для леса и воды. smallCity: сколько предприятий работает без склада. */
 const PROD={nearR:2,forestFull:7,commuteMin:.3,commuteFree:6,commuteStep:.025,smallCity:4,noStore:.75,noPower:.35,forestBase:.35,forestAdd:.65,mount:1.3,warm:1.3,limRun:.99,shortRun:.95,storeStaff:.5};
 const HOME={noPower:.5,noShop:.6};
 /* Потребление на жителя в месяц. canReserve: сколько месяцев еды консервный завод не трогает. */
 const NEED={food:.12,canReserve:1.5,goods:.05,cloth:.03,coffee:.004,coffeeRich:.06};
-const TAXK={bizFree:.15,bizPen:1.6,incFree:.1,expCut:1.6};
-const TRADEK={reserveMonths:2,relPerUnit:.005,debtFloor:20000};
+/* incFree: подоходный налог до этой ставки не портит настроение. */
+const TAXK={incFree:.15,incFreeOld:.1,incMax:.3,expCut:1.6};
+const TRADEK={reserveMonths:2,relPerUnit:.005,debtFloor:20000*CAP};
 const PRICEK={stockShare:.2,noDemand:.5,noDemandPrice:.7,min:.5,max:2,pad:2,pow:.6,speed:RATE.fast};
-const ECO={wage:15,schoolWage:.3,richIncome:60,interest:.02,storeBase:300,portPerStore:25,lateChance:.5,loanDust:.5};
+/* schoolWage: школы поднимают зарплату до +30%. */
+const ECO={schoolWage:.3,interest:.02,storeBase:300,portPerStore:25,lateChance:.5,loanDust:.5};
 const MOODK={base:50,goods:10,cloth:6,coffee:4,park:12,school:7,clinic:8,crime:10,unemp:45,incTax:150,hunger:40,foodShort:.05,foodPrice:10,importMax:15,importK:40,importMinWage:50,blackout:25,huts:12,speed:RATE.normal};
 const POPK={workShare:.62,growFrom:SCALE.bad,growBase:3,growJobs:.6,growPop:.05,growMin:.3,growRange:.6,growSpan:100-SCALE.bad,leaveBelow:SCALE.bad,leaveShare:.05,famine:.25,famineShare:.06,overcrowd:.4};
 const MIGK={inRate:.0012,inDiff:5,per:10,crisisMul:3,outDiff:10,outMinPop:30,outRate:.004};
@@ -360,92 +371,95 @@ const MINK={fin:.02,trdPrice:.015,trdPort:.05,enPow:.04,enCoal:.05,ind:.03,agr:.
 const CAND={skill:5,hon:.72,loy:.65,risk:.5,salBase:5,salK:2,salRand:4};
 const CABK={firedUnrest:8,firedPeo:4,theftFin:.04,theftBase:4,theftSkill:2,caught:.025,caughtAppr:6,plot:.04,plotAppr:SCALE.bad,plotUnrest:15,plotArmy:8};
 /* Автопилот: когда министр действует. */
-const AUTO={importOf:{agr:['food'],en:['coal'],ind:['wood','iron','coal','cotton']},resRisk:800,resSafe:3000,step:.01,eps:.005,
-  finMood:[SCALE.bad,SCALE.good],finInc:[.16,.13],finCalm:SCALE.bad,finCalmInc:.08,finRich:15000,finRichMood:SCALE.good,finRichInc:.06,
+const AUTO={importOf:{agr:['food'],en:['coal'],ind:['wood','iron','coal','cotton']},resRisk:800*CAP,resSafe:3000*CAP,step:.01,eps:.005,
+  finMood:[SCALE.bad,SCALE.good],finInc:[.21,.18],finCalm:SCALE.bad,finCalmInc:.13,finRich:15000*CAP,finRichMood:SCALE.good,finRichInc:.11,
   tradeImp:[.04,.12],tradeExp:[.03,.06],
-  dipNear:15,dipAidCash:3000,dipBroke:-1500,dipDebtMax:8000,dipLoanGap:12,dipLoan:3000,
+  dipNear:15,dipAidCash:3000*CAP,dipBroke:-1500*CAP,dipDebtMax:8000*CAP,dipLoanGap:12,dipLoan:3000*CAP,
   fuelLow:.9,coalOk:4,logLow:.95,inputsLow:.2,foodShort:.05,foodStock:.2,park:.6,school:.5,clinic:.5,police:.7,unrest:40};
 /* Подсказки советника: при каких цифрах что говорить. */
-const ADV={fuel:.9,food:.1,foodLog:.15,jobsOver:1.25,jobsGap:15,unemp:.15,jobsFree:8,roomLow:4,serve:.7,servePop:40,poor:2,police:.6,log:.95,inputs:.2,goods:.7,cabinet:.35};
+const ADV={fuel:.9,food:.1,foodLog:.15,jobsOver:1.25,jobsGap:15,unemp:.15,jobsFree:8,roomLow:4,serve:.7,servePop:40,poor:2,police:.6,log:.95,inputs:.2,goods:.7,cabinet:.35,firmLoss:100};
 /* Власть. */
 const GOVK={term:120,appr0:55,army0:60,sat0:{agr:55,ind:55,trd:55,peo:60,mil:50,int:50},seats0:{agr:22,ind:18,trd:14,peo:42,mil:0,int:4},richJobs:2,parlLo:SCALE.crisis,parlSpan:SCALE.top-SCALE.crisis,satSpeed:RATE.normal,pollNoise:6,inflW:{food:.5,goods:.25,cloth:.15,coffee:.1}};
 /* Цели довольства фракций. */
-const FACT={agr:{base:58,food:25,bizFree:.12,biz:120,imp:30,min:3},ind:{base:55,run:.8,runK:40,pow:40,bizFree:.12,biz:150,log:40,min:3},
+const FACT={agr:{base:58,food:25,bizFree:.20,biz:120,imp:30,min:3},ind:{base:55,run:.8,runK:40,pow:40,bizFree:.20,biz:150,log:40,min:3},
   trd:{base:50,expMax:20,expDiv:40,impFree:.1,imp:100,expFree:.05,exp:150,deal:5,min:3},peo:{mood:.9,job:10},
   mil:{base:42,soldMax:25,sold:20,broke:-10,ok:5,guard:8},int:{base:40,school:15,clinic:12,gov:{demo:8,parl:5,mon:-10},min:2}};
 /* Отношение фракций к соседям. */
 const FATT={ownFrom:.5,pad:60,sphere:2,trdBase:.2,peo:1.5,milAggr:-.8,milTense:-.4,milAlly:.3,intReg:{rep:.6,mon:0,auth:-.6},relMax:1.2,relDeal:.4,relEmb:.8};
 const APPR={mood:.55,job:15,growthMax:10,growth:50,inflFree:.08,inflMax:15,infl:100,broke:10,debtRatio:.6,debt:10,base:10,soc:.5,speed:RATE.normal};
-const UNR={below:SCALE.crisis,rise:.6,calm:3,broke:-2000,brokeAdd:3,hunger:.3,hungerAdd:5,apprBelow:SCALE.crisis,apprAdd:2,warn:[50,80],warnReset:40};
+const UNR={below:SCALE.crisis,rise:.6,calm:3,broke:-2000*CAP,brokeAdd:3,hunger:.3,hungerAdd:5,apprBelow:SCALE.crisis,apprAdd:2,warn:[50,80],warnReset:40};
 const ARMY={base:30,mil:.4,guard:12,rich:5,broke:-15,mood:.3,appr:.2,speed:RATE.normal,guardCost:80,coupBelow:SCALE.bad,coupArmy:.12,coupUnrest:.04,coupPlot:.01,coupPlotAppr:SCALE.bad,coupWarn:.02};
-const REFORM={cost:3000,gap:60,army:60,appr:50,parl:60,toMon:-10,fromMon:5,monAva:10,monSol:-10,repSol:10,repAva:-5};
-const BRIBE={cost:2000,sat:12,army:3,decay:.85};
+const REFORM={cost:3000*CAP,gap:60,army:60,appr:50,parl:60,toMon:-10,fromMon:5,monAva:10,monSol:-10,repSol:10,repAva:-5};
+const BRIBE={cost:2000*CAP,sat:12,army:3,decay:.85};
 /* Соседи: цены и внутренняя жизнь. */
 const NATK={buyNeed:1.3,buyOther:.9,buyCrisis:1.25,sellHave:.85,sellNone:1.3,sellCrisis:1.5,sellDeal:.92,demOther:8,
   balHappy:42,balDiv:60,balCrisis:.05,crisis:.03,crisisMin:4,crisisRand:5,brokeHappy:-8,happySpeed:RATE.normal,happyNoise:2,popMin:500,popMid:50,popDiv:2500,
-  pvMin:.8,pvMax:1.25,pvSpeed:RATE.fast,pvNoise:.08,relSpeed:RATE.vslow,dealRel:.4,embRel:1.5};
+  pvMin:.8,pvMax:1.25,pvSpeed:RATE.fast,pvNoise:.08,relSpeed:RATE.vslow,dealRel:.4,embRel:1.5,money:CAP};
 /* Обращения к соседям. Эффект договора и займа один при любом способе (кнопка, событие, министр). */
-const DIPA={dealRel:5,dealCancel:-8,embargo:-25,aidCost:1000,aidMax:10,aidStep:2,aidMin:2,borrowFrom:RELK.tense,borrowCash:3,borrowYears:2,borrowMonths:24,borrowBtn:3000,lendRel:6,lendRate:.08,lendMonths:12,lendBtn:2000,rateMin:.02,rateRel:400,rateDebt:60000};
+const DIPA={dealRel:5,dealCancel:-8,embargo:-25,aidCost:1000*CAP,aidMax:10,aidStep:2,aidMin:2,borrowFrom:RELK.tense,borrowCash:3,borrowYears:2,borrowMonths:24,borrowBtn:3000*CAP,lendRel:6,lendRate:.08,lendMonths:12,lendBtn:2000*CAP,rateMin:.02,rateRel:400,rateDebt:60000*CAP};
 /* Четыре сообщения с особыми правилами (остальные — EVN в nations.js) и общие числа сообщений. */
-const EVX={loan:{from:RELK.tense,months:4,round:500,min:1500,max:5000,no:-5},deal:{from:RELK.friend},tariff:{imp:.05,to:.05,hike:.35,term:12,yes:6,no:-10},ref:{min:20,rand:40,yes:6,no:-4,riskRoom:.3}};
+const EVX={loan:{from:RELK.tense,months:4,round:500*CAP,min:1500*CAP,max:5000*CAP,no:-5},deal:{from:RELK.friend},tariff:{imp:.05,to:.05,hike:.35,term:12,yes:6,no:-10},ref:{min:20,rand:40,yes:6,no:-4,riskRoom:.3}};
 const EVG={firstMonth:3,answerMonths:6,wiseRisk:1.5,wiseSafe:3};
 /* Цели игры. */
 const GOALS=[
-  {t:'Поселите 60 жителей',ok:()=>S.pop>=60,rw:300},
-  {t:'Дайте работу 40 жителям',ok:c=>c.emp>=40,rw:400},
-  {t:'Постройте порт и продайте груз за границу',ok:(c,r)=>r&&r.expV>0,rw:600},
-  {t:'Выпустите товары, ткани или консервы',ok:(c,r)=>r&&(r.prod.goods+r.prod.cloth+r.prod.cans)>0,rw:600},
-  {t:'Купите вторую область',ok:()=>S.regions.filter(g=>g.own).length>=2,rw:500},
-  {t:'Подпишите торговый договор',ok:()=>S.nat.some(n=>n.deal),rw:800},
-  {t:'Население 300',ok:()=>S.pop>=300,rw:1000},
-  {t:'Профицит бюджета 400 кр за месяц',ok:(c,r)=>r&&r.net>=400,rw:1000},
-  {t:'Население 1000',ok:()=>S.pop>=1000,rw:3000},
+  {t:'Поселите 60 жителей',ok:()=>S.pop>=60,rw:300*CAP},
+  {t:'Дайте работу 40 жителям',ok:c=>c.emp>=40,rw:400*CAP},
+  {t:'Постройте порт и продайте груз за границу',ok:(c,r)=>r&&r.expV>0,rw:600*CAP},
+  {t:'Выпустите товары, ткани или консервы',ok:(c,r)=>r&&(r.prod.goods+r.prod.cloth+r.prod.cans)>0,rw:600*CAP},
+  {t:'Купите вторую область',ok:()=>S.regions.filter(g=>g.own).length>=2,rw:500*CAP},
+  {t:'Подпишите торговый договор',ok:()=>S.nat.some(n=>n.deal),rw:800*CAP},
+  {t:'Население 300',ok:()=>S.pop>=300,rw:1000*CAP},
+  {t:'Профицит бюджета 400 кр за месяц',ok:(c,r)=>r&&r.net>=400,rw:1000*CAP},
+  {t:'Население 1000',ok:()=>S.pop>=1000,rw:3000*CAP},
 ];
 
 /* ===== data/resources.js ===== */
-/* Ресурсы и базовые цены, залежи. Баланс меняется здесь. */
+/* Ресурсы и базовые цены, залежи. Баланс меняется здесь.
+   Масштаб цен (DESIGN.md, «Зарплата и цены»): прежние цены × 2,2, сверху товары × 1,5, ткани × 1,35, консервы × 1,4.
+   Так рабочий создаёт за месяц больше, чем получает, а переработка стоит дороже сырья. */
 const RES={
-  food:{n:'Еда',base:5,c:'#d8b85c'},coffee:{n:'Кофе',base:24,c:'#7a4a2c'},cotton:{n:'Хлопок',base:8,c:'#ece6d6'},
-  wood:{n:'Древесина',base:6,c:'#a87a4d'},coal:{n:'Уголь',base:7,c:'#3a3634'},iron:{n:'Железо',base:11,c:'#9a4e32'},
-  gold:{n:'Золото',base:48,c:'#e2b33c'},goods:{n:'Товары',base:20,c:'#3f7f9a'},cloth:{n:'Ткани',base:17,c:'#b0568f'},
-  cans:{n:'Консервы',base:15,c:'#c44f3a'}};
+  food:{n:'Еда',base:11,c:'#d8b85c'},coffee:{n:'Кофе',base:53,c:'#7a4a2c'},cotton:{n:'Хлопок',base:18,c:'#ece6d6'},
+  wood:{n:'Древесина',base:13,c:'#a87a4d'},coal:{n:'Уголь',base:15,c:'#3a3634'},iron:{n:'Железо',base:24,c:'#9a4e32'},
+  gold:{n:'Золото',base:106,c:'#e2b33c'},goods:{n:'Товары',base:66,c:'#3f7f9a'},cloth:{n:'Ткани',base:50,c:'#b0568f'},
+  cans:{n:'Консервы',base:46,c:'#c44f3a'}};
 const RK=Object.keys(RES);
 const MIN={coal:{n:'Уголь',c:[52,48,46]},iron:{n:'Железо',c:[160,80,50]},gold:{n:'Золото',c:[232,184,58]}};
 const LANDB=[SAND,GRASS,FOREST,HILL];
 
 /* ===== data/buildings.js ===== */
-/* Все здания: стоимость, содержание, рабочие места, энергия, выработка, ореолы. Баланс меняется здесь. */
+/* Все здания: стоимость, содержание, рабочие места, энергия, выработка, ореолы. Баланс меняется здесь.
+   Стоимость — в масштабе CAP (rules.js), содержание в месяц. */
 const CATS=[['base','Дороги'],['home','Жильё'],['farm','Поля и еда'],['mine','Добыча'],['ind','Заводы'],['pow','Энергия'],['svc','Услуги'],['com','Логистика'],['mil','Армия']];
 const B={
   hall:{n:'Ратуша',cat:'',cost:0,up:0,jobs:10,pow:12,d:'Сердце города. Каждое здание должно быть связано с ней дорогой.'},
-  hut:{n:'Барак',cat:'home',cost:40,up:1,home:14,pow:-.5,on:LANDB,d:'Дёшево и тесно: 14 жителей. Если бараков много, настроение падает.'},
-  house:{n:'Дом',cat:'home',cost:60,up:1,home:10,pow:-.5,on:LANDB,d:'Жильё для 10 рабочих.'},
-  villa:{n:'Особняк',cat:'home',cost:240,up:2,home:5,rich:1,pow:-1,on:LANDB,need:80,d:'5 состоятельных жителей платят налог как 20 рабочих. Пьют много кофе. С населения 80.'},
-  tower:{n:'Многоэтажка',cat:'home',cost:380,up:5,home:48,pow:-3,on:LANDB,need:200,d:'Жильё на 48 человек. С населения 200.'},
-  farm:{n:'Пшеничное поле',cat:'farm',cost:110,up:3,jobs:8,pow:-.5,on:[GRASS],out:{food:16},fert:1,d:'16 еды в месяц. Урожай зависит от плодородия.'},
-  veg:{n:'Овощная ферма',cat:'farm',cost:150,up:4,jobs:10,pow:-1,on:[GRASS,SAND],out:{food:24},fert:1,water:1,d:'24 еды, но нужна вода в 2 клетках для полива.'},
-  ranch:{n:'Ранчо',cat:'farm',cost:130,up:3,jobs:5,pow:-.5,on:[GRASS,HILL],out:{food:11},d:'11 еды при всего 5 рабочих. Годится для холмов.'},
-  fish:{n:'Рыбацкий причал',cat:'farm',cost:150,up:3,jobs:6,pow:0,on:[SAND,GRASS,FOREST],coast:1,out:{food:15},d:'15 еды из моря. Ставится у воды.'},
-  coffee:{n:'Кофейная плантация',cat:'farm',cost:220,up:4,jobs:12,pow:0,on:[GRASS,HILL],warm:1,out:{coffee:8},fert:1,d:'8 кофе. Дорогой экспорт, любимый напиток богачей. Только в тёплых областях.'},
-  cotton:{n:'Хлопковое поле',cat:'farm',cost:120,up:3,jobs:9,pow:0,on:[GRASS,SAND],out:{cotton:12},fert:1,d:'12 хлопка для ткацкой фабрики. В тёплых областях +30%.'},
-  saw:{n:'Лесопилка',cat:'mine',cost:160,up:4,jobs:10,pow:-2,on:LANDB,out:{wood:12},d:'До 12 древесины. Чем больше леса вокруг, тем выше выработка.'},
-  coalmine:{n:'Угольная шахта',cat:'mine',cost:220,up:5,jobs:12,pow:-2,on:[HILL,MOUNT],dep:'coal',out:{coal:12},d:'12 угля. Уголь топит ТЭС и нужен заводу. Только на угольных залежах.'},
-  ironmine:{n:'Железный рудник',cat:'mine',cost:260,up:6,jobs:12,pow:-3,on:[HILL,MOUNT],dep:'iron',out:{iron:10},d:'10 железа для завода. Только на железных залежах.'},
-  goldmine:{n:'Золотой прииск',cat:'mine',cost:420,up:8,jobs:14,pow:-2,on:[HILL,MOUNT],dep:'gold',out:{gold:3},d:'3 золота. Внутри не нужно, но за границей стоит дороже всего.'},
-  factory:{n:'Механический завод',cat:'ind',cost:480,up:10,jobs:20,pow:-6,on:LANDB,in:{wood:4,iron:4,coal:2},out:{goods:10},d:'4 древесины + 4 железа + 2 угля → 10 товаров.'},
-  textile:{n:'Ткацкая фабрика',cat:'ind',cost:380,up:8,jobs:14,pow:-4,on:LANDB,in:{cotton:8},out:{cloth:8},d:'8 хлопка → 8 тканей. Жители покупают одежду на рынках.'},
-  cannery:{n:'Консервный завод',cat:'ind',cost:420,up:8,jobs:12,pow:-3,on:LANDB,in:{food:12},out:{cans:8},d:'12 еды → 8 консервов на экспорт. Берёт только излишки еды.'},
-  power:{n:'Угольная ТЭС',cat:'pow',cost:500,up:12,jobs:8,pow:60,fuel:{coal:4},on:LANDB,d:'60 энергии, сжигает 4 угля в месяц. Без угля мощность падает.'},
-  wind:{n:'Ветряк',cat:'pow',cost:140,up:2,jobs:1,pow:10,on:[SAND,GRASS,HILL],d:'10 энергии без топлива.'},
-  sub:{n:'Подстанция',cat:'pow',cost:90,up:1,on:LANDB,d:'Передаёт энергию дальше: работает, если сама стоит в зоне электричества.'},
-  shop:{n:'Рынок',cat:'svc',cost:150,up:3,jobs:6,pow:-1,serve:120,on:LANDB,d:'Продаёт товары, ткани и кофе до 120 жителям в своём ореоле. Дом без рынка заселён на '+PCT(HOME.noShop)+'%.'},
-  school:{n:'Школа',cat:'svc',cost:300,up:6,jobs:8,pow:-1,on:LANDB,need:60,d:'Образованные жители зарабатывают больше: подоходный налог до +30% и настроение.'},
-  clinic:{n:'Больница',cat:'svc',cost:400,up:8,jobs:10,pow:-2,on:LANDB,need:80,d:'Здоровье жителей в ореоле: заметно поднимает настроение.'},
-  police:{n:'Полиция',cat:'svc',cost:300,up:6,jobs:8,pow:-1,on:LANDB,need:120,d:'Без полиции в городе от 120 жителей растёт преступность.'},
-  store:{n:'Склад',cat:'com',cost:260,up:4,jobs:6,pow:-1,stor:300,on:LANDB,d:'+300 места под каждый ресурс, +25 к пропускной способности порта. Предприятия в ореоле склада работают быстрее.'},
-  port:{n:'Порт',cat:'com',cost:600,up:12,jobs:10,pow:-2,cap:60,on:[SAND,GRASS,FOREST],coast:1,d:'Торговля с другими странами, до 60 ед. в месяц. Ставится у воды.'},
-  barracks:{n:'Казарма',cat:'mil',cost:350,up:10,jobs:20,pow:-1,on:LANDB,need:60,d:'20 солдат. Опора фракции военных и лояльности армии, позже — сила в войне. Солдатам платят из казны.'},
-  park:{n:'Парк',cat:'svc',cost:80,up:1,park:1,on:LANDB,d:'Поднимает настроение домов в пешей доступности.'},
+  hut:{n:'Барак',cat:'home',cost:40*CAP,up:1,home:14,pow:-.5,on:LANDB,d:'Дёшево и тесно: 14 жителей. Если бараков много, настроение падает.'},
+  house:{n:'Дом',cat:'home',cost:60*CAP,up:1,home:10,pow:-.5,on:LANDB,d:'Жильё для 10 рабочих.'},
+  villa:{n:'Особняк',cat:'home',cost:240*CAP,up:2,home:5,rich:1,pow:-1,on:LANDB,need:80,d:'5 управляющих: получают зарплату как '+WAGE.richMul+' рабочих из счёта предприятий и платят с неё налог. Пьют много кофе. С населения 80.'},
+  tower:{n:'Многоэтажка',cat:'home',cost:380*CAP,up:5,home:48,pow:-3,on:LANDB,need:200,d:'Жильё на 48 человек. С населения 200.'},
+  farm:{n:'Пшеничное поле',cat:'farm',cost:110*CAP,up:3,jobs:8,pow:-.5,on:[GRASS],out:{food:16},fert:1,d:'16 еды в месяц. Урожай зависит от плодородия.'},
+  veg:{n:'Овощная ферма',cat:'farm',cost:150*CAP,up:4,jobs:10,pow:-1,on:[GRASS,SAND],out:{food:24},fert:1,water:1,d:'24 еды, но нужна вода в 2 клетках для полива.'},
+  ranch:{n:'Ранчо',cat:'farm',cost:130*CAP,up:3,jobs:5,pow:-.5,on:[GRASS,HILL],out:{food:11},d:'11 еды при всего 5 рабочих. Годится для холмов.'},
+  fish:{n:'Рыбацкий причал',cat:'farm',cost:150*CAP,up:3,jobs:6,pow:0,on:[SAND,GRASS,FOREST],coast:1,out:{food:15},d:'15 еды из моря. Ставится у воды.'},
+  coffee:{n:'Кофейная плантация',cat:'farm',cost:220*CAP,up:4,jobs:12,pow:0,on:[GRASS,HILL],warm:1,out:{coffee:8},fert:1,d:'8 кофе. Дорогой экспорт, любимый напиток богачей. Только в тёплых областях.'},
+  cotton:{n:'Хлопковое поле',cat:'farm',cost:120*CAP,up:3,jobs:9,pow:0,on:[GRASS,SAND],out:{cotton:12},fert:1,d:'12 хлопка для ткацкой фабрики. В тёплых областях +30%.'},
+  saw:{n:'Лесопилка',cat:'mine',cost:160*CAP,up:4,jobs:10,pow:-2,on:LANDB,out:{wood:12},d:'До 12 древесины. Чем больше леса вокруг, тем выше выработка.'},
+  coalmine:{n:'Угольная шахта',cat:'mine',cost:220*CAP,up:5,jobs:12,pow:-2,on:[HILL,MOUNT],dep:'coal',out:{coal:12},d:'12 угля. Уголь топит ТЭС и нужен заводу. Только на угольных залежах.'},
+  ironmine:{n:'Железный рудник',cat:'mine',cost:260*CAP,up:6,jobs:12,pow:-3,on:[HILL,MOUNT],dep:'iron',out:{iron:10},d:'10 железа для завода. Только на железных залежах.'},
+  goldmine:{n:'Золотой прииск',cat:'mine',cost:420*CAP,up:8,jobs:14,pow:-2,on:[HILL,MOUNT],dep:'gold',out:{gold:3},d:'3 золота. Внутри не нужно, но за границей стоит дороже всего.'},
+  factory:{n:'Механический завод',cat:'ind',cost:480*CAP,up:10,jobs:20,pow:-6,on:LANDB,in:{wood:4,iron:4,coal:2},out:{goods:10},d:'4 древесины + 4 железа + 2 угля → 10 товаров.'},
+  textile:{n:'Ткацкая фабрика',cat:'ind',cost:380*CAP,up:8,jobs:14,pow:-4,on:LANDB,in:{cotton:8},out:{cloth:8},d:'8 хлопка → 8 тканей. Жители покупают одежду на рынках.'},
+  cannery:{n:'Консервный завод',cat:'ind',cost:420*CAP,up:8,jobs:12,pow:-3,on:LANDB,in:{food:12},out:{cans:8},d:'12 еды → 8 консервов на экспорт. Берёт только излишки еды.'},
+  power:{n:'Угольная ТЭС',cat:'pow',cost:500*CAP,up:12,jobs:8,pow:60,fuel:{coal:4},on:LANDB,d:'60 энергии, сжигает 4 угля в месяц. Без угля мощность падает.'},
+  wind:{n:'Ветряк',cat:'pow',cost:140*CAP,up:2,jobs:1,pow:10,on:[SAND,GRASS,HILL],d:'10 энергии без топлива.'},
+  sub:{n:'Подстанция',cat:'pow',cost:90*CAP,up:1,on:LANDB,d:'Передаёт энергию дальше: работает, если сама стоит в зоне электричества.'},
+  shop:{n:'Рынок',cat:'svc',cost:150*CAP,up:3,jobs:6,pow:-1,serve:120,on:LANDB,d:'Продаёт товары, ткани и кофе до 120 жителям в своём ореоле и берёт наценку '+PCT(SHOPK.margin)+'%. Дом без рынка заселён на '+PCT(HOME.noShop)+'%.'},
+  school:{n:'Школа',cat:'svc',cost:300*CAP,up:6,jobs:8,pow:-1,on:LANDB,need:60,d:'Образованные жители получают зарплату до +'+PCT(ECO.schoolWage)+'%: больше налога и выше настроение.'},
+  clinic:{n:'Больница',cat:'svc',cost:400*CAP,up:8,jobs:10,pow:-2,on:LANDB,need:80,d:'Здоровье жителей в ореоле: заметно поднимает настроение.'},
+  police:{n:'Полиция',cat:'svc',cost:300*CAP,up:6,jobs:8,pow:-1,on:LANDB,need:120,d:'Без полиции в городе от 120 жителей растёт преступность.'},
+  store:{n:'Склад',cat:'com',cost:260*CAP,up:4,jobs:6,pow:-1,stor:300,on:LANDB,d:'+300 места под каждый ресурс, +25 к пропускной способности порта. Предприятия в ореоле склада работают быстрее.'},
+  port:{n:'Порт',cat:'com',cost:600*CAP,up:12,jobs:10,pow:-2,cap:60,on:[SAND,GRASS,FOREST],coast:1,d:'Торговля с другими странами, до 60 ед. в месяц. Ставится у воды.'},
+  barracks:{n:'Казарма',cat:'mil',cost:350*CAP,up:10,jobs:20,pow:-1,on:LANDB,need:60,d:'20 солдат. Опора фракции военных и лояльности армии, позже — сила в войне. Солдатам платят из казны.'},
+  park:{n:'Парк',cat:'svc',cost:80*CAP,up:1,park:1,on:LANDB,d:'Поднимает настроение домов в пешей доступности.'},
 };
 const RAD={hall:5,power:10,wind:5,sub:7,shop:6,park:4,school:6,clinic:7,police:7,store:8};
 const RADN={power:'энергия',shop:'рынок',park:'парк',school:'школа',clinic:'больница',police:'полиция',store:'склад'};
@@ -468,30 +482,30 @@ const MAPS=[
 /* ===== data/nations.js ===== */
 /* Соседние страны и типы кризисов. */
 const NATDEF=[
-  {id:'sol',n:'Солмар',gen:'Солмара',ins:'Солмаром',fest:['Торговый форум в Солмаре','Республика Солмар собирает купцов со всего архипелага и зовёт вашу делегацию.'],full:'Республика Солмар',col:'#e07a3f',rel:35,pop:4200,happy:60,money:30000,rate:.05,tar:.05,brel:30,hb:58,reg:'rep',
+  {id:'sol',n:'Солмар',gen:'Солмара',ins:'Солмаром',fest:['Торговый форум в Солмаре','Республика Солмар собирает купцов со всего архипелага и зовёт вашу делегацию.'],full:'Республика Солмар',col:'#e07a3f',rel:35,pop:4200,happy:60,money:30000*CAP,rate:.05,tar:.05,brel:30,hb:58,reg:'rep',
    sup:{food:140,cotton:70,coffee:25,wood:30},dem:{goods:45,iron:35,cloth:20,coal:25},
    trait:'Аграрная республика. Много еды и хлопка, не хватает товаров и железа. Дружелюбна, но бедна.'},
-  {id:'kar',n:'Кардон',gen:'Кардона',ins:'Кардоном',fest:['Парад в Кардоне','Железный союз Кардон приглашает вашу делегацию на смотр флота. Отказ там запомнят.'],full:'Железный союз Кардон',col:'#8a96a3',rel:-20,pop:9500,happy:47,money:60000,rate:.11,tar:.25,brel:-15,hb:46,aggr:1,reg:'auth',
+  {id:'kar',n:'Кардон',gen:'Кардона',ins:'Кардоном',fest:['Парад в Кардоне','Железный союз Кардон приглашает вашу делегацию на смотр флота. Отказ там запомнят.'],full:'Железный союз Кардон',col:'#8a96a3',rel:-20,pop:9500,happy:47,money:60000*CAP,rate:.11,tar:.25,brel:-15,hb:46,aggr:1,reg:'auth',
    sup:{coal:130,iron:110,goods:60,wood:40},dem:{food:100,coffee:25,cans:35,cloth:25},
    trait:'Индустриальная держава. Уголь и железо в избытке, вечно не хватает еды. Высокие пошлины и жёсткая политика.'},
-  {id:'ava',n:'Авалис',gen:'Авалиса',ins:'Авалисом',fest:['Королевский бал в Авалисе','Двор Авалиса ждёт посланников с подарками на праздник короны.'],full:'Королевство Авалис',col:'#c9a227',rel:10,pop:6000,happy:68,money:150000,rate:.07,tar:.12,brel:5,hb:66,reg:'mon',
+  {id:'ava',n:'Авалис',gen:'Авалиса',ins:'Авалисом',fest:['Королевский бал в Авалисе','Двор Авалиса ждёт посланников с подарками на праздник короны.'],full:'Королевство Авалис',col:'#c9a227',rel:10,pop:6000,happy:68,money:150000*CAP,rate:.07,tar:.12,brel:5,hb:66,reg:'mon',
    sup:{goods:40,cloth:40,cans:15},dem:{gold:20,coffee:45,cans:25,cotton:30},
    trait:'Богатая торговая монархия. Скупает золото и кофе, охотно даёт займы, но считает каждую монету.'},
 ];
 /* Сообщения соседей и обращения к ним. Промежутки — в месяцах. */
-/* decay: торговля за последний год считается скользящей суммой. minTrade: сколько кр в год считается заметной торговлей. poor: казна, ниже которой страна на мели. hardYears: на сколько месяцев убытка хватает казны, чтобы страна ещё не просила денег. */
-const DIPL={evGap:12,evChance:.25,actGap:12,noRepeat:3,aggrDrift:.2,decay:11/12,minTrade:300,poor:5000,hardMonths:12};
+/* decay: торговля за последний год считается скользящей суммой. minTrade: сколько кр в год считается заметной торговлей (в ценах товаров, они выросли в 2,2 раза). poor: казна, ниже которой страна на мели. hardYears: на сколько месяцев убытка хватает казны, чтобы страна ещё не просила денег. */
+const DIPL={evGap:12,evChance:.25,actGap:12,noRepeat:3,aggrDrift:.2,decay:11/12,minTrade:650,poor:5000*CAP,hardMonths:12};
 /* Числа сообщений. rel: [отношения при согласии, при отказе]. */
 const EVN={
   order:{mul:1.4,min:30,rel:[4,-2],from:-50,cap:60,round:5,wise:1.5},
   bargain:{mul:.6,amt:40,rel:[2,0],from:-30,lowMonths:3,cashK:2},
   relief:{amt:30,rel:[10,-3],from:-30,keep:2,wise:3},
-  summit:{cost:600,gap:60,rel:[7,-1],from:-40,to:RELK.friend,cashK:2},
-  dumping:{share:.15,min:200,max:1500,rel:[5,-5]},
+  summit:{cost:600*CAP,gap:60,rel:[7,-1],from:-40,to:RELK.friend,cashK:2},
+  dumping:{share:.15,min:200*CAP,max:1500*CAP,rel:[5,-5]},
   border:{mil:4,rel:[6,-7],below:-10},
-  debt:{share:.25,min:300,rel:[8,-3],wise:5000},
+  debt:{share:.25,min:300*CAP,rel:[8,-3],wise:5000*CAP},
   mediate:{rel:[6,-2],other:-6,from:15,wise:20},
-  envoy:{cost:200,until:60,rel:[5,-2]},
+  envoy:{cost:200*CAP,until:60,rel:[5,-2]},
 };
 const CRISES={
   drought:{n:'засуха',start:'засуха, урожай погиб',end:'засуха закончилась',h:-10,relief:{k:'food',why:'Засуха погубила урожай, людям нечего есть.'},sup:{food:.3,cotton:.3,coffee:.4},dem:{food:1.8}},
@@ -508,8 +522,8 @@ const GOVS={
   mon:{n:'Абсолютная монархия',d:'Выборов нет. Опора — армия и сословия. При слабости грозит переворот.'}};
 const DIFF={easy:{n:'Лёгкая',th:40,cr:.7,un:.7},norm:{n:'Нормальная',th:50,cr:1,un:1},hard:{n:'Тяжёлая',th:50,cr:1.5,un:1.4}};
 const FAC={
-  agr:{n:'Аграрии',m:'Землевладельцы',c:'#9ccf6a',w:'Дорогая еда, низкий налог на бизнес, мало ввоза еды. Любят страны, куда уходит наша еда и сырьё.',sab:'Поля, ранчо и рыбаки'},
-  ind:{n:'Промышленники',m:'Заводчики',c:'#8a96a3',w:'Загруженные заводы, энергия, склады, налог на бизнес до 12%. Не любят страны, чьи товары теснят наши.',sab:'Шахты, лесопилки и заводы'},
+  agr:{n:'Аграрии',m:'Землевладельцы',c:'#9ccf6a',w:'Дорогая еда, низкий налог на прибыль, мало ввоза еды. Любят страны, куда уходит наша еда и сырьё.',sab:'Поля, ранчо и рыбаки'},
+  ind:{n:'Промышленники',m:'Заводчики',c:'#8a96a3',w:'Загруженные заводы, энергия, склады, налог на прибыль до '+PCT(FACT.ind.bizFree)+'%. Не любят страны, чьи товары теснят наши.',sab:'Шахты, лесопилки и заводы'},
   trd:{n:'Торговцы',m:'Купечество',c:'#e0a83a',w:'Экспорт, низкие пошлины, договоры. Любят всех, с кем торгуем.',sab:'Порт и рынки'},
   peo:{n:'Народная партия',m:'Простой народ',c:'#e05a47',w:'Хорошее настроение и работа для всех. Ценят тех, кто кормит и одевает страну.',sab:'Злой народ раздувает протесты'},
   mil:{n:'Военные',m:'Офицерство',c:'#6b7f4e',w:'Казармы на 3–5% населения, полная казна. Против договоров с враждебными странами.',sab:'Лояльность армии'},
@@ -517,7 +531,7 @@ const FAC={
 /* Баланс фракций: места, саботаж, вес отношения к соседям. */
 const FACK={floor:4,share:70,lo:SCALE.crisis,loM:.9,hi:SCALE.top,hiM:1.05,natW:10,smooth:RATE.slow,soldierPct:.04,coupAngry:.004,peoUnrest:2,fanFrom:.25};
 const POSTS={
-  fin:{n:'Финансов',b:`Собираемость налогов +${PCT(MINK.fin)}% за уровень навыка.`,a:'Сам меняет подоходный налог и налог на бизнес, чтобы держать бюджет в плюсе.'},
+  fin:{n:'Финансов',b:`Собираемость налогов +${PCT(MINK.fin)}% за уровень навыка.`,a:'Сам меняет подоходный налог, чтобы держать бюджет в плюсе.'},
   trd:{n:'Торговли',b:`Экспортные цены +${PCT(MINK.trdPrice)}% и пропускная способность портов +${PCT(MINK.trdPort)}% за уровень.`,a:'Сам ставит пошлины и ведёт весь вывоз и ввоз, ваши кнопки в это время закрыты: осторожный защищает своих производителей, рисковый открывает рынок.'},
   dip:{n:'Иностранных дел',b:`Отношения со всеми +${COMMA(MINK.dipRel)} в месяц и ставка займов −${PCT(MINK.dipRate)}% за уровень.`,a:'Сам отвечает на просьбы и ультиматумы, подписывает договоры, помогает соседям.'},
   en:{n:'Энергетики',b:`Мощность электростанций +${PCT(MINK.enPow)}%, расход угля −${PCT(MINK.enCoal)}% за уровень.`,a:'Сам строит ветряки, а рисковый и ТЭС, когда не хватает энергии или здания остались без электричества. Ведёт ввоз угля, ваша кнопка в это время закрыта.'},
@@ -546,10 +560,10 @@ const TUT={
   layer:{h:'Слои карты',p:'Кнопка «Слой» показывает зоны: энергию, рынки, школы и путь рабочих до предприятий. Откройте меню и выберите любой слой.',hl:['#b-layer'],ui:1},
   region:{h:'Новые области',p:'Строить можно только в своих областях. Коснитесь затемнённой чужой области: увидите климат, залежи и цену. Купить её можно позже.',ui:1},
   saw:{h:'Добыча',p:'Сырьё дают лесопилки, шахты и фермы. Поставьте лесопилку у леса: чем больше деревьев вокруг, тем больше древесины.',cat:'mine',tool:'saw'},
-  port:{h:'Порт',p:'Порт продаёт излишки за границу и закупает нехватку. Поставьте его на берегу и соедините дорогой. Он стоит 600 кр.',cat:'com',tool:'port'},
+  port:{h:'Порт',p:`Порт продаёт излишки за границу и закупает нехватку. Поставьте его на берегу и соедините дорогой. Он стоит ${fmt(B.port.cost)} кр.`,cat:'com',tool:'port'},
   chain:{h:'Заводы',p:'Заводы превращают сырьё в дорогие товары. Механическому заводу нужны древесина, железо и уголь, ткацкой фабрике — хлопок. Чего нет, порт докупит, но дороже.',hl:['[data-c="ind"]'],next:1},
   econ:{h:'Экономика',p:'Откройте «Экономику»: налоги, бюджет, склад и цены. Посмотрите и закройте окно крестиком.',hl:['#b-econ'],ui:1},
-  tax:{h:'Налоги',p:`Откройте «Экономику» и сдвиньте любой налог. Выше налог — больше денег, но ниже настроение, а налог на бизнес выше ${PCT(TAXK.bizFree)}% тормозит предприятия.`,hl:['#b-econ']},
+  tax:{h:'Налоги',p:`Откройте «Экономику» и сдвиньте любой налог. Выше налог — больше денег, но ниже настроение: подоходный выше ${PCT(TAXK.incFree)}% злит людей. Там же видна зарплата и прибыль госпредприятий.`,hl:['#b-econ']},
   gov:{h:'Власть',p:'Откройте «Власть»: рейтинг, выборы или угроза переворота, парламент и министры. Посмотрите и закройте.',hl:['#b-gov'],ui:1},
   gov2:{h:'Министры и выборы',p:'Откройте «Власть». Назначьте министров: у каждого навык и черты, можно дать ему советовать или управлять самому. Следите за рейтингом — от него зависят выборы. Закройте окно, когда посмотрите.',hl:['#b-gov'],ui:1},
   world:{h:'Мир',p:'Откройте «Мир»: три соседа, отношения, договоры, займы и эмбарго. Посмотрите и закройте.',hl:['#b-world'],ui:1},
@@ -618,7 +632,7 @@ function newGame(mi){
   const W=genWorld(mi),z=v=>Object.fromEntries(RK.map(k=>[k,v]));
   const s={v:2,mi,type:W.type,elev:W.elev,reg:W.reg,regions:W.regions,hall:W.hall,
     bld:Array(N*N).fill(null),road:new Uint8Array(N*N),
-    money:START.money,pop:START.pop,happy:START.happy,month:0,tax:Object.assign({},START.tax),
+    money:START.money,hh:START.hh,wage:WAGE.start,pop:START.pop,happy:START.happy,month:0,tax:Object.assign({},START.tax),
     stock:Object.assign(z(0),START.stock),dom:Object.fromEntries(RK.map(k=>[k,RES[k].base])),
     trade:Object.fromEntries(RK.map(k=>[k,{e:1,i:1}])),goal:0,log:[],rep:null,
     nat:initNations(),loans:[],lent:[],mig:'open',ev:null,evAt:-99,evHist:[],evNid:null,tut:null};
@@ -650,7 +664,7 @@ function refreshMarkets(){for(const n of S.nat){const d=ND(n);
   for(const k of RK){n.dl[k]=Math.round((d.dem[k]||NATK.demOther)*crMul(n,k,'dem')*(n.pop/d.pop));n.sl[k]=Math.round((d.sup[k]||0)*crMul(n,k,'sup'))}}}
 function canTrade(n){return !n.emb}
 /* Месячный итог казны соседа. */
-function natBal(n){return n.pop*(n.happy-NATK.balHappy)/NATK.balDiv-(n.cr?n.pop*NATK.balCrisis:0)}
+function natBal(n){return(n.pop*(n.happy-NATK.balHappy)/NATK.balDiv-(n.cr?n.pop*NATK.balCrisis:0))*NATK.money}
 /* Торговля за последний год: скользящая сумма по ресурсам. */
 function tradeYear(y,cur){for(const k of new Set([...Object.keys(y),...Object.keys(cur||{})])){y[k]=(y[k]||0)*DIPL.decay+(cur&&cur[k]||0);if(y[k]<1)delete y[k]}}
 const sumV=o=>Object.values(o).reduce((a,v)=>a+v,0);
@@ -761,9 +775,9 @@ function evAnswer(yes,silent){
       if(e.t==='order'){S.stock[e.k]-=e.amt;S.money+=sum;n.money-=sum;L(`${d.n}: партия продана за ${fmt(sum)} кр.`)}
       else if(e.t==='bargain'){S.money-=sum;n.money+=sum;S.stock[e.k]+=e.amt;L(`${d.n}: партия куплена за ${fmt(sum)} кр.`)}
       else if(e.t==='relief'){S.stock[e.k]-=e.amt;L(`${d.n}: отправлена помощь, ${RES[e.k].n.toLowerCase()} ${e.amt} ед.`)}
-      else if(e.t==='summit'){S.money-=X.cost;L(`${d.fest[0]}: делегация принята.`)}
+      else if(e.t==='summit'){S.money-=X.cost;n.money+=X.cost;L(`${d.fest[0]}: делегация принята.`)}
       else if(e.t==='dumping'){S.money-=e.cost;n.money+=e.cost;L(`${d.n}: отступные выплачены.`)}
-      else if(e.t==='envoy'){S.money-=X.cost;L(`${d.n}: обменялись послами.`)}
+      else if(e.t==='envoy'){S.money-=X.cost;n.money+=X.cost;L(`${d.n}: обменялись послами.`)}
       else if(e.t==='border'){if(S.fac&&S.fac.mil)S.fac.mil.sat=Math.max(0,S.fac.mil.sat-X.mil);L(`${d.n}: вы принесли извинения.`)}
       else if(e.t==='debt'){const l=S.lent.find(x=>x.nid===n.id);l.left=Math.max(1,l.left-e.amt);L(`${d.n}: списано ${fmt(e.amt)} кр долга.`)}
       else if(e.t==='mediate'){const o=natById(e.oid);o.rel=Math.max(-RELK.max,Math.min(RELK.max,o.rel+X.other));L(`Вы поддержали ${d.n} в споре с ${ND(o).ins}.`)}
@@ -849,33 +863,49 @@ function census(){
   return c;
 }
 const addNK=(o,id,k,v)=>{const x=o[id]||(o[id]={});x[k]=(x[k]||0)+v};
+/* Предприятие — здание, которое продаёт продукцию или услугу: поля, добыча, заводы и рынки. У него свой счёт за месяц.
+   Все они пока государственные: итог счёта уходит в казну, убыток казна покрывает. Остальные места с работой — госслужба, зарплаты платит казна. */
+const isFirm=t=>!!B[t].out||t==='shop';
 /* Строки бюджета за месяц. Отчёт показывает ровно их, их сумма равна r.net (стандарт СТ2). */
 function budgetLines(r){return{
-  inc:[['Подоходный налог',r.inc],['Налог на бизнес',r.biz],['Импортные пошлины',r.dImp],['Экспортные пошлины',r.dExp],['Возврат ваших займов',r.loanIn]],
-  out:[['Содержание зданий и дорог',r.up],['Выплаты по займам',r.loanOut],['Проценты по долгу казны',r.int],['Зарплаты министров',r.sal],['Неучтённые расходы',r.theft,'Кто-то из министров ворует. Кто именно, станет ясно при скандале.'],['Гвардия',r.guard]].filter((x,i)=>i<3||x[1]>0)}}
-function upkeep(){let u=0;for(let i=0;i<N*N;i++){const b=S.bld[i];if(b)u+=B[b.t].up;if(S.road[i])u+=S.road[i]===2?ROADK.upBridge:ROADK.upRoad}return u}
+  inc:[['Подоходный налог',r.inc],['Прибыль госпредприятий',r.firmPlus],['Импортные пошлины',r.dImp],['Экспортные пошлины',r.dExp],['Продажа госзапасов',r.stockSale,'Со складов страны продано то, что в этом месяце никто не выпускал.'],['Возврат ваших займов',r.loanIn]].filter((x,i)=>i<4||x[1]>0),
+  out:[['Зарплаты госслужбы',r.pubW,'Ратуша, электростанции, школы, больницы, полиция, склады, порт и казармы.'],['Убытки госпредприятий',r.firmMinus],['Содержание зданий и дорог',r.up],['Уголь для ТЭС',r.fuelCost],['Выплаты по займам',r.loanOut],['Проценты по долгу казны',r.int],['Зарплаты министров',r.sal],['Неучтённые расходы',r.theft,'Кто-то из министров ворует. Кто именно, станет ясно при скандале.'],['Гвардия',r.guard]].filter((x,i)=>i<3||x[1]>0)}}
+/* Деньги из казны, которые уходят жителям страны: стройка, земля, подарки знати. Стандарт СТ1: деньги не исчезают. */
+function spend(v){S.money-=v;S.hh+=v}
+/* Доходы казны от налогов, пошлин и госпредприятий за месяц. */
+const taxIncome=r=>r.inc+r.firmPlus+r.dImp+r.dExp;
 
 function tick(){
   const c=census(),T=S.tax,st=S.stock,z=()=>Object.fromEntries(RK.map(k=>[k,0]));
-  const r={bs:{},impH:0,impB:0,inc:0,biz:0,dImp:0,dExp:0,up:0,int:0,loanIn:0,loanOut:0,sal:0,theft:0,guard:0,auto:0,prod:z(),cons:z(),exp:z(),imp:z(),need:z(),expV:0,impV:0,
-    best:{},dest:{},xn:{},mn:{},sat:{},short:{food:0,inputs:0},run:{},ev:[],mig:{}};
+  const r={bs:{},fin:{},impH:0,inc:0,dImp:0,dExp:0,up:0,int:0,loanIn:0,loanOut:0,sal:0,theft:0,guard:0,auto:0,pubW:0,fuelCost:0,firmPlus:0,firmMinus:0,stockSale:0,shop:0,fx:0,hhBuy:0,
+    prod:z(),cons:z(),exp:z(),imp:z(),need:z(),expV:0,impV:0,best:{},dest:{},xn:{},mn:{},sat:{},short:{food:0,inputs:0},run:{},ev:[],mig:{}};
   if(!S.nat[0].dl.food)refreshMarkets();
   c.ports=Math.round(c.ports*(1+MINK.trdPort*M('trd')));let cap=c.ports;const port=cap>0;
-  const buy=(k,q,who)=>{q=Math.ceil(q);if(!port||!S.trade[k].i||q<=0)return;
+  /* Покупка за рубежом: pay(v) списывает сумму с покупателя, lim — сколько у него денег. Сосед получает цену, казна — пошлину. */
+  const buy=(k,q,pay,lim=Infinity)=>{q=Math.ceil(q);let got=0;if(!port||!S.trade[k].i||q<=0)return 0;
     const ns=S.nat.filter(n=>canTrade(n)&&n.sl[k]>0).sort((a,b)=>natSell(a,k)-natSell(b,k));
-    for(const n of ns){if(q<=0||cap<=0)break;const x=Math.min(q,cap,n.sl[k]);const p=natSell(n,k),v=x*p;
-      const du=n.deal?0:T.imp;n.sl[k]-=x;cap-=x;q-=x;st[k]+=x;r.imp[k]+=x;r.impV+=v;r.dImp+=v*du;n.money+=v;if(who==='h')r.impH+=v*(1+du);else r.impB+=v;r.dest[n.id]=(r.dest[n.id]||0)+v;addNK(r.mn,n.id,k,v)}};
-  // fuel
-  const fuelNeed=c.coalPl*B.power.fuel.coal*(1-MINK.enCoal*M('en'));if(st.coal<fuelNeed)buy('coal',fuelNeed-st.coal);
-  const fr=c.coalPl?Math.min(1,st.coal/fuelNeed):1;st.coal-=fuelNeed*fr;r.cons.coal+=fuelNeed*fr;r.need.coal+=fuelNeed;r.fuel=fr;
+    for(const n of ns){if(q<=0||cap<=0)break;const p=natSell(n,k),du=n.deal?0:T.imp,x=Math.min(q,cap,n.sl[k],Math.floor(lim/(p*(1+du))));if(x<=0)break;const v=x*p;
+      n.sl[k]-=x;cap-=x;q-=x;got+=x;lim-=v*(1+du);st[k]+=x;r.imp[k]+=x;r.impV+=v;r.dImp+=v*du;n.money+=v;r.fx-=v;pay(v*(1+du));r.dest[n.id]=(r.dest[n.id]||0)+v;addNK(r.mn,n.id,k,v)}
+    return got};
+  /* Своя продукция по внутренней цене: деньги идут в общую выручку ресурса, её делят те, кто его выпустил. */
+  const pool=z(),sell=(k,q,pay)=>{if(q<=0)return;const v=q*S.dom[k];st[k]-=q;pool[k]+=v;pay(v)};
+  // зарплаты: одна ставка на страну, со школами выше. Предприятия платят со своего счёта, госслужбу оплачивает казна.
+  const W=S.wage*(1+ECO.schoolWage*c.cv.school);r.W=W;let firmW=0;
+  for(const i of c.list){const t=S.bld[i].t,d=B[t],w=(d.jobs||0)*(c.st[i]||0);
+    if(isFirm(t)){r.fin[i]={rev:0,inp:0,wage:w*W,mgr:0,up:d.up,w};firmW+=w}else r.pubW+=w*W}
+  r.mgr=firmW>0?c.richPop*W*WAGE.richMul:0;if(firmW>0)for(const i in r.fin)r.fin[i].mgr=r.mgr*r.fin[i].w/firmW;
+  r.wages=r.pubW+r.mgr+Object.values(r.fin).reduce((a,f)=>a+f.wage,0);
+  r.inc=Math.min(r.wages,r.wages*T.inc*(1+MINK.fin*M('fin')));S.hh+=r.wages-r.inc;
+  // fuel: ТЭС — госслужба, уголь покупает казна
+  const fuelNeed=c.coalPl*B.power.fuel.coal*(1-MINK.enCoal*M('en')),coal0=st.coal,toFuel=v=>{r.fuelCost+=v};if(st.coal<fuelNeed)buy('coal',fuelNeed-st.coal,toFuel);
+  const fr=c.coalPl?Math.min(1,st.coal/fuelNeed):1,burn=fuelNeed*fr,own=Math.min(coal0,burn);sell('coal',own,toFuel);st.coal-=burn-own;r.cons.coal+=burn;r.need.coal+=fuelNeed;r.fuel=fr;
   c.sup=Math.max(0,c.sup-c.coalSup*(1-fr));c.pr=c.use>0?Math.max(0,Math.min(1,c.sup/c.use)):1;
   // primary production
-  const bizPen=Math.max(0,T.biz-TAXK.bizFree)*TAXK.bizPen,eff=Math.max(0,1-bizPen);r.eff=eff;r.bizPen=bizPen;
   const agg={};
   const small=c.prodN<=PROD.smallCity;let lgSum=0;
   for(const i of c.list){const b=S.bld[i],d=B[b.t];if(!d.out)continue;const lg=small||COV.store[i]?1:PROD.noStore;lgSum+=lg;
-    const P={staff:c.st[i]||0,power:d.pow<0?(PW[i]?c.pr:PROD.noPower):1,commute:dfac(wdist(i)),log:lg,tax:eff,fac:facM(sphereOf(b.t))};
-    const e=P.staff*P.power*P.commute*P.log*P.tax*P.fac;
+    const P={staff:c.st[i]||0,power:d.pow<0?(PW[i]?c.pr:PROD.noPower):1,commute:dfac(wdist(i)),log:lg,fac:facM(sphereOf(b.t))};
+    const e=P.staff*P.power*P.commute*P.log*P.fac;
     if(d.in){P.minister=1+MINK.ind*M('ind');agg[b.t]=(agg[b.t]||0)+e*P.minister;r.bs[i]={P,e:e*P.minister};continue}
     if(d.fert)P.fert=fert(i);if(b.t==='saw')P.forest=PROD.forestBase+PROD.forestAdd*forestNear(i);if(d.dep&&S.type[i]===MOUNT)P.mount=PROD.mount;if(b.t==='cotton'&&regOf(i).warm)P.warm=PROD.warm;
     if(d.out.food||d.out.coffee||d.out.cotton)P.minister=1+MINK.agr*M('agr');else P.minister=1+MINK.ind*M('ind');
@@ -886,17 +916,20 @@ function tick(){
   const served=Math.min(S.pop*c.cv.shop,c.serve),richPop=c.richPop;
   const nF=S.pop*NEED.food;
   // industry
-  for(const t of['factory','textile','cannery']){const a=agg[t];if(!a)continue;const d=B[t];
-    for(const k in d.in){const need=d.in[k]*a;r.need[k]+=need;if(k!=='food'&&st[k]<need)buy(k,need-st[k])}
+  for(const t of['factory','textile','cannery']){const a=agg[t];if(!a)continue;const d=B[t],own0={};let cost=0;const toInp=v=>{cost+=v};
+    for(const k in d.in){const need=d.in[k]*a;r.need[k]+=need;own0[k]=st[k];if(k!=='food'&&st[k]<need)buy(k,need-st[k],toInp)}
     let run=1,lim=null;for(const k in d.in){const av=st[k]-(k==='food'?nF*NEED.canReserve:0),q=Math.max(0,av)/(d.in[k]*a);if(q<run){run=q;lim=k}}r.lim=r.lim||{};r.lim[t]=run<PROD.limRun?lim:null;run=Math.max(0,Math.min(1,run));
-    for(const k in d.in){const u=d.in[k]*a*run;st[k]-=u;r.cons[k]+=u}for(const k in d.out){const o=d.out[k]*a*run;st[k]+=o;r.prod[k]+=o}
+    for(const k in d.in){const u=d.in[k]*a*run,own=Math.min(own0[k],u);sell(k,own,toInp);st[k]-=u-own;r.cons[k]+=u}for(const k in d.out){const o=d.out[k]*a*run;st[k]+=o;r.prod[k]+=o}
     r.run[t]=run;
-    for(const i in r.bs){const x=r.bs[i];if(x.e===undefined||S.bld[i].t!==t)continue;x.run=run;x.out={};x.inp={};x.need={};
+    for(const i in r.bs){const x=r.bs[i];if(x.e===undefined||S.bld[i].t!==t)continue;x.run=run;x.out={};x.inp={};x.need={};r.fin[i].inp+=cost*x.e/a;
       for(const k in d.out)x.out[k]=d.out[k]*x.e*run;for(const k in d.in){x.inp[k]=d.in[k]*x.e*run;x.need[k]=d.in[k]*x.e}}
     if(t!=='cannery'&&run<PROD.shortRun)r.short.inputs=Math.max(r.short.inputs,1-run)}
-  // consumers
+  // consumers: жители платят из своего кошелька, сначала еда. Рынок берёт наценку на товары, ткани и кофе.
   const need={food:nF,goods:served*NEED.goods,cloth:served*NEED.cloth,coffee:served*NEED.coffee+richPop*c.cv.shop*NEED.coffeeRich};
-  for(const k in need){const q=need[k];r.need[k]+=q;if(st[k]<q)buy(k,q-st[k],'h');const e=Math.min(st[k],q);st[k]-=e;r.cons[k]+=e;r.sat[k]=q>0?e/q:1}
+  for(const k in need){const q=need[k],m=SHOPK.goods.includes(k)?SHOPK.margin:0,toHH=v=>{S.hh-=v*(1+m);r.shop+=v*m;r.hhBuy+=v*(1+m)};r.need[k]+=q;
+    const dq=Math.max(0,Math.min(q,st[k],S.hh/(S.dom[k]*(1+m))));sell(k,dq,toHH);
+    let iq=0;if(q-dq>0&&S.hh>0){const h0=S.hh;iq=Math.min(q-dq,buy(k,q-dq,toHH,S.hh/(1+m)));st[k]-=iq;r.impH+=h0-S.hh}
+    r.cons[k]+=dq+iq;r.sat[k]=q>0?(dq+iq)/q:1}
   r.short.food=1-r.sat.food;
   // exports: best price first
   const xf=Math.max(0,1-T.exp*TAXK.expCut),reserve=k=>r.need[k]*TRADEK.reserveMonths;
@@ -907,20 +940,32 @@ function tick(){
     if(!port||!S.trade[k].e)continue;
     let sur=st[k]-reserve(k);
     for(const n of ns){if(sur<1||cap<1)break;const p=natBuy(n,k)*(1+MINK.trdPrice*M('trd')),q=Math.floor(Math.min(sur,cap,n.dl[k],Math.max(0,n.money+TRADEK.debtFloor)/p)*xf);if(q<1)continue;
-      const v=q*p*(1-natTariff(n));n.dl[k]-=q;cap-=q;sur-=q;st[k]-=q;r.exp[k]+=q;r.expV+=v;r.dExp+=v*T.exp;
-      n.money-=q*p;n.rel=Math.min(100,n.rel+q*TRADEK.relPerUnit);r.dest[n.id]=(r.dest[n.id]||0)+v;addNK(r.xn,n.id,k,v)}}
+      const v=q*p*(1-natTariff(n));n.dl[k]-=q;cap-=q;sur-=q;st[k]-=q;r.exp[k]+=q;r.expV+=v;r.dExp+=v*T.exp;pool[k]+=v*(1-T.exp);
+      n.money-=v;r.fx+=v;n.rel=Math.min(100,n.rel+q*TRADEK.relPerUnit);r.dest[n.id]=(r.dest[n.id]||0)+v;addNK(r.xn,n.id,k,v)}}
   for(const k of RK){st[k]=Math.max(0,st[k]);if(st[k]>c.cap){st[k]=c.cap;if(!(S.month%6))r.ev.push(`Склады переполнены: ${RES[k].n.toLowerCase()} портится. Стройте склады или продавайте через порт.`)}}
   r.portUse=c.ports?1-cap/c.ports:0;
   // domestic prices
   for(const k of RK){const sup=Math.max(0,r.prod[k]+r.imp[k]+st[k]*PRICEK.stockShare),dem=Math.max(0,r.need[k]);
     const target=dem<PRICEK.noDemand?RES[k].base*PRICEK.noDemandPrice:RES[k].base*Math.max(PRICEK.min,Math.min(PRICEK.max,Math.pow((dem+PRICEK.pad)/(sup+PRICEK.pad),PRICEK.pow)));S.dom[k]+=(target-S.dom[k])*PRICEK.speed}
-  // budget
-  const sold=RK.reduce((a,k)=>a+r.cons[k]*S.dom[k],0)+r.expV;
-  r.wages=c.emp*ECO.wage*(1+ECO.schoolWage*c.cv.school)+richPop*ECO.richIncome;r.inc=r.wages*T.inc;r.biz=Math.max(0,sold-r.impB)*T.biz*(1+MINK.fin*M('fin'));r.inc*=1+MINK.fin*M('fin');r.up=upkeep();r.int=S.money<0?-S.money*ECO.interest:0;
-  for(const L of S.loans){const p=Math.min(L.left,L.pay);L.left-=p;r.loanOut+=p;natById(L.nid).money+=p}S.loans=S.loans.filter(L=>L.left>ECO.loanDust);
-  for(const L of S.lent){const n=natById(L.nid);if(n.money<0&&Math.random()<ECO.lateChance){r.ev.push(`${ND(n).n} задерживает выплату по вашему займу.`);continue}const p=Math.min(L.left,L.pay);L.left-=p;n.money-=p;r.loanIn+=p}
+  // выручка ресурса делится между теми, кто выпустил его в этом месяце. Если никто не выпускал — продан госзапас, деньги в казну.
+  const outBy=z();for(const i in r.bs){const o=r.bs[i].out;if(o)for(const k in o)outBy[k]+=o[k]}
+  for(const k of RK){if(pool[k]<=0)continue;if(outBy[k]>0){for(const i in r.bs){const o=r.bs[i].out;if(o&&o[k]>0)r.fin[i].rev+=pool[k]*o[k]/outBy[k]}}else r.stockSale+=pool[k]}
+  // наценка рынков делится по тому, скольких покупателей обслужил каждый рынок
+  const shops=Object.keys(r.fin).filter(i=>S.bld[i].t==='shop'&&PW[i]),sw=shops.reduce((a,i)=>a+(c.st[i]||0),0);
+  if(sw>0)for(const i of shops)r.fin[i].rev+=r.shop*(c.st[i]||0)/sw;else r.stockSale+=r.shop;
+  // содержание: предприятия платят сами, остальное казна. Деньги получают жители — те, кто чинит и обслуживает
+  let upF=0;for(let i=0;i<N*N;i++){const b=S.bld[i];if(b&&!r.fin[i])r.up+=B[b.t].up;if(S.road[i])r.up+=S.road[i]===2?ROADK.upBridge:ROADK.upRoad}
+  // итог счёта предприятия уходит в казну, убыток казна покрывает
+  for(const i in r.fin){const f=r.fin[i];upF+=f.up;f.net=f.rev-f.inp-f.wage-f.mgr-f.up;if(f.net>=0)r.firmPlus+=f.net;else r.firmMinus-=f.net}
+  r.int=S.money<0?-S.money*ECO.interest:0;S.hh+=r.up+upF+r.int;
+  for(const L of S.loans){const p=Math.min(L.left,L.pay);L.left-=p;r.loanOut+=p;r.fx-=p;natById(L.nid).money+=p}S.loans=S.loans.filter(L=>L.left>ECO.loanDust);
+  for(const L of S.lent){const n=natById(L.nid);if(n.money<0&&Math.random()<ECO.lateChance){r.ev.push(`${ND(n).n} задерживает выплату по вашему займу.`);continue}const p=Math.min(L.left,L.pay);L.left-=p;n.money-=p;r.loanIn+=p;r.fx+=p}
   S.lent=S.lent.filter(L=>L.left>ECO.loanDust);
-  r.net=r.inc+r.biz+r.dImp+r.dExp+r.loanIn-r.up-r.int-r.loanOut;S.money+=r.net;
+  r.net=r.inc+r.firmPlus+r.dImp+r.dExp+r.stockSale+r.loanIn-r.pubW-r.firmMinus-r.up-r.fuelCost-r.loanOut-r.int;S.money+=r.net;
+  // ставка зарплаты на следующий месяц: доля стоимости, которую создал рабочий предприятия, с поправкой на нехватку рабочих
+  let va=0,vw=0;for(const i in r.fin){if(!B[S.bld[i].t].out)continue;va+=r.fin[i].rev-r.fin[i].inp;vw+=r.fin[i].w}
+  if(vw>0){const tight=c.work>0?c.jobs/c.work:1,f=Math.max(WAGE.tightMin,Math.min(WAGE.tightMax,1+WAGE.tight*(tight-1)));
+    r.vaW=va/vw;r.wageTgt=Math.max(WAGE.min,Math.min(WAGE.max,WAGE.share*r.vaW*f/(1+ECO.schoolWage*c.cv.school)));S.wage+=(r.wageTgt-S.wage)*WAGE.speed}
   // mood
   const unemp=c.work>0?(c.work-c.emp)/c.work:0;
   const sh=S.pop>0?served/S.pop:0;
@@ -988,7 +1033,7 @@ function canBuild(tool,i){
   const cost=d.cost+(t===FOREST?ROADK.forestClear:0);return{ok:S.money>=cost,cost,why:S.money<cost?'Не хватает денег':''};
 }
 function place(tool,i){
-  const q=canBuild(tool,i);if(!q.ok)return q;S.money-=q.cost;
+  const q=canBuild(tool,i);if(!q.ok)return q;spend(q.cost);
   if(tool==='bull'){if(S.bld[i])S.bld[i]=null;else S.road[i]=0}
   else if(tool==='road'){S.road[i]=S.type[i]<=SHAL?2:1;if(S.type[i]===FOREST)S.type[i]=GRASS}
   else{S.bld[i]={t:tool};if(S.type[i]===FOREST)S.type[i]=GRASS}
@@ -996,7 +1041,7 @@ function place(tool,i){
 }
 function roadPath(a,b){const bx=b%N,by=b/N|0;let x=a%N,y=a/N|0;const p=[y*N+x];
   while(x!==bx){x+=Math.sign(bx-x);p.push(y*N+x)}while(y!==by){y+=Math.sign(by-y);p.push(y*N+x)}return p}
-function buyRegion(k){const g=S.regions[k];if(g.own||S.money<g.price)return false;S.money-=g.price;g.own=1;S.log.unshift({m:S.month,t:`Куплена область «${g.n}» за ${fmt(g.price)} кр.`});return true}
+function buyRegion(k){const g=S.regions[k];if(g.own||S.money<g.price)return false;spend(g.price);g.own=1;S.log.unshift({m:S.month,t:`Куплена область «${g.n}» за ${fmt(g.price)} кр.`});return true}
 function advisor(c){
   const r=S.rep;
   if(S.ev)return'';
@@ -1017,8 +1062,8 @@ function advisor(c){
   if(c.log<ADV.log)return`Логистика ${Math.round(c.log*100)}%: поставьте склад рядом с предприятиями.`;
   if(r&&r.short.inputs>ADV.inputs)return'Заводам не хватает сырья. Добывайте или закупайте через порт.';
   if(r&&r.sat.goods<ADV.goods&&c.serve>0)return'На рынках мало товаров. Нужен завод или импорт.';
-  if(r&&r.bizPen>0)return`Налог на бизнес выше ${PCT(TAXK.bizFree)}% снижает выработку предприятий.`;
-  if(r&&r.sal&&r.sal+r.theft>(r.inc+r.biz+r.dImp+r.dExp)*ADV.cabinet)return`Кабинет министров обходится в ${Math.round((r.sal+r.theft)/Math.max(1,r.inc+r.biz+r.dImp+r.dExp)*100)}% доходов казны. Для такого города это дорого.`;
+  if(r&&r.firmMinus>r.firmPlus&&r.firmMinus>ADV.firmLoss){const n=Object.values(r.fin).filter(f=>f.net<0).length;return`Госпредприятия в убытке: ${n} ${plural(n,'предприятие','предприятия','предприятий')} теряют ${fmt(r.firmMinus)} кр в месяц. Осмотрите их: нет сбыта, сырья или рабочих.`}
+  if(r&&r.sal&&r.sal+r.theft>taxIncome(r)*ADV.cabinet)return`Кабинет министров обходится в ${Math.round((r.sal+r.theft)/Math.max(1,taxIncome(r))*100)}% доходов казны. Для такого города это дорого.`;
   return'';
 }
 
@@ -1027,7 +1072,7 @@ function advisor(c){
 function mkCand(post){const R=Math.random;const sk=1+Math.floor(R()*CAND.skill),f=FN[Math.floor(R()*FN.length)],l=LN[Math.floor(R()*LN.length)];
   const fem=/а$|я$/.test(f)&&f!=='Захар',ln=fem&&!/а$/.test(l)?l+'а':(!fem&&/а$/.test(l)?l.slice(0,-1):l);
   return{id:Math.random().toString(36).slice(2,8),name:`${f} ${ln}`,sk,hon:R()<CAND.hon,loy:R()<CAND.loy,risk:R()<CAND.risk,sal:CAND.salBase+sk*sk*CAND.salK+(R()*CAND.salRand|0)}}
-function govInit(s,gov,diff){s.v=4;s.gov=gov;s.diff=diff;s.nextEl=GOVK.term;s.unrest=0;s.appr=GOVK.appr0;s.army=GOVK.army0;s.guard=0;s.bribe=0;s.hist=[];s.over=null;s.reformAt=0;
+function govInit(s,gov,diff){s.v=5;s.gov=gov;s.diff=diff;s.nextEl=GOVK.term;s.unrest=0;s.appr=GOVK.appr0;s.army=GOVK.army0;s.guard=0;s.bribe=0;s.hist=[];s.over=null;s.reformAt=0;
   s.fac=Object.fromEntries(Object.entries(GOVK.sat0).map(([f,sat])=>[f,{sat}]));s.seats=Object.assign({},GOVK.seats0);s.fatt=fattInit(s);
   s.min={};s.cand={};for(const p in POSTS)s.cand[p]=[mkCand(p),mkCand(p),mkCand(p)];s.warned={}}
 const M=p=>S&&S.min&&S.min[p]?S.min[p].sk:0;
@@ -1052,9 +1097,7 @@ function ministerTurn(p,c,r,doIt){
   const act=(type,isT,why)=>{if(!doIt)return why;if(can<B[type].cost)return why+' Ждёт денег.';const i=autoBuild(type,isT);if(i>=0){S.log.unshift({m:S.month,t:`${m.name}: построен ${B[type].n.toLowerCase()}. ${why}`});return why}return why};
   const hasB=(i,f)=>{const b=S.bld[i];return b&&CONN[i]&&f(B[b.t],i,b)};
   if(p==='fin'){if((r.net<0||S.money<0)&&S.happy>AUTO.finMood[risk?0:1]){if(doIt&&T.inc<AUTO.finInc[risk?0:1])T.inc=+(T.inc+AUTO.step).toFixed(2);return'Бюджет в минусе: советую поднять подоходный налог на 1%.'}
-    if(r.net<0&&T.biz<TAXK.bizFree){if(doIt)T.biz=+(T.biz+AUTO.step).toFixed(2);return'Бюджет в минусе, а люди недовольны: поднимем налог на бизнес, не трогая людей.'}
     if(S.happy<AUTO.finCalm&&T.inc>AUTO.finCalmInc){if(doIt)T.inc=+(T.inc-AUTO.step).toFixed(2);return'Люди на грани протестов: снизим подоходный налог.'}
-    if(T.biz>TAXK.bizFree){if(doIt)T.biz=TAXK.bizFree;return`Налог на бизнес выше ${Math.round(TAXK.bizFree*100)}% душит предприятия, верните ${Math.round(TAXK.bizFree*100)}%.`}
     if(S.money>AUTO.finRich&&S.happy<AUTO.finRichMood&&T.inc>AUTO.finRichInc){if(doIt)T.inc=+(T.inc-AUTO.step).toFixed(2);return'Казна полна, а люди недовольны: снизим подоходный на 1%.'}return'Бюджет в порядке.'}
   if(p==='trd'){const ti=AUTO.tradeImp[risk?0:1],te=AUTO.tradeExp[risk?0:1];let s='Пошлины в норме.';
     if(Math.abs(T.imp-ti)>AUTO.eps){s=`Советую импортную пошлину ${Math.round(ti*100)}%: ${risk?'дешёвый импорт оживит торговлю':'защитим своих производителей'}.`;if(doIt)T.imp=+(T.imp+Math.sign(ti-T.imp)*AUTO.step).toFixed(2)}
@@ -1106,13 +1149,19 @@ function migrateSave(o){if(o.v===3){o.fac.mil={sat:50};o.fac.int={sat:50};o.seat
   /* торговля за год для обоснованных сообщений; сообщение старого вида без причины снимаем */
   o.nat.forEach(n=>{n.xy=n.xy||{};n.my=n.my||{}});if(o.ev&&!o.ev.r)o.ev=null;
   /* гвардия существует только при монархии */
-  if(o.gov!=='mon')o.guard=0;return o}
+  if(o.gov!=='mon')o.guard=0;
+  /* v4 → v5: кошельки и новый масштаб денег. Разовые суммы × CAP, цены заново от базовых, подоходный налог +5% к новой норме. */
+  if(o.v===4){const sc=l=>{l.left*=CAP;l.pay*=CAP};o.money*=CAP;o.hh=START.hh;o.wage=WAGE.start;o.loans.forEach(sc);o.lent.forEach(sc);
+    o.nat.forEach(n=>{n.money*=CAP});o.regions.forEach(g=>{g.price*=CAP});o.dom=Object.fromEntries(RK.map(k=>[k,RES[k].base]));
+    o.tax.inc=Math.min(TAXK.incMax,o.tax.inc+TAXK.incFree-TAXK.incFreeOld);o.tax.biz=START.tax.biz;o.hist=[];o.ev=null;o.v=5}
+  return o}
 /* indicators and politics, called after the month is computed */
 function govTick(r,c){
   const D=DIFF[S.diff],T=S.tax,L=t=>S.log.unshift({m:S.month,t});
   // ministers: salaries, theft, autopilot, plots
-  let sal=0,theft=0;for(const p in S.min){const m=S.min[p];sal+=m.sal;if(!m.hon)theft+=p==='fin'?(r.inc+r.biz)*CABK.theftFin:CABK.theftBase+m.sk*CABK.theftSkill}
-  r.sal=sal;r.theft=theft;S.money-=sal+theft;r.net-=sal+theft;
+  let sal=0,theft=0;for(const p in S.min){const m=S.min[p];sal+=m.sal;if(!m.hon)theft+=p==='fin'?r.inc*CABK.theftFin:CABK.theftBase+m.sk*CABK.theftSkill}
+  /* Министры — тоже жители: зарплата и украденное остаются в стране. */
+  r.sal=sal;r.theft=theft;spend(sal+theft);r.net-=sal+theft;
   const cash0=S.money;
   for(const p in S.min){const m=S.min[p];m.tip=ministerTurn(p,c,r,!!m.auto);
     if(!m.hon&&Math.random()<CABK.caught){S.appr-=CABK.caughtAppr;L(`Скандал: министр ${m.name} уличён в хищениях и снят с поста. Рейтинг падает.`);fire(p,true);continue}
@@ -1148,7 +1197,7 @@ function govTick(r,c){
   let du=(S.happy<UNR.below?(UNR.below-S.happy)*UNR.rise:-UNR.calm)+(S.fac.peo.sat<FACK.lo?FACK.peoUnrest:0)+(S.money<UNR.broke?UNR.brokeAdd:0)+(r.short.food>UNR.hunger?UNR.hungerAdd:0)+(S.appr<UNR.apprBelow?UNR.apprAdd:0);du*=du>0?D.un*(1-MINK.mvdUnrest*M('mvd')):1;
   S.unrest=Math.max(0,Math.min(100,S.unrest+du));
   if(S.gov==='mon'){S.army+=((ARMY.base+S.fac.mil.sat*ARMY.mil+S.guard*ARMY.guard+(S.money>0?ARMY.rich:ARMY.broke)+(S.happy-50)*ARMY.mood+(S.appr-50)*ARMY.appr)-S.army)*ARMY.speed;
-    if(S.guard){r.guard=ARMY.guardCost;S.money-=r.guard;r.net-=r.guard}}
+    if(S.guard){r.guard=ARMY.guardCost;spend(r.guard);r.net-=r.guard}}
   const coup=S.gov==='mon'?Math.max(0,(ARMY.coupBelow-S.army)/100*ARMY.coupArmy+(S.unrest/100)*ARMY.coupUnrest+Object.values(S.min).filter(m=>!m.loy).length*(S.appr<ARMY.coupPlotAppr?ARMY.coupPlot:0)+['agr','ind','trd'].filter(f=>S.fac[f].sat<FACK.lo).length*FACK.coupAngry):0;
   S.coup=coup;S.parl=parl;
   h.push({m:S.month,gdp,cpi,infl,debt,pop:S.pop,happy:S.happy,unemp:r.unemp,money:S.money,appr:S.appr,trade:r.expV-r.impV,net:r.net,parl,unrest:S.unrest});if(h.length>240)h.shift();
@@ -1167,11 +1216,11 @@ function govTick(r,c){
 function endGame(reason){S.over={reason,month:S.month};S.log.unshift({m:S.month,t:reason})}
 /* Гвардия есть только при монархии. */
 function toggleGuard(){if(S.gov!=='mon')return'Гвардия бывает только при монархии';S.guard=S.guard?0:1;return S.guard?'Гвардия набрана':'Гвардия распущена'}
-function bribe(){if(S.money<BRIBE.cost)return'Не хватает денег';S.money-=BRIBE.cost;S.bribe+=BRIBE.sat;S.army+=BRIBE.army;S.log.unshift({m:S.month,t:'Знать получила щедрые подарки из казны.'});return'Сословия довольны'}
+function bribe(){if(S.money<BRIBE.cost)return'Не хватает денег';spend(BRIBE.cost);S.bribe+=BRIBE.sat;S.army+=BRIBE.army;S.log.unshift({m:S.month,t:'Знать получила щедрые подарки из казны.'});return'Сословия довольны'}
 function reform(to){
   const ok=S.gov==='mon'?(S.army>=REFORM.army&&S.appr>=REFORM.appr):(S.parl>=REFORM.parl);if(S.gov===to)return'Уже так';if(S.month<S.reformAt)return'Реформа возможна раз в 5 лет';
   if(!ok)return S.gov==='mon'?`Нужны лояльность армии от ${REFORM.army} и рейтинг от ${REFORM.appr}`:`Нужна поддержка парламента от ${REFORM.parl}%`;if(S.money<REFORM.cost)return`Реформа стоит ${fmt(REFORM.cost)} кр`;
-  S.money-=REFORM.cost;const from=S.gov;S.gov=to;S.reformAt=S.month+REFORM.gap;S.nextEl=S.month+GOVK.term;
+  spend(REFORM.cost);const from=S.gov;S.gov=to;S.reformAt=S.month+REFORM.gap;S.nextEl=S.month+GOVK.term;
   if(to==='mon')S.happy+=REFORM.toMon;if(from==='mon'){S.happy+=REFORM.fromMon;if(S.guard){S.guard=0;S.log.unshift({m:S.month,t:'Гвардия распущена вместе с монархией.'})}}const sol=natById('sol'),ava=natById('ava');if(to==='mon'){ava.rel+=REFORM.monAva;sol.rel+=REFORM.monSol}else if(from==='mon'){sol.rel+=REFORM.repSol;ava.rel+=REFORM.repAva}
   S.log.unshift({m:S.month,t:`Реформа: страна стала «${GOVS[to].n}».`});return`Теперь у вас ${GOVS[to].n.toLowerCase()}`}
 
@@ -1567,16 +1616,17 @@ function bInfo(i,b,c){
   if(d.pow>0){const p=t==='hall'?d.pow:Math.round(d.pow*s*(d.fuel&&r?r.fuel:1));top.push([`+${p}`,'энергии',`Номинал ${d.pow}. Зависит от рабочих${d.fuel?' и угля':''}.`])}
   if(d.serve){top.push([Math.round(d.serve*s*(on?1:0)),'покупателей','Сколько жителей рынок может обслужить с текущим штатом.'])}
   if(d.cap){top.push([Math.round(d.cap*s*(on?1:0)),'ед. в месяц','Пропускная способность этого порта.'])}
-  if(d.up)top.push([`−${d.up}`,'кр/мес казне','Содержание здания из бюджета.']);
+  const fin=r&&r.fin?r.fin[i]:null,firm=isFirm(t);
+  if(fin)top.push([money(fin.net),fin.net>=0?'кр/мес в казну':'кр/мес из казны','Итог счёта предприятия за прошлый месяц: выручка минус сырьё, зарплаты и содержание. Предприятие государственное: прибыль идёт в казну, убыток казна покрывает.']);
+  else if(d.up)top.push([`−${d.up}`,'кр/мес казне','Содержание здания из бюджета.']);
   if(top.length)H.push(big(top.slice(0,6)));
   // workers and factors
-  if(d.jobs&&t!=='hall'){const w=wdist(i);H.push('<h5>Работники</h5>'+kv([['Путь от жилья',w>=999?pill('нет пути','bad'):`${w} кл. по дорогам`],['Зарплаты',`${fmt(Math.round(d.jobs*s)*15)} кр/мес`]]))}
+  if(d.jobs&&t!=='hall'){const w=wdist(i),W=r?r.W:S.wage;H.push('<h5>Работники</h5>'+kv([['Путь от жилья',w>=999?pill('нет пути','bad'):`${w} кл. по дорогам`],['Зарплаты',`${fmt(d.jobs*s*W)} кр/мес · ${firm?'платит предприятие':'платит казна'}`],['Ставка на рабочего',`${W.toFixed(1)} кр/мес`]]))}
   if(x&&x.P){const P=x.P,f=[];
     f.push(fbar('Укомплектованность',P.staff,'Доля занятых рабочих мест.'));
     if(d.pow<0)f.push(fbar('Электричество',P.power,`Вне зоны энергии выработка падает до ${PCT(PROD.noPower)}%, при общей нехватке энергии — пропорционально.`));
     f.push(fbar('Дорога до работы',P.commute,`До ${PROD.commuteFree} клеток от жилья без потерь, дальше −${PCT(PROD.commuteStep)}% за клетку.`));
     if(c.prodN>PROD.smallCity)f.push(fbar('Склад рядом',P.log,`Без склада в ореоле предприятие работает на ${PCT(PROD.noStore)}%.`));
-    if(P.tax<1)f.push(fbar('Налог на бизнес',P.tax,`Налог выше ${PCT(TAXK.bizFree)}% снижает выработку.`));
     if(P.fac!==undefined&&P.fac!==1)f.push(fbar('Настрой фракции',P.fac,`Злая фракция саботирует свою отрасль (−${PCT(1-FACK.loM)}%), довольная работает с рвением (+${PCT(FACK.hiM-1)}%).`));if(P.fert)f.push(fbar('Плодородие',P.fert));if(P.forest)f.push(fbar('Лес вокруг',P.forest,`Лесопилке нужен нетронутый лес в ${PROD.nearR} клетках.`));
     if(P.mount)f.push(fbar('Горы',P.mount,'В горах залежи богаче.'));if(P.warm)f.push(fbar('Тёплый климат',P.warm));
     H.push('<h5>Что влияет на выработку</h5>'+f.join(''))}
@@ -1584,10 +1634,12 @@ function bInfo(i,b,c){
   if(d.in&&x){const rows=Object.keys(d.in).map(k=>[`${rd(k)}${RES[k].n}`,`${(x.inp[k]||0).toFixed(1)} из ${(x.need[k]||0).toFixed(1)} · на складе ${fmt(S.stock[k])}`]);
     H.push('<h5>Сырьё за месяц</h5>'+kv(rows)+(r.lim&&r.lim[t]?`<p>Не хватает: ${RES[r.lim[t]].n.toLowerCase()}. ${t==='cannery'?'Заводу достаётся только еда сверх запаса для жителей.':'Добывайте больше или разрешите ввоз.'}</p>`:''))}
   // economics of production
-  if(x&&x.out){let rev=0,inp=0;for(const k in x.out)rev+=x.out[k]*S.dom[k];if(x.inp)for(const k in x.inp)inp+=x.inp[k]*S.dom[k];const wages=Math.round(d.jobs*s)*15;
-    const k0=Object.keys(d.out)[0],best=r.best[k0];
-    H.push('<h5>Экономика</h5>'+kv([['Выручка по внутренней цене',`${fmt(rev)} кр`],['Цена внутри · за рубежом',`${S.dom[k0].toFixed(1)} · ${best?best.p.toFixed(1)+' '+nm(best.nid):'—'}`],
-      ...(inp?[['Сырьё',`−${fmt(inp)} кр`]]:[]),['Зарплаты',`${money(-wages)} кр`],['Прибыль владельцев',`<b class="${rev-inp-wages>=0?'up':'dn'}">${money(rev-inp-wages)} кр</b>`],['Налог в казну',`${fmt(rev*S.tax.biz)} кр`]]))}
+  if(fin){const k0=d.out?Object.keys(d.out)[0]:null,best=k0&&r.best[k0],pay=fin.net>0?B[t].cost/fin.net/12:0;
+    H.push('<h5>Счёт предприятия за месяц</h5>'+kv([['Выручка',money(fin.rev)+' кр'],...(fin.inp>.5?[['Сырьё',money(-fin.inp)+' кр']]:[]),['Зарплаты',money(-fin.wage)+' кр'],
+      ...(fin.mgr>.5?[['Управляющие из особняков',money(-fin.mgr)+' кр']]:[]),['Содержание',money(-fin.up)+' кр'],[fin.net>=0?'Итог: в казну':'Итог: из казны',`<b class="${fin.net>=0?'up':'dn'}">${money(fin.net)} кр</b>`],
+      ['Окупаемость',pay?`${COMMA(pay.toFixed(1))} ${plural(Math.round(pay),'год','года','лет')} при таком итоге`:pill('в убытке','bad')],
+      ...(k0?[['Цена внутри · за рубежом',`${S.dom[k0].toFixed(1)} · ${best?best.p.toFixed(1)+' '+nm(best.nid):'—'}`]]:[])])+
+      `<p>${t==='shop'?`Выручка рынка — наценка ${PCT(SHOPK.margin)}% на товары, ткани и кофе.`:'Выручку ресурса делят все, кто выпустил его в этом месяце. Лишнее, что не купили жители, заводы и соседи, лежит на складе и денег не приносит.'}</p>`)}
   // port
   if(t==='port'&&r){const share=c.ports?d.cap*s/c.ports:0,ex={},im={};for(const k of RK){if(r.exp[k])ex[k]=r.exp[k]*share;if(r.imp[k])im[k]=r.imp[k]*share}
     H.push('<h5>Торговля за месяц (доля этого порта)</h5>'+kv([['Загрузка всех портов',pct(r.portUse)],['Вывезено',resList(ex)],['Ввезено',resList(im)],['Экспорт · импорт',`${fmt(r.expV*share)} · ${fmt(r.impV*share)} кр`],
@@ -1598,10 +1650,10 @@ function bInfo(i,b,c){
   // power
   if(d.pow>0||t==='sub'){let users=0,dark=0;inDisk(i,RAD[t],j=>{const bb=S.bld[j];if(bb&&B[bb.t].pow<0)users++});for(let j=0;j<N*N;j++){const bb=S.bld[j];if(bb&&CONN[j]&&B[bb.t].pow<0&&!PW[j])dark++}
     H.push('<h5>Энергосеть</h5>'+kv([['Потребителей в ореоле',users],['Город: потребление / выработка',`${fmt(c.use)} / ${fmt(c.sup)}`],['Зданий без электричества',dark?pill(dark,'bad'):pill('нет')],
-      ...(d.fuel&&r?[['Уголь за месяц',`${(4*s*r.fuel).toFixed(1)} из ${(4*s).toFixed(1)} · на складе ${fmt(S.stock.coal)}`]]:[])]))}
+      ...(d.fuel&&r?[['Уголь за месяц',`${(d.fuel.coal*s*r.fuel).toFixed(1)} из ${(d.fuel.coal*s).toFixed(1)} · на складе ${fmt(S.stock.coal)}`]]:[])]))}
   // store
   if(t==='store'){let ent=0;inDisk(i,RAD.store,j=>{const bb=S.bld[j];if(bb&&B[bb.t].out&&CONN[j])ent++});
-    H.push('<h5>Логистика</h5>'+kv([['Предприятий в ореоле',ent],['Вместимость складов города',`${fmt(c.cap)} на ресурс`],['Прибавка к портам',c.ports?`+25 ед.`:'порта нет']]))}
+    H.push('<h5>Логистика</h5>'+kv([['Предприятий в ореоле',ent],['Вместимость складов города',`${fmt(c.cap)} на ресурс`],['Прибавка к портам',c.ports?`+${ECO.portPerStore} ед.`:'порта нет']]))}
   // social services
   if(['park','school','clinic','police'].includes(t)){let homes=0,res=0;inDisk(i,RAD[t],j=>{const bb=S.bld[j];if(bb&&B[bb.t].home&&CONN[j]){homes++;res+=B[bb.t].home*homeF(j)}});
     const cvk={park:'park',school:'school',clinic:'clinic',police:'police'}[t];
@@ -1609,10 +1661,10 @@ function bInfo(i,b,c){
   // housing
   if(d.home){const hf=homeF(i),sv=['shop','park','school','clinic','police'].map(k=>`${COV[k][i]?'✓':'✗'} ${RADN[k]}`).join(', ');
     H.push('<h5>Условия жизни</h5>'+kv([['Электричество',PW[i]?pill('есть'):pill(`нет, заселение ${PCT(HOME.noPower)}%`,'bad')],['Рынок рядом',COV.shop[i]?pill('есть'):pill(`нет, заселение ${PCT(HOME.noShop)}%`,'bad')],['Службы',sv],
-      ['Налог с жителей',`~${fmt(Math.round(d.home*hf)*(d.rich?60:15*.62)*S.tax.inc)} кр/мес`]]))}
+      ['Налог с жителей',`~${fmt(Math.round(d.home*hf)*(r?r.W:S.wage)*(d.rich?WAGE.richMul:POPK.workShare)*S.tax.inc)} кр/мес`]]))}
   // hall
   if(t==='hall')H.push('<h5>Город</h5>'+kv([['Жители / места',`${fmt(S.pop)} / ${fmt(c.home)}`],['Занято / мест',`${fmt(c.emp)} / ${fmt(c.jobs)}`],['Зданий',c.list.length],['Без дороги',c.dis]]));
-  const act=t!=='hall'?`<button class="btn ghost" type="button" id="i-del" data-tip="Здание исчезнет, деньги за него не вернутся. Жители и рабочие места пропадут сразу.">Снести · 5 кр</button>`:'';
+  const act=t!=='hall'?`<button class="btn ghost" type="button" id="i-del" data-tip="Здание исчезнет, деньги за него не вернутся. Жители и рабочие места пропадут сразу.">Снести · ${fmt(ROADK.demolish)} кр</button>`:'';
   infoText(`${d.n} ${pill(status[0],status[1])}`,d.d+(RAD[t]?` Ореол ${RAD[t]} клеток.`:''),H.join('')+(r?'':'<p>Подробная статистика появится через месяц.</p>')+act);
   const del=$('#i-del');if(del)del.onclick=()=>{const q=place('bull',i);if(q.ok){toast('Снесено');info(-1);refresh()}else toast(q.why)};
 }
@@ -1779,13 +1831,19 @@ function econHTML(){
   const maxF=r?Math.max(20,...r.F.map(f=>Math.abs(f[1]))):1;
   return`<div class="sheet-in"><div class="sheet-top"><h2>Экономика</h2><button class="ibtn" type="button" id="sh-x" aria-label="Закрыть">✕</button></div>
   <div class="sec"><h3>Налоги и пошлины</h3><div class="sliders">
-    ${sl('tx-inc','Подоходный налог',T.inc,30,`Платят занятые жители, богачи в особняках платят вчетверо больше. Выше ${PCT(TAXK.incFree)}% портит настроение.`)}
-    ${sl('tx-biz','Налог на бизнес',T.biz,30,'С выручки предприятий за вычетом закупленного за рубежом сырья. Выше '+PCT(TAXK.bizFree)+'% снижает выработку.')}
+    ${sl('tx-inc','Подоходный налог',T.inc,30,`С зарплат всех работающих, управляющие из особняков получают в ${WAGE.richMul} раза больше. Выше ${PCT(TAXK.incFree)}% портит настроение.`)}
+    ${sl('tx-biz','Налог на прибыль',T.biz,30,'Для частных предприятий: они появятся вместе с зонами. Сейчас все предприятия государственные, их прибыль целиком идёт в казну. Аграрии и промышленники следят за этим налогом уже сейчас.')}
     ${sl('tx-imp','Импортная пошлина',T.imp,50,'С ввоза, кроме стран с договором. Жители платят за импорт больше, а настроение падает, когда на импорт уходит большая доля зарплат.')}
     ${sl('tx-exp','Экспортная пошлина',T.exp,30,'С вывоза. Высокая пошлина сокращает объём экспорта.')}</div></div>
   <div class="sec"><h3>Бюджет за прошлый месяц</h3>${r?`<div class="budget">
-    <div class="bcol">${BL.inc.map(x=>bl(x[0],money(x[1]))).join('')}${bl('Доходы',money(BL.inc.reduce((a,x)=>a+x[1],0)),'tot')}</div>
+    <div class="bcol">${BL.inc.map(x=>bl(x[0],money(x[1]),'',x[2])).join('')}${bl('Доходы',money(BL.inc.reduce((a,x)=>a+x[1],0)),'tot')}</div>
     <div class="bcol">${BL.out.map(x=>bl(x[0],money(-x[1]),'',x[2])).join('')}${bl('Расходы',money(-BL.out.reduce((a,x)=>a+x[1],0)),'tot')}${bl('Итог месяца',`<b class="${r.net>=0?'up':'dn'}">${money(r.net)} кр</b>`,'tot')}${Math.abs(r.auto)>=.5?bl('Вне бюджета: решения министров',money(r.auto),'','Стройка, помощь и займы, которые министры сделали сами. В итог месяца не входят.'):''}</div></div>`:'<p class="log">Отчёт появится через месяц.</p>'}</div>
+  <div class="sec"><h3>Зарплата и кошельки</h3>${r?(()=>{const fs=Object.values(r.fin),lose=fs.filter(f=>f.net<0).length;return kv([
+      [`<span data-tip="Одна ставка на страну. Тянется к ${PCT(WAGE.share)}% стоимости, которую рабочий предприятия создаёт за месяц, выше при нехватке рабочих и ниже при безработице. Школы добавляют до ${PCT(ECO.schoolWage)}%.">Зарплата рабочего ⓘ</span>`,`${r.W.toFixed(1)} кр/мес`],
+      ['Рабочий предприятия создаёт',r.vaW?`${r.vaW.toFixed(1)} кр/мес`:'—'],['Ставка тянется к',r.wageTgt?`${r.wageTgt.toFixed(1)} кр/мес`:'—'],
+      [`<span data-tip="Сюда приходят зарплаты, деньги за стройку и ремонт. Отсюда жители платят за еду, товары и привозное. Если кошелёк пуст, жители покупают меньше.">Сбережения жителей ⓘ</span>`,`${fmt(S.hh)} кр`],
+      ['Покупки жителей за месяц',`${fmt(r.hhBuy)} кр`],['Госпредприятий в убытке',`${lose} из ${fs.length}`]])})():'<p class="log">Появится через месяц.</p>'}
+    <p class="log" style="font-size:12.5px">Все предприятия государственные. У каждого свой счёт: выручка, сырьё, зарплаты, содержание. Итог месяца уходит в казну, убыток казна покрывает. Счёт виден в карточке здания.</p></div>
   <div class="sec"><h3>Ресурсы, цены и торговля</h3><div class="tw"><table class="tbl" style="min-width:760px"><thead><tr><th>Ресурс</th><th>Склад</th><th>Добыто</th><th>Потрачено</th><th>Цена внутри</th><th>Лучшая за рубежом</th><th>Вывоз</th><th>Ввоз</th><th>Порт</th></tr></thead><tbody>${RK.map(row).join('')}</tbody></table></div>
   <p class="log" style="font-size:12.5px">Склады вмещают ${fmt(c.cap)} ед. каждого ресурса. ${c.ports?`Порты пропускают ${c.ports} ед. в месяц, загрузка ${Math.round((r?r.portUse:0)*100)}%. Экспорт идёт туда, где выше цена за вычетом чужой пошлины.`:'Без порта торговли нет.'} Внутренняя цена падает, когда товара больше, чем нужно стране.</p></div>
   <div class="sec"><h3>Настроение: ${Math.round(S.happy)}%</h3><div class="mood">${r?r.F.filter(f=>Math.abs(f[1])>=.5).map(f=>{const w=Math.min(50,Math.abs(f[1])/maxF*50);return`<div class="mrow"><span>${f[0]}</span><span class="mbar"><i style="left:${f[1]>=0?50:50-w}%;width:${w}%;background:${f[1]>=0?'var(--good)':'var(--bad)'}"></i></span><span class="${f[1]>=0?'up':'dn'}">${f[1]>=0?'+':'−'}${Math.abs(f[1]).toFixed(0)}</span></div>`}).join(''):''}</div></div>
@@ -2007,7 +2065,7 @@ function start(data){
   $('.money').dataset.tip=`Казна и итог прошлого месяца: доходы минус расходы. В минусе нельзя строить, долг растёт на ${PCT(ECO.interest)}% в месяц.`;
   buildOpts();buildMenu();buildTutPick();
   $('#b-tut').onclick=()=>{const p=$('#tut-pick'),on=p.hidden;p.hidden=!on;$('#b-tut').setAttribute('aria-expanded',on)};
-  if(data&&data.s){try{S=loadStr(data.s);if(S.v===4)enterGame();else S=null}catch(e){S=null}}
+  if(data&&data.s){try{S=loadStr(data.s);if(S.v===5)enterGame();else S=null}catch(e){S=null}}
   requestAnimationFrame(loop);
 }
 window.claude?.hot?.snapshot?.(()=>S?{s:saveStr()}:{});
