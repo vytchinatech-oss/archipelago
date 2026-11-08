@@ -14,7 +14,7 @@ function fire(p,silent){const m=S.min[p];if(!m)return'';delete S.min[p];
 /* Какой министр с доверенной сферой ведёт выключатель ресурса (m: 'e' вывоз, 'i' ввоз). Пока он есть, игрок кнопку не меняет. */
 function tradeBoss(k,m){const on=p=>S.min[p]&&S.min[p].auto?S.min[p]:null;if(on('trd'))return on('trd');
   if(m==='i')for(const p in AUTO.importOf)if(AUTO.importOf[p].includes(k)&&on(p))return on(p);return null}
-function setTrade(k,m){const b=tradeBoss(k,m);if(b)return`Этим ведает ${b.name}. Переведите министра в советники или уволите его`;S.trade[k][m]=S.trade[k][m]?0:1;return''}
+function setTrade(k,m){const b=tradeBoss(k,m);if(b)return`Этим ведает ${b.name}. Переведите министра в советники или увольте его`;S.trade[k][m]=S.trade[k][m]?0:1;return''}
 /* building helper for autopilot ministers */
 function autoBuild(type,isTarget){let best=-1,bs=0;
   for(let i=0;i<N*N;i++){if(!nb4(i).some(j=>NET[j]))continue;if(!canBuild(type,i).ok)continue;let sc=0;

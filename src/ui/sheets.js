@@ -7,7 +7,7 @@ function renderSheet(){const el=$('#sheet'),sc=el.scrollTop;const m=sheetMode;el
 function econHTML(){
   const r=S.rep,T=S.tax,c=r?r.cen:census();
   const sl=(id,lab,v,max,hint)=>`<div class="sl" data-tip="${hint}"><label for="${id}">${lab}<span>${Math.round(v*100)}%</span></label><input type="range" id="${id}" min="0" max="${max}" step="1" value="${Math.round(v*100)}"><small>${hint}</small></div>`;
-  const tgl=(k,m,t,tip)=>{const w=tradeBoss(k,m);return`<button class="tg" type="button" data-k="${k}" data-m="${m}"${w?' aria-disabled="true"':''} data-tip="${w?`Этим ведает ${w.name}. Чтобы вернуть управление, переведите министра в советники или уволите его.`:tip}" aria-pressed="${!!S.trade[k][m]}">${t}</button>`};
+  const tgl=(k,m,t,tip)=>{const w=tradeBoss(k,m);return`<button class="tg" type="button" data-k="${k}" data-m="${m}"${w?' aria-disabled="true"':''} data-tip="${w?`Этим ведает ${w.name}. Чтобы вернуть управление, переведите министра в советники или увольте его.`:tip}" aria-pressed="${!!S.trade[k][m]}">${t}</button>`};
   const row=k=>{const b=r&&r.best[k];return`<tr><td>${rd(k)}${RES[k].n}</td><td>${fmt(S.stock[k])}</td><td>${r?'+'+fmt(r.prod[k]):'—'}</td><td>${r?'−'+fmt(r.cons[k]):'—'}</td><td>${S.dom[k].toFixed(1)}</td><td>${b?b.p.toFixed(1)+' '+nm(b.nid):'—'}</td><td>${r?fmt(r.exp[k]):'—'}</td><td>${r?fmt(r.imp[k]):'—'}</td>
     <td>${tgl(k,'e','вывоз','Порт продаёт излишек сверх запаса на 2 месяца туда, где цена выше. Выключите, чтобы копить ресурс.')} ${tgl(k,'i','ввоз','Порт докупает нехватку у самой дешёвой страны. Выключите, чтобы не зависеть от импорта.')}</td></tr>`};
   const bl=(a,b,cls='',tip='')=>`<div class="${cls}"${tip?` data-tip="${tip}"`:''}><span>${a}</span><span>${b}</span></div>`,BL=r?budgetLines(r):null;

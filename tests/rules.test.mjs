@@ -251,7 +251,7 @@ test('Н17: советник не трогает выключатели, дов�
     const adv=go(0),trust=go(1);const blocked=setTrade('food','e');const on=S.trade.food.e;
     S.min.trd.auto=0;const coalLocked=!!tradeBoss('coal','i'),coalExp=!!tradeBoss('coal','e');S.min.en.auto=0;S.min.ind.auto=0;S.trade.coal.i=1;const free=setTrade('coal','i');
     S.min.agr.auto=0;fire('agr',true);S.trade.food.i=0;({adv,trust,blocked,on,coalLocked,coalExp,free,coal:S.trade.coal.i,food:setTrade('food','i'),foodOn:S.trade.food.i})`);
-  assert.equal(r.adv, 0); assert.equal(r.trust, 10); assert.match(r.blocked, /советники или уволите/); assert.equal(r.on, 1);
+  assert.equal(r.adv, 0); assert.equal(r.trust, 10); assert.match(r.blocked, /советники или увольте/); assert.equal(r.on, 1);
   assert.equal(r.coalLocked, true); assert.equal(r.coalExp, false); assert.equal(r.free, ''); assert.equal(r.coal, 0); assert.equal(r.food, ''); assert.equal(r.foodOn, 1);
 });
 
