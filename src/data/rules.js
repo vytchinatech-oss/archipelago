@@ -10,7 +10,7 @@ const PCT=v=>String(+(v*100).toFixed(1)).replace('.',',');
 const COMMA=v=>String(v).replace('.',',');
 /* Масштаб денег (DESIGN.md, «Собственность, кошельки и зоны»). Цены товаров выросли в 2,2 раза, разовые суммы — стройка, земля, награды,
    займы, подарки, казны соседей — в CAP раз: так поле окупается за 5–6 лет, а не за пару месяцев. */
-const CAP=30;
+const CAP=10;
 /* Старт новой игры и области. hh — сбережения жителей. */
 const START={money:4000*CAP,hh:1000,pop:18,happy:62,tax:{inc:.15,biz:.20,imp:.10,exp:.05},stock:{food:80,wood:30,coal:20,goods:20}};
 const REGK={base:200*CAP,perTile:12*CAP,round:500,goldMul:1.3,fertMin:.75,fertRand:.45,tileMin:.85,tileRand:.3};
