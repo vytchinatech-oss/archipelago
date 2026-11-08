@@ -132,3 +132,45 @@ test('обучение: налоговый шаг ждёт изменения н
   const r = load()(`setup();tutStart(S,'full');while(tutStep()!=='tax')tutAdvance();const a=tutStateOk('tax');S.tax.inc+=.03;({a,b:tutStateOk('tax')})`);
   assert.equal(r.a, false); assert.equal(r.b, true);
 });
+
+test('соседи пишут не чаще раза в год и не повторяются подряд', () => {
+  const r = load()(`setup();for(const k of RK)S.stock[k]=120;dip('lend','sol',5000);const seen=[];let at=S.evAt;
+    for(let m=0;m<600;m++){for(const k of RK)S.stock[k]=120;S.money=1e6;tick();computeCov();if(S.evAt!==at){at=S.evAt;seen.push([S.month,S.ev.t])}if(S.ev)evAnswer(m%2===0,true)}
+    let gap=1e9,rep=0;for(let i=1;i<seen.length;i++){gap=Math.min(gap,seen[i][0]-seen[i-1][0]);if(seen[i][1]===seen[i-1][1])rep++}
+    ({n:seen.length,gap,rep,kinds:new Set(seen.map(x=>x[1])).size})`);
+  assert.ok(r.n > 15, JSON.stringify(r)); assert.ok(r.gap >= 12, JSON.stringify(r)); assert.equal(r.rep, 0); assert.ok(r.kinds >= 8, JSON.stringify(r));
+});
+
+test('все виды сообщений читаются и применяются без сбоев', () => {
+  const r = load()(`setup();for(const k of RK)S.stock[k]=120;dip('lend','sol',5000);const bad=[],kinds={};
+    for(let i=0;i<4000;i++){const m=i%6;S.nat.forEach((n,j)=>{n.rel=[60,30,5,-20,-35,-5][(m+j)%6];n.deal=0;n.cr=i%3?{t:Object.keys(CRISES)[i%4],m:3}:null;n.money=i%2?5000:90000});S.lent[0].left=2000;
+      S.ev=null;S.evHist=[];S.tax.imp=.2;makeEvent();const e=S.ev;if(!e)continue;kinds[e.t]=1;const x=evText(e);if(x.length!==4||x.join().includes('undefined')||x.join().includes('NaN'))bad.push(e.t);
+      evAnswer(i%2===0);S.money=1e6;for(const k of RK)S.stock[k]=120;if(!S.nat.every(n=>isFinite(n.rel)&&n.rel>=-100&&n.rel<=100))bad.push('rel '+e.t)}
+    ({bad:bad.join(),kinds:Object.keys(kinds).sort().join()})`);
+  assert.equal(r.bad, '');
+  assert.equal(r.kinds, ['border','bargain','deal','debt','dumping','loan','mediate','order','ref','relief','summit','tariff'].sort().join());
+});
+
+test('согласие без денег или товара равно отказу', () => {
+  const r = load()(`setup();const n=natById('sol');n.rel=10;S.money=0;S.ev={t:'summit',nid:'sol',exp:99};evAnswer(true);const a=n.rel;S.stock.food=0;S.ev={t:'order',nid:'sol',k:'food',amt:30,price:9,exp:99};evAnswer(true);({a,b:n.rel,m:S.money,f:S.stock.food})`);
+  assert.equal(r.a, 9); assert.equal(r.b, 7); assert.equal(r.m, 0); assert.equal(r.f, 0);
+});
+
+test('к стране можно обратиться раз в год, неудачная попытка год не тратит', () => {
+  const r = load()(`setup();const s=natById('sol'),k=natById('kar');k.rel=0;const fail=dip('deal','kar');const free=dipWait(k);
+    dip('aid','sol');const rel=s.rel,m=S.money,again=dip('lend','sol',2000);const same=s.rel===rel&&S.money===m;const other=dip('aid','ava');
+    S.month+=11;const w=dipWait(s);S.month+=1;const later=dip('aid','sol');({free,again,same,other,w,later,fail})`);
+  assert.equal(r.free, 0); assert.match(r.again, /через 12 месяцев/); assert.ok(r.same);
+  assert.match(r.other, /Отношения/); assert.equal(r.w, 1); assert.match(r.later, /Отношения/);
+});
+
+test('министр не ломается, когда страна на перерыве', () => {
+  const r = load()(`setup();S.money=-5000;for(const n of S.nat){n.actAt=S.month;n.rel=30}let ok=1;try{for(const p in POSTS)for(let i=0;i<3;i++){tick();computeCov()}}catch(e){ok=e.message}({ok,loans:S.loans.length})`);
+  assert.equal(r.ok, 1);
+});
+
+test('старое сохранение без новых полей загружается', () => {
+  const r = load()(`setup();const o=JSON.parse(saveStr());delete o.evAt;delete o.evHist;delete o.evNid;o.nat.forEach(n=>delete n.actAt);
+    S=loadStr(JSON.stringify(o));computeConn();computeCov();tick();({at:S.evAt,h:Array.isArray(S.evHist),w:dipWait(S.nat[0])})`);
+  assert.equal(r.at, -99); assert.ok(r.h); assert.equal(r.w, 0);
+});

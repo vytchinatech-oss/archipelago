@@ -32,10 +32,10 @@ function ministerTurn(p,c,r,doIt){
     else if(Math.abs(T.exp-te)>.005){s=`Советую экспортную пошлину ${Math.round(te*100)}%.`;if(doIt)T.exp=+(T.exp+Math.sign(te-T.exp)*.01).toFixed(2)}
     if(doIt)for(const k of RK)S.trade[k].e=1;if(!c.ports)s='Без порта торговли нет: постройте порт.';return s}
   if(p==='dip'){let s='Отношения стабильны.';
-    if(S.ev){const e=S.ev,y=e.t==='deal'||(e.t==='loan'&&S.money>e.amt*(risk?1.5:3))||(e.t==='tariff'&&!risk)||(e.t==='ref'&&c.home-S.pop>e.amt*(risk?.3:1));s=`По запросу «${evText(e)[0]}» советую: ${y?evText(e)[2].toLowerCase():evText(e)[3].toLowerCase()}.`;if(doIt){evAnswer(y&&!(e.t==='loan'&&S.money<e.amt));S.log.unshift({m:S.month,t:`${m.name} ответил на запрос: ${y?'согласие':'отказ'}.`})}return s}
-    const cand=S.nat.find(n=>!n.deal&&!n.emb&&n.rel>=25);if(cand){s=`Отношения с ${ND(cand).n} позволяют подписать договор.`;if(doIt)dip('deal',cand.id);return s}
-    const near=S.nat.find(n=>!n.deal&&!n.emb&&n.rel>=15&&n.rel<25&&n.aid<4);if(near&&S.money>res+3000){s=`${ND(near).n} почти готов к договору: помощь 1 000 кр поможет.`;if(doIt)dip('aid',near.id)}
-    if(S.money<-1500&&risk&&debtTotal()<8000&&!S.loans.some(l=>l.since>S.month-12)){s='Казна пуста: возьмём заём у самого дешёвого кредитора.';if(doIt){const n=S.nat.filter(n=>n.rel>-30&&n.money>9000).sort((a,b)=>borrowRate(a)-borrowRate(b))[0];if(n){dip('borrow',n.id,3000);S.loans[S.loans.length-1].since=S.month}}}return s}
+    if(S.ev){const e=S.ev,y=evWise(e,risk,c);s=`По запросу «${evText(e)[0]}» советую: ${y?evText(e)[2].toLowerCase():evText(e)[3].toLowerCase()}.`;if(doIt){evAnswer(y&&!evLack(e));S.log.unshift({m:S.month,t:`${m.name} ответил на запрос: ${y?'согласие':'отказ'}.`})}return s}
+    const cand=S.nat.find(n=>!n.deal&&!n.emb&&n.rel>=25&&!dipWait(n));if(cand){s=`Отношения с ${ND(cand).n} позволяют подписать договор.`;if(doIt)dip('deal',cand.id);return s}
+    const near=S.nat.find(n=>!n.deal&&!n.emb&&n.rel>=15&&n.rel<25&&n.aid<4&&!dipWait(n));if(near&&S.money>res+3000){s=`${ND(near).n} почти готов к договору: помощь 1 000 кр поможет.`;if(doIt)dip('aid',near.id)}
+    if(S.money<-1500&&risk&&debtTotal()<8000&&!S.loans.some(l=>l.since>S.month-12)){s='Казна пуста: возьмём заём у самого дешёвого кредитора.';if(doIt){const n=S.nat.filter(n=>n.rel>-30&&n.money>9000&&!dipWait(n)).sort((a,b)=>borrowRate(a)-borrowRate(b))[0];if(n){dip('borrow',n.id,3000);S.loans[S.loans.length-1].since=S.month}}}return s}
   if(p==='en'){if(c.unpow>0)return act('wind',i=>hasB(i,(d,j)=>d.pow<0&&!PW[j]),`${c.unpow} зданий без электричества.`);
     if(c.pr<1)return act(risk&&r.prod.coal>4?'power':'wind',()=>1,'Энергии не хватает на всех.');if(r.fuel<.9){if(doIt)S.trade.coal.i=1;return'ТЭС не хватает угля: включаю ввоз угля.'}return'Энергосеть в порядке.'}
   if(p==='ind'){if(c.log<.95)return act('store',i=>hasB(i,(d,j)=>d.out&&!COV.store[j]),'Предприятиям нужен склад рядом.');if(r.short.inputs>.2){if(doIt)for(const k of['wood','iron','coal','cotton'])S.trade[k].i=1;return'Заводам не хватает сырья: включаю ввоз сырья.'}return'Промышленность работает.'}
@@ -70,7 +70,9 @@ function natEff(f){const a=S.fatt&&S.fatt[f];if(!a)return 0;let s=0,w=0;for(cons
 /* кто из фракций любит и не любит страну: [[f,att],...] */
 function natFans(id,th=.25){const fan=[],foe=[];for(const f in FAC){const v=S.fatt&&S.fatt[f]?S.fatt[f][id]||0:0;if(f==='mil'&&!S.seats.mil)continue;if(v>=th)fan.push(f);else if(v<=-th)foe.push(f)}return{fan,foe}}
 /* старые сохранения v3 → v4: две новые фракции и отношения к соседям */
-function migrateSave(o){if(o.v===3){o.fac.mil={sat:50};o.fac.int={sat:50};o.seats.mil=0;o.seats.int=4;o.fatt=fattInit(o);o.v=4}return o}
+function migrateSave(o){if(o.v===3){o.fac.mil={sat:50};o.fac.int={sat:50};o.seats.mil=0;o.seats.int=4;o.fatt=fattInit(o);o.v=4}
+  /* поля редких сообщений и обращений раз в год: версия та же, просто дополняем */
+  if(o.evAt===undefined){o.evAt=-99;o.evHist=[];o.evNid=null;o.nat.forEach(n=>{n.actAt=-99})}return o}
 /* indicators and politics, called after the month is computed */
 function govTick(r,c){
   const D=DIFF[S.diff],T=S.tax,L=t=>S.log.unshift({m:S.month,t});

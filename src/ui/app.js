@@ -1,6 +1,6 @@
 /* Меню, панель строительства, карточки клеток и областей, события, верхняя панель. */
 const $=s=>document.querySelector(s);
-const SAVE_KEY='archipelago-v3',MONTH_MS=4000;
+const SAVE_KEY='archipelago-v3',MONTH_MS=40000;
 let TOOL='inspect',CAT='base',ROADA=-1,SEL=-1,HOV=-1,SPEED=1,PICK=0,cv,ctx,DPR=1,VW=0,VH=0,Z=1,cam={x:0,y:0},acc=0,lastTs=0,sheetMode=null,LAYER=null;
 let BOATS=[],SMOKE=[],smokeT=0;
 const TNAME={inspect:'Осмотр',road:'Дорога',bull:'Снос'};
@@ -98,15 +98,17 @@ function info(i){
 }
 
 /* ---------- events ---------- */
-function evTip(e,y){const t=e.t;
+function evTip(e,y){const t=e.t,X=EVN[t],R=v=>`Отношения ${v>0?'+':'−'}${Math.abs(v)}.`;
+  if(X){const rel=R(X.rel[y?0:1]),no=X.rel[1]?rel:'Ничего не изменится.';if(!y)return t==='mediate'?'Никто не обидится всерьёз. '+rel:'Всё останется как есть. '+no;
+    return({order:`Получите ${fmt(e.amt*e.price)} кр, партия уйдёт со склада. `,bargain:`Заплатите ${fmt(e.amt*e.price)} кр, партия придёт на склад. `,relief:`${e.amt} ед. еды уйдут со склада. `,summit:`Расход ${fmt(X.cost)} кр. `,dumping:`Расход ${fmt(X.cost)} кр. `,border:`Довольство военных −${X.mil}. `,debt:`Вернут на ${fmt(e.amt)} кр меньше. `,mediate:`Отношения со второй страной ${X.other}. `})[t]+rel}
   if(t==='loan')return y?`Отдадите ${fmt(e.amt)} кр, вернут ${fmt(e.amt*(1+e.rate))} кр за 12 месяцев. Отношения +10.`:'Деньги останутся у вас. Отношения −5.';
   if(t==='deal')return y?'Пошлины между вами обнуляются, их товары дешевле на 8%, отношения растут каждый месяц.':'Ничего не изменится, предложение может повториться.';
   if(t==='tariff')return y?'Ваша импортная пошлина станет 5%: меньше доход казны, зато мир и отношения +6.':'Год их пошлина на ваши товары будет 35%, отношения −10.';
   return y?`Население +${e.amt}, отношения +6. Беженцам нужно жильё, иначе они начнут уезжать.`:'Отношения −4.'}
 function showEvent(){const el=$('#event');if(!S.ev){el.hidden=true;return}
   const[h,p,y,n]=evText(S.ev),d=ND(natById(S.ev.nid));
-  el.hidden=false;el.innerHTML=`<div class="card-h"><span class="flag" style="background:${d.col}"></span><h4>${h}</h4></div><p>${p} Ответ до ${MONTHS[S.ev.exp%12].toLowerCase()}.</p><div class="btns"><button class="btn" type="button" id="ev-y" data-tip="${evTip(S.ev,1)}">${y}</button><button class="btn ghost" type="button" id="ev-n" data-tip="${evTip(S.ev,0)}">${n}</button></div>`;
-  $('#ev-y').onclick=()=>{if(S.ev.t==='loan'&&S.money<S.ev.amt){toast('Не хватает денег');return}evAnswer(true);showEvent();refresh()};
+  el.hidden=false;el.innerHTML=`<div class="card-h"><span class="flag" style="background:${d.col}"></span><h4>${h}</h4></div><p>${p} Срок ответа: ${MONTHS[S.ev.exp%12].toLowerCase()}.</p><div class="btns"><button class="btn" type="button" id="ev-y" data-tip="${evTip(S.ev,1)}">${y}</button><button class="btn ghost" type="button" id="ev-n" data-tip="${evTip(S.ev,0)}">${n}</button></div>`;
+  $('#ev-y').onclick=()=>{{const m=evLack(S.ev);if(m){toast(m);return}}evAnswer(true);showEvent();refresh()};
   $('#ev-n').onclick=()=>{evAnswer(false);showEvent();refresh()}}
 
 /* ---------- hud ---------- */

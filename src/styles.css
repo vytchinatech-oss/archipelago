@@ -52,6 +52,8 @@ h1{font:800 clamp(38px,10vw,92px)/.95 var(--f-display);letter-spacing:-.02em;mar
 .ibtn{all:unset;box-sizing:border-box;cursor:pointer;min-width:34px;height:32px;padding:0 9px;display:grid;place-items:center;border-radius:9px;background:rgba(234,242,238,.08);font:700 12px/1 var(--f-mono)}
 .ibtn[aria-pressed="true"]{background:var(--sun);color:var(--sun-ink)}
 .ibtn.txt{font:600 12px/1 var(--f-body)}
+.ibtn[aria-disabled="true"]{opacity:.45}
+.dip-wait{color:var(--sun);font-weight:600}
 .ibtn:focus-visible{outline:2px solid var(--sun)}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;width:100%}
 .stat{display:flex;flex-direction:column;gap:4px;padding:6px 8px;border-radius:9px;background:rgba(234,242,238,.05);min-width:0}

@@ -31,7 +31,7 @@ function bindEcon(){const el=$('#sheet');
 function worldHTML(){
   const r=S.rep,debt=debtTotal(),lent=S.lent.reduce((a,l)=>a+l.left,0);
   const mig=[['open','Открыты для всех'],['allies','Только союзникам'],['closed','Закрыты']];
-  const card=n=>{const d=ND(n),[lab,cls]=relLabel(n.rel),tar=natTariff(n);
+  const card=n=>{const d=ND(n),[lab,cls]=relLabel(n.rel),tar=natTariff(n),wait=dipWait(n),off=wait?' aria-disabled="true"':'';
     const buys=Object.keys(d.dem).map(k=>`${RES[k].n.toLowerCase()} ${natBuy(n,k).toFixed(0)}`).join(', ');
     const sells=Object.keys(d.sup).filter(k=>n.sl[k]>0||!r).map(k=>`${RES[k].n.toLowerCase()} ${natSell(n,k).toFixed(0)}`).join(', ')||'сейчас нечего';
     const my=S.loans.filter(l=>l.nid===n.id).reduce((a,l)=>a+l.left,0),their=S.lent.filter(l=>l.nid===n.id).reduce((a,l)=>a+l.left,0);
@@ -45,18 +45,19 @@ function worldHTML(){
       <div><span>Вы должны</span><span>${fmt(my)}</span></div><div><span>Должны вам</span><span>${fmt(their)}</span></div>
       <div><span>Миграция</span><span>${r&&r.mig[n.id]?(r.mig[n.id]>0?'+':'')+r.mig[n.id]:'0'}</span></div><div><span>Ставка займа</span><span>${Math.round(borrowRate(n)*100)}%</span></div></div>
     <div class="mkt"><b>Покупает:</b>${buys}<br><b>Продаёт:</b>${sells}</div>
-    <div class="acts"><button class="ibtn txt" type="button" data-a="deal" data-n="${n.id}" data-tip="${n.deal?`Пошлины вернутся (у ${d.n} ${Math.round(n.tar*100)}%), скидка на их товары пропадёт. Отношения −8.`:`Взаимные пошлины обнулятся, их товары станут дешевле на 8%, отношения +0,4 в месяц. Нужны отношения от 25, сейчас ${Math.round(n.rel)}.`}">${n.deal?'Расторгнуть договор':'Торговый договор'}</button>
-      <button class="ibtn txt" type="button" data-a="borrow" data-n="${n.id}" data-v="3000" data-tip="Получите 3 000 кр сразу, вернёте ${fmt(3000*(1+borrowRate(n)*2))} кр равными платежами за 24 месяца. Ставка ${Math.round(borrowRate(n)*100)}% растёт с вашим долгом и плохими отношениями. Врагам (ниже −30) не дают.">Взять 3 000</button>
-      <button class="ibtn txt" type="button" data-a="lend" data-n="${n.id}" data-v="2000" data-tip="Отдадите 2 000 кр, вернут 2 160 кр за 12 месяцев. Отношения +6. Если у страны кончатся деньги, выплаты будут задерживаться.">Одолжить 2 000</button>
-      <button class="ibtn txt" type="button" data-a="aid" data-n="${n.id}" data-tip="1 000 кр в подарок. Отношения +${Math.max(2,10-n.aid*2)}: каждая следующая помощь даёт меньше.">Помощь 1 000</button>
-      <button class="ibtn txt" type="button" data-a="emb" data-n="${n.id}" data-tip="${n.emb?'Торговля и миграция с этой страной возобновятся.':'Запрет торговли и миграции. Отношения −25 сразу и −1,5 каждый месяц, договор расторгается.'}">${n.emb?'Снять эмбарго':'Эмбарго'}</button></div></div>`};
+    ${wait?`<p class="dip-wait" data-tip="С каждой страной можно иметь дело раз в год: договор, заём, помощь или эмбарго.">Следующее обращение через ${wait} ${plural(wait,'месяц','месяца','месяцев')}</p>`:''}
+    <div class="acts"><button class="ibtn txt"${off} type="button" data-a="deal" data-n="${n.id}" data-tip="${n.deal?`Пошлины вернутся (у ${d.n} ${Math.round(n.tar*100)}%), скидка на их товары пропадёт. Отношения −8.`:`Взаимные пошлины обнулятся, их товары станут дешевле на 8%, отношения +0,4 в месяц. Нужны отношения от 25, сейчас ${Math.round(n.rel)}.`}">${n.deal?'Расторгнуть договор':'Торговый договор'}</button>
+      <button class="ibtn txt"${off} type="button" data-a="borrow" data-n="${n.id}" data-v="3000" data-tip="Получите 3 000 кр сразу, вернёте ${fmt(3000*(1+borrowRate(n)*2))} кр равными платежами за 24 месяца. Ставка ${Math.round(borrowRate(n)*100)}% растёт с вашим долгом и плохими отношениями. Врагам (ниже −30) не дают.">Взять 3 000</button>
+      <button class="ibtn txt"${off} type="button" data-a="lend" data-n="${n.id}" data-v="2000" data-tip="Отдадите 2 000 кр, вернут 2 160 кр за 12 месяцев. Отношения +6. Если у страны кончатся деньги, выплаты будут задерживаться.">Одолжить 2 000</button>
+      <button class="ibtn txt"${off} type="button" data-a="aid" data-n="${n.id}" data-tip="1 000 кр в подарок. Отношения +${Math.max(2,10-n.aid*2)}: каждая следующая помощь даёт меньше.">Помощь 1 000</button>
+      <button class="ibtn txt"${off} type="button" data-a="emb" data-n="${n.id}" data-tip="${n.emb?'Торговля и миграция с этой страной возобновятся.':'Запрет торговли и миграции. Отношения −25 сразу и −1,5 каждый месяц, договор расторгается.'}">${n.emb?'Снять эмбарго':'Эмбарго'}</button></div></div>`};
   return`<div class="sheet-in"><div class="sheet-top"><h2>Мир и дипломатия</h2><button class="ibtn" type="button" id="sh-x" aria-label="Закрыть">✕</button></div>
   <div class="sec"><h3>Ваша страна</h3><div class="mini" style="max-width:520px"><div><span>Население</span><span>${fmt(S.pop)}</span></div><div><span>Настроение</span><span>${Math.round(S.happy)}%</span></div>
     <div><span>Внешний долг</span><span>${fmt(debt)}</span></div><div><span>Вам должны</span><span>${fmt(lent)}</span></div></div>
     <p class="log" style="font-size:12.5px">Люди переезжают туда, где настроение выше. Если у вас лучше, а в доме есть место, к вам едут иммигранты.</p>
     <div class="seg" role="radiogroup" aria-label="Границы">${mig.map(([k,t])=>`<button class="tg" type="button" role="radio" data-mig="${k}" data-tip="${({open:'Иммигранты едут из любой страны, где настроение ниже вашего.',allies:'Иммигрантов пускают только из стран с отношениями от 40.',closed:'Никто не въезжает. Уезжать жители всё равно могут.'})[k]}" aria-pressed="${S.mig===k}" aria-checked="${S.mig===k}">${t}</button>`).join('')}</div></div>
   <div class="sec"><h3>Соседи</h3><div class="nations">${S.nat.map(card).join('')}</div>
-  <p class="log" style="font-size:12.5px">Договор возможен при отношениях от 25: пошлины обнуляются, цены их товаров ниже на 8%. Займы берутся на 2 года, выдаются на год под 8%. Отношения растут от торговли, помощи и займов.</p></div></div>`;
+  <p class="log" style="font-size:12.5px">Договор возможен при отношениях от 25: пошлины обнуляются, цены их товаров ниже на 8%. Займы берутся на 2 года, выдаются на год под 8%. Отношения растут от торговли, помощи и займов. К каждой стране можно обратиться раз в год.</p></div></div>`;
 }
 function bindWorld(){const el=$('#sheet');
   el.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const m=dip(b.dataset.a,b.dataset.n,+b.dataset.v||0);toast(m);refresh()});

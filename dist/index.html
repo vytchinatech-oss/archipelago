@@ -58,6 +58,8 @@ h1{font:800 clamp(38px,10vw,92px)/.95 var(--f-display);letter-spacing:-.02em;mar
 .ibtn{all:unset;box-sizing:border-box;cursor:pointer;min-width:34px;height:32px;padding:0 9px;display:grid;place-items:center;border-radius:9px;background:rgba(234,242,238,.08);font:700 12px/1 var(--f-mono)}
 .ibtn[aria-pressed="true"]{background:var(--sun);color:var(--sun-ink)}
 .ibtn.txt{font:600 12px/1 var(--f-body)}
+.ibtn[aria-disabled="true"]{opacity:.45}
+.dip-wait{color:var(--sun);font-weight:600}
 .ibtn:focus-visible{outline:2px solid var(--sun)}
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;width:100%}
 .stat{display:flex;flex-direction:column;gap:4px;padding:6px 8px;border-radius:9px;background:rgba(234,242,238,.05);min-width:0}
@@ -271,8 +273,8 @@ button.stat:focus-visible{outline:2px solid var(--sun)}
       <span class="date" id="date">Январь, год 1</span>
       <div class="ctrl">
         <button class="ibtn" type="button" data-spd="0" aria-label="Пауза" data-tip="Пауза. Время стоит, но строить можно. Клавиша пробел.">II</button>
-        <button class="ibtn" type="button" data-spd="1" aria-pressed="true" aria-label="Обычная скорость" data-tip="Обычная скорость: месяц за 4 секунды.">1×</button>
-        <button class="ibtn" type="button" data-spd="3" aria-label="Быстро" data-tip="Втрое быстрее: месяц примерно за секунду.">3×</button>
+        <button class="ibtn" type="button" data-spd="1" aria-pressed="true" aria-label="Обычная скорость" data-tip="Обычная скорость: месяц за 40 секунд.">1×</button>
+        <button class="ibtn" type="button" data-spd="3" aria-label="Быстро" data-tip="Втрое быстрее: месяц примерно за 13 секунд.">3×</button>
         <button class="ibtn txt" type="button" id="b-econ" data-tip="Налоги и пошлины, бюджет, склад, внутренние и экспортные цены, настроение и журнал.">Экономика</button>
         <button class="ibtn txt" type="button" id="b-gov" data-tip="Власть: строй, выборы и опросы, протесты, парламент и сословия, министры и реформа.">Власть</button>
         <button class="ibtn txt" type="button" id="b-world" data-tip="Соседние страны: отношения, торговля, договоры, займы, эмбарго и миграция.">Мир</button>
@@ -389,16 +391,29 @@ const MAPS=[
 /* ===== data/nations.js ===== */
 /* Соседние страны и типы кризисов. */
 const NATDEF=[
-  {id:'sol',n:'Солмар',full:'Республика Солмар',col:'#e07a3f',rel:35,pop:4200,happy:60,money:30000,rate:.05,tar:.05,brel:30,hb:58,reg:'rep',
+  {id:'sol',n:'Солмар',gen:'Солмара',ins:'Солмаром',fest:['Торговый форум в Солмаре','Республика Солмар собирает купцов со всего архипелага и зовёт вашу делегацию.'],full:'Республика Солмар',col:'#e07a3f',rel:35,pop:4200,happy:60,money:30000,rate:.05,tar:.05,brel:30,hb:58,reg:'rep',
    sup:{food:140,cotton:70,coffee:25,wood:30},dem:{goods:45,iron:35,cloth:20,coal:25},
    trait:'Аграрная республика. Много еды и хлопка, не хватает товаров и железа. Дружелюбна, но бедна.'},
-  {id:'kar',n:'Кардон',full:'Железный союз Кардон',col:'#8a96a3',rel:-20,pop:9500,happy:47,money:60000,rate:.11,tar:.25,brel:-15,hb:46,aggr:1,reg:'auth',
+  {id:'kar',n:'Кардон',gen:'Кардона',ins:'Кардоном',fest:['Парад в Кардоне','Железный союз Кардон приглашает вашу делегацию на смотр флота. Отказ там запомнят.'],full:'Железный союз Кардон',col:'#8a96a3',rel:-20,pop:9500,happy:47,money:60000,rate:.11,tar:.25,brel:-15,hb:46,aggr:1,reg:'auth',
    sup:{coal:130,iron:110,goods:60,wood:40},dem:{food:100,coffee:25,cans:35,cloth:25},
    trait:'Индустриальная держава. Уголь и железо в избытке, вечно не хватает еды. Высокие пошлины и жёсткая политика.'},
-  {id:'ava',n:'Авалис',full:'Королевство Авалис',col:'#c9a227',rel:10,pop:6000,happy:68,money:150000,rate:.07,tar:.12,brel:5,hb:66,reg:'mon',
+  {id:'ava',n:'Авалис',gen:'Авалиса',ins:'Авалисом',fest:['Королевский бал в Авалисе','Двор Авалиса ждёт посланников с подарками на праздник короны.'],full:'Королевство Авалис',col:'#c9a227',rel:10,pop:6000,happy:68,money:150000,rate:.07,tar:.12,brel:5,hb:66,reg:'mon',
    sup:{goods:40,cloth:40,cans:15},dem:{gold:20,coffee:45,cans:25,cotton:30},
    trait:'Богатая торговая монархия. Скупает золото и кофе, охотно даёт займы, но считает каждую монету.'},
 ];
+/* Сообщения соседей и обращения к ним. Промежутки — в месяцах. */
+const DIPL={evGap:12,evChance:.25,actGap:12,noRepeat:3,aggrDrift:.2};
+/* Числа сообщений. rel: [отношения при согласии, при отказе]. */
+const EVN={
+  order:{mul:1.4,min:30,rel:[4,-2]},
+  bargain:{mul:.6,amt:40,rel:[2,0]},
+  relief:{amt:30,rel:[10,-3]},
+  summit:{cost:600,rel:[7,-1]},
+  dumping:{cost:800,rel:[5,-5]},
+  border:{mil:4,rel:[6,-7]},
+  debt:{share:.25,min:300,rel:[8,-3]},
+  mediate:{rel:[6,-2],other:-6},
+};
 const CRISES={
   drought:{n:'засуха',start:'засуха, урожай погиб',end:'засуха закончилась',h:-10,sup:{food:.3,cotton:.3,coffee:.4},dem:{food:1.8}},
   strike:{n:'забастовка',start:'забастовка на заводах и шахтах',end:'забастовка окончена',h:-8,sup:{goods:.2,iron:.4,coal:.4,cloth:.3}},
@@ -448,7 +463,7 @@ const TUT={
   shop:{h:'Рынок',p:'Без рынка дом заселён только на 60%. Поставьте рынок так, чтобы дома попали в его ореол — подсвеченный круг.',cat:'svc',tool:'shop'},
   inspect:{h:'Осмотр',p:'Выберите «Осмотр» и коснитесь любого здания. Карточка покажет, сколько людей там работает и что мешает работе.',cat:'base',tool:'inspect',ui:1},
   goal:{h:'Цели и советник',p:'Вверху — текущая цель: за неё казна получает награду. Красная плашка советника подсказывает главную проблему города.',hl:['#goal'],next:1},
-  time:{h:'Запустим время',p:'Нажмите 1× и дождитесь конца месяца. Каждый месяц жители работают, платят налоги, город растёт. Пробел ставит паузу.',hl:['[data-spd="1"]']},
+  time:{h:'Запустим время',p:'Нажмите 1× и дождитесь конца месяца: это 40 секунд, на 3× втрое быстрее. Каждый месяц жители работают, платят налоги, город растёт. Пробел ставит паузу.',hl:['[data-spd="1"]']},
   layer:{h:'Слои карты',p:'Кнопка «Слой» показывает зоны: энергию, рынки, школы и путь рабочих до предприятий. Откройте меню и выберите любой слой.',hl:['#b-layer'],ui:1},
   region:{h:'Новые области',p:'Строить можно только в своих областях. Коснитесь затемнённой чужой области: увидите климат, залежи и цену. Купить её можно позже.',ui:1},
   saw:{h:'Добыча',p:'Сырьё дают лесопилки, шахты и фермы. Поставьте лесопилку у леса: чем больше деревьев вокруг, тем больше древесины.',cat:'mine',tool:'saw'},
@@ -525,7 +540,7 @@ function newGame(mi){
     money:4000,pop:18,happy:62,month:0,tax:{inc:.10,biz:.12,imp:.10,exp:.05},
     stock:Object.assign(z(0),{food:80,wood:30,coal:20,goods:20}),dom:Object.fromEntries(RK.map(k=>[k,RES[k].base])),
     trade:Object.fromEntries(RK.map(k=>[k,{e:1,i:1}])),goal:0,log:[],rep:null,
-    nat:initNations(),loans:[],lent:[],mig:'open',ev:null,tut:null};
+    nat:initNations(),loans:[],lent:[],mig:'open',ev:null,evAt:-99,evHist:[],evNid:null,tut:null};
   const h=W.hall,clr=j=>{if(s.type[j]===FOREST)s.type[j]=GRASS};
   s.bld[h]={t:'hall'};clr(h);
   for(const j of[h+1,h+2,h+3])if(s.type[j]>=SAND&&s.type[j]<=HILL){s.road[j]=1;clr(j)}
@@ -542,7 +557,7 @@ function loadStr(str){const o=JSON.parse(str);o.type=Uint8Array.from(o.type);o.e
 /* ===== sim/nations.js ===== */
 /* Рынки стран, кризисы, события-запросы, дипломатия и займы. */
 function initNations(){return NATDEF.map(d=>({id:d.id,rel:d.rel,pop:d.pop,happy:d.happy,money:d.money,tar:d.tar,deal:0,emb:0,cr:null,
-  pv:Object.fromEntries(RK.map(k=>[k,1])),dl:{},sl:{},tarUntil:0,aid:0}))}
+  pv:Object.fromEntries(RK.map(k=>[k,1])),dl:{},sl:{},tarUntil:0,aid:0,actAt:-99}))}
 const ND=n=>NATDEF.find(d=>d.id===n.id);
 const natById=id=>S.nat.find(n=>n.id===id);
 function relLabel(r){return r>=50?['Союзник','']:r>=15?['Дружба','']:r>=-15?['Нейтралитет','mid']:r>=-50?['Напряжённость','bad']:['Вражда','bad']}
@@ -563,14 +578,13 @@ function natTick(r){
     n.pop=Math.max(500,Math.round(n.pop*(1+(n.happy-50)/2500)));
     n.money+=n.pop*(n.happy-42)/60-(c?n.pop*.05:0);
     for(const k of RK)n.pv[k]=Math.max(.8,Math.min(1.25,n.pv[k]+(1-n.pv[k])*.1+(Math.random()-.5)*.08));
-    n.rel+=(d.brel-n.rel)*.02+(n.deal?.4:0)-(n.emb?1.5:0)+.15*M('dip');
-    if(d.aggr&&!n.deal&&Math.random()<.05){n.rel-=4;L(`${d.n} обвиняет вас в демпинге. Отношения ухудшились.`)}
+    n.rel+=(d.brel-n.rel)*.02+(n.deal?.4:0)-(n.emb?1.5:0)+.15*M('dip')-(d.aggr&&!n.deal?DIPL.aggrDrift:0);
     n.rel=Math.max(-100,Math.min(100,n.rel));
     if(n.deal&&n.rel<0){n.deal=0;L(`${d.n} разорвал торговый договор: отношения испортились.`)}
   }
   refreshMarkets();
   if(S.ev&&S.month>=S.ev.exp){evAnswer(false,true)}
-  if(!S.ev&&S.month>3&&Math.random()<.08)makeEvent();
+  if(!S.ev&&S.month>3&&S.month-S.evAt>=DIPL.evGap&&Math.random()<DIPL.evChance)makeEvent();
 }
 function makeEvent(){
   const opts=[];
@@ -579,14 +593,59 @@ function makeEvent(){
     if(n.rel>=20&&!n.deal)opts.push({t:'deal',nid:n.id});
     if(d.aggr&&!n.deal&&S.tax.imp>.05&&n.tarUntil<=S.month)opts.push({t:'tariff',nid:n.id});
     if(n.cr&&CRISES[n.cr.t].ref)opts.push({t:'ref',nid:n.id,amt:20+Math.floor(Math.random()*40)});
+    const cap=S.rep?S.rep.cen.cap:300;
+    if(n.rel>-50)for(const k of Object.keys(d.dem)){const amt=Math.floor(Math.min(S.stock[k],60)/5)*5,price=Math.round(natBuy(n,k)*EVN.order.mul);if(amt>=EVN.order.min&&n.money>amt*price)opts.push({t:'order',nid:n.id,k,amt,price})}
+    if(n.rel>-30)for(const k of Object.keys(d.sup)){const amt=EVN.bargain.amt,price=Math.max(1,Math.round(natSell(n,k)*EVN.bargain.mul));if(S.stock[k]+amt<=cap&&S.money>=amt*price*2)opts.push({t:'bargain',nid:n.id,k,amt,price})}
+    if(n.cr&&!CRISES[n.cr.t].ref&&CRISES[n.cr.t].h<0&&n.rel>-30&&S.stock.food>=EVN.relief.amt*2)opts.push({t:'relief',nid:n.id,amt:EVN.relief.amt,cn:CRISES[n.cr.t].n});
+    if(n.rel>-40&&S.money>=EVN.summit.cost*2)opts.push({t:'summit',nid:n.id});
+    if(d.aggr&&!n.deal)opts.push({t:'dumping',nid:n.id});
+    if(n.rel<-10)opts.push({t:'border',nid:n.id});
+    const l=S.lent.find(x=>x.nid===n.id);if(l&&l.left>=EVN.debt.min&&(n.cr||n.money<15000))opts.push({t:'debt',nid:n.id,amt:Math.round(l.left*EVN.debt.share)});
+    if(n.rel>=0){const o=S.nat.find(x=>x.id!==n.id&&!!ND(x).aggr!==!!d.aggr);if(o)opts.push({t:'mediate',nid:n.id,oid:o.id})}
   }
-  if(!opts.length)return;const e=opts[Math.floor(Math.random()*opts.length)];e.exp=S.month+6;S.ev=e;
+  /* Сначала выбираем вид сообщения, потом страну: так частые виды не вытесняют редкие. Недавние виды не повторяем. */
+  const all=[...new Set(opts.map(o=>o.t))],H=S.evHist;
+  let ts=all.filter(t=>!H.includes(t));if(!ts.length)ts=all.filter(t=>t!==H[H.length-1]);if(!ts.length)return;
+  const t=ts[Math.floor(Math.random()*ts.length)],same=opts.filter(o=>o.t===t),fresh=same.filter(o=>o.nid!==S.evNid),pool=fresh.length?fresh:same;
+  const e=pool[Math.floor(Math.random()*pool.length)];e.exp=S.month+6;S.ev=e;
+  S.evAt=S.month;S.evNid=e.nid;H.push(t);while(H.length>DIPL.noRepeat)H.shift();
 }
+/* Чего не хватает, чтобы согласиться; пустая строка — хватает всего. */
+function evLack(e){const X=EVN[e.t],sum=e.amt*e.price;
+  if(e.t==='loan'&&S.money<e.amt)return'Не хватает денег';
+  if(e.t==='bargain'&&S.money<sum)return'Не хватает денег';
+  if((e.t==='summit'||e.t==='dumping')&&S.money<X.cost)return'Не хватает денег';
+  if(e.t==='order'&&S.stock[e.k]<e.amt)return`На складах нет столько: ${RES[e.k].n.toLowerCase()}`;
+  if(e.t==='relief'&&S.stock.food<e.amt)return'На складах нет столько еды';
+  if(e.t==='debt'&&!S.lent.some(l=>l.nid===e.nid))return'Этот долг уже погашен';
+  return''}
+/* Совет министра дипломатии: соглашаться или нет. */
+function evWise(e,risk,c){const n=natById(e.nid),X=EVN[e.t],m=risk?1.5:3,k=m*2-1;
+  if(e.t==='deal')return true;
+  if(e.t==='loan')return S.money>e.amt*m;
+  if(e.t==='tariff'||e.t==='border')return !risk;
+  if(e.t==='ref')return c.home-S.pop>e.amt*(risk?.3:1);
+  if(e.t==='order')return S.stock[e.k]>=e.amt*1.5;
+  if(e.t==='bargain')return S.money>e.amt*e.price*m;
+  if(e.t==='relief')return S.stock.food>e.amt*3;
+  if(e.t==='summit'||e.t==='dumping')return S.money>X.cost*k;
+  if(e.t==='debt')return S.money>5000;
+  if(e.t==='mediate')return n.rel-natById(e.oid).rel>20;
+  return false}
 function evText(e){const d=ND(natById(e.nid));
   if(e.t==='loan')return[`${d.n} просит заём`,`${d.full} просит ${fmt(e.amt)} кр на 12 месяцев под ${Math.round(e.rate*100)}%. Отказ испортит отношения.`,'Дать заём','Отказать'];
   if(e.t==='deal')return[`${d.n} предлагает договор`,`Торговый договор: взаимные пошлины обнуляются, их товары дешевле на 8%, отношения растут каждый месяц.`,'Подписать','Отклонить'];
-  if(e.t==='tariff')return[`Ультиматум ${d.n==='Кардон'?'Кардона':d.n}`,`${d.full} требует снизить вашу импортную пошлину до 5%. Иначе на год поднимет пошлину на ваши товары до 35%.`,'Уступить','Отказать'];
-  return[`Беженцы из ${d.n==='Авалис'?'Авалиса':d.n==='Кардон'?'Кардона':'Солмара'}`,`${e.amt} человек просят убежища. Это рабочие руки, но им нужно жильё.`,'Принять','Отказать'];
+  const res=e.k?RES[e.k].n.toLowerCase():'',sum=e.amt*e.price;
+  if(e.t==='order')return[`Срочный заказ из ${d.gen}`,`${d.full} покупает партию: ${res}, ${e.amt} ед. по ${e.price} кр. Всего ${fmt(sum)} кр сразу и без пошлин.`,'Продать','Отказать'];
+  if(e.t==='bargain')return[`Скидка от ${d.gen}`,`${d.full} распродаёт запасы: ${res}, ${e.amt} ед. по ${e.price} кр. Всего ${fmt(sum)} кр.`,'Купить','Не нужно'];
+  if(e.t==='relief')return[`${d.n} просит помощи`,`В стране ${e.cn}. Просят прислать ${e.amt} ед. еды безвозмездно.`,'Отправить','Отказать'];
+  if(e.t==='summit')return[d.fest[0],`${d.fest[1]} Поездка обойдётся в ${fmt(EVN.summit.cost)} кр.`,'Послать делегацию','Не поедем'];
+  if(e.t==='dumping')return[`${d.n} обвиняет вас в демпинге`,`${d.full} заявляет, что ваши товары разоряют его заводы, и требует ${fmt(EVN.dumping.cost)} кр отступных.`,'Заплатить','Отвергнуть'];
+  if(e.t==='border')return['Инцидент в проливе',`Патруль ${d.gen} задержал ваше торговое судно, и теперь ${d.n} требует извинений. Военным уступка не понравится.`,'Извиниться','Отказать'];
+  if(e.t==='debt')return[`${d.n} просит простить долг`,`Страна не справляется с выплатами и просит списать ${fmt(e.amt)} кр из своего долга.`,'Простить','Напомнить о долге'];
+  if(e.t==='mediate')return[`${d.n} ищет поддержки`,`Спор с ${ND(natById(e.oid)).ins} о рыбных промыслах зашёл далеко. ${d.n} просит встать на его сторону.`,'Поддержать','Остаться в стороне'];
+  if(e.t==='tariff')return[`Ультиматум ${d.gen}`,`${d.full} требует снизить вашу импортную пошлину до 5%. Иначе на год поднимет пошлину на ваши товары до 35%.`,'Уступить','Отказать'];
+  return[`Беженцы из ${d.gen}`,`${e.amt} человек просят убежища. Это рабочие руки, но им нужно жильё.`,'Принять','Отказать'];
 }
 function evAnswer(yes,silent){
   const e=S.ev;if(!e)return;const n=natById(e.nid),d=ND(n),L=t=>S.log.unshift({m:S.month,t});S.ev=null;
@@ -596,13 +655,28 @@ function evAnswer(yes,silent){
   else if(e.t==='tariff'){if(yes){S.tax.imp=Math.min(S.tax.imp,.05);n.rel+=6;L(`Вы уступили ${d.n}: импортная пошлина снижена до 5%.`)}
     else{n.tarUntil=S.month+12;n.rel-=10;L(`${d.n} поднял пошлину на ваши товары до 35% на год.`)}}
   else if(e.t==='ref'){if(yes){S.pop+=e.amt;n.pop-=e.amt;n.rel+=6;L(`Приняты ${e.amt} беженцев из ${d.n}.`)}else n.rel-=4}
+  else{const X=EVN[e.t],ok=yes&&!evLack(e),sum=e.amt*e.price;n.rel+=X.rel[ok?0:1];
+    if(ok){
+      if(e.t==='order'){S.stock[e.k]-=e.amt;S.money+=sum;n.money-=sum;L(`${d.n}: партия продана за ${fmt(sum)} кр.`)}
+      else if(e.t==='bargain'){S.money-=sum;n.money+=sum;S.stock[e.k]+=e.amt;L(`${d.n}: партия куплена за ${fmt(sum)} кр.`)}
+      else if(e.t==='relief'){S.stock.food-=e.amt;L(`${d.n}: отправлено ${e.amt} ед. еды.`)}
+      else if(e.t==='summit'){S.money-=X.cost;L(`${d.fest[0]}: делегация принята.`)}
+      else if(e.t==='dumping'){S.money-=X.cost;n.money+=X.cost;L(`${d.n}: отступные выплачены.`)}
+      else if(e.t==='border'){if(S.fac&&S.fac.mil)S.fac.mil.sat=Math.max(0,S.fac.mil.sat-X.mil);L(`${d.n}: вы принесли извинения.`)}
+      else if(e.t==='debt'){const l=S.lent.find(x=>x.nid===n.id);l.left=Math.max(1,l.left-e.amt);L(`${d.n}: списано ${fmt(e.amt)} кр долга.`)}
+      else if(e.t==='mediate'){const o=natById(e.oid);o.rel=Math.max(-100,Math.min(100,o.rel+X.other));L(`Вы поддержали ${d.n} в споре с ${ND(o).ins}.`)}
+    }else if(!silent)L(`${d.n}: вы отказали.`)}
   n.rel=Math.max(-100,Math.min(100,n.rel));
 }
+/* Сколько месяцев ждать следующего обращения к стране. */
+function dipWait(n){return Math.max(0,n.actAt+DIPL.actGap-S.month)}
 /* diplomacy actions: return message */
 function debtTotal(){return S.loans.reduce((a,l)=>a+l.left,0)}
 function borrowRate(n){return Math.max(.02,ND(n).rate-.005*M('dip'))+Math.max(0,-n.rel)/400+debtTotal()/60000}
 function dip(act,id,amt){
-  const n=natById(id),d=ND(n),L=t=>S.log.unshift({m:S.month,t});
+  /* Год отсчитывается только от удавшегося обращения: всё удачное пишется в журнал через L, отказы — нет. */
+  const n=natById(id),d=ND(n),L=t=>{S.log.unshift({m:S.month,t});n.actAt=S.month},w=dipWait(n);
+  if(w>0)return`${d.n}: следующее обращение через ${w} ${plural(w,'месяц','месяца','месяцев')}`;
   if(act==='deal'){if(n.deal){n.deal=0;n.rel-=8;L(`Вы расторгли договор с ${d.n}.`);return'Договор расторгнут'}
     if(n.emb)return'Сначала снимите эмбарго';if(n.rel<25)return`${d.n} согласится на договор при отношениях от 25`;n.deal=1;L(`Подписан торговый договор с ${d.n}.`);return'Договор подписан'}
   if(act==='emb'){n.emb=n.emb?0:1;if(n.emb){n.rel-=25;n.deal=0;L(`Вы ввели эмбарго против ${d.n}.`);return'Эмбарго введено'}L(`Эмбарго против ${d.n} снято.`);return'Эмбарго снято'}
@@ -884,10 +958,10 @@ function ministerTurn(p,c,r,doIt){
     else if(Math.abs(T.exp-te)>.005){s=`Советую экспортную пошлину ${Math.round(te*100)}%.`;if(doIt)T.exp=+(T.exp+Math.sign(te-T.exp)*.01).toFixed(2)}
     if(doIt)for(const k of RK)S.trade[k].e=1;if(!c.ports)s='Без порта торговли нет: постройте порт.';return s}
   if(p==='dip'){let s='Отношения стабильны.';
-    if(S.ev){const e=S.ev,y=e.t==='deal'||(e.t==='loan'&&S.money>e.amt*(risk?1.5:3))||(e.t==='tariff'&&!risk)||(e.t==='ref'&&c.home-S.pop>e.amt*(risk?.3:1));s=`По запросу «${evText(e)[0]}» советую: ${y?evText(e)[2].toLowerCase():evText(e)[3].toLowerCase()}.`;if(doIt){evAnswer(y&&!(e.t==='loan'&&S.money<e.amt));S.log.unshift({m:S.month,t:`${m.name} ответил на запрос: ${y?'согласие':'отказ'}.`})}return s}
-    const cand=S.nat.find(n=>!n.deal&&!n.emb&&n.rel>=25);if(cand){s=`Отношения с ${ND(cand).n} позволяют подписать договор.`;if(doIt)dip('deal',cand.id);return s}
-    const near=S.nat.find(n=>!n.deal&&!n.emb&&n.rel>=15&&n.rel<25&&n.aid<4);if(near&&S.money>res+3000){s=`${ND(near).n} почти готов к договору: помощь 1 000 кр поможет.`;if(doIt)dip('aid',near.id)}
-    if(S.money<-1500&&risk&&debtTotal()<8000&&!S.loans.some(l=>l.since>S.month-12)){s='Казна пуста: возьмём заём у самого дешёвого кредитора.';if(doIt){const n=S.nat.filter(n=>n.rel>-30&&n.money>9000).sort((a,b)=>borrowRate(a)-borrowRate(b))[0];if(n){dip('borrow',n.id,3000);S.loans[S.loans.length-1].since=S.month}}}return s}
+    if(S.ev){const e=S.ev,y=evWise(e,risk,c);s=`По запросу «${evText(e)[0]}» советую: ${y?evText(e)[2].toLowerCase():evText(e)[3].toLowerCase()}.`;if(doIt){evAnswer(y&&!evLack(e));S.log.unshift({m:S.month,t:`${m.name} ответил на запрос: ${y?'согласие':'отказ'}.`})}return s}
+    const cand=S.nat.find(n=>!n.deal&&!n.emb&&n.rel>=25&&!dipWait(n));if(cand){s=`Отношения с ${ND(cand).n} позволяют подписать договор.`;if(doIt)dip('deal',cand.id);return s}
+    const near=S.nat.find(n=>!n.deal&&!n.emb&&n.rel>=15&&n.rel<25&&n.aid<4&&!dipWait(n));if(near&&S.money>res+3000){s=`${ND(near).n} почти готов к договору: помощь 1 000 кр поможет.`;if(doIt)dip('aid',near.id)}
+    if(S.money<-1500&&risk&&debtTotal()<8000&&!S.loans.some(l=>l.since>S.month-12)){s='Казна пуста: возьмём заём у самого дешёвого кредитора.';if(doIt){const n=S.nat.filter(n=>n.rel>-30&&n.money>9000&&!dipWait(n)).sort((a,b)=>borrowRate(a)-borrowRate(b))[0];if(n){dip('borrow',n.id,3000);S.loans[S.loans.length-1].since=S.month}}}return s}
   if(p==='en'){if(c.unpow>0)return act('wind',i=>hasB(i,(d,j)=>d.pow<0&&!PW[j]),`${c.unpow} зданий без электричества.`);
     if(c.pr<1)return act(risk&&r.prod.coal>4?'power':'wind',()=>1,'Энергии не хватает на всех.');if(r.fuel<.9){if(doIt)S.trade.coal.i=1;return'ТЭС не хватает угля: включаю ввоз угля.'}return'Энергосеть в порядке.'}
   if(p==='ind'){if(c.log<.95)return act('store',i=>hasB(i,(d,j)=>d.out&&!COV.store[j]),'Предприятиям нужен склад рядом.');if(r.short.inputs>.2){if(doIt)for(const k of['wood','iron','coal','cotton'])S.trade[k].i=1;return'Заводам не хватает сырья: включаю ввоз сырья.'}return'Промышленность работает.'}
@@ -922,7 +996,9 @@ function natEff(f){const a=S.fatt&&S.fatt[f];if(!a)return 0;let s=0,w=0;for(cons
 /* кто из фракций любит и не любит страну: [[f,att],...] */
 function natFans(id,th=.25){const fan=[],foe=[];for(const f in FAC){const v=S.fatt&&S.fatt[f]?S.fatt[f][id]||0:0;if(f==='mil'&&!S.seats.mil)continue;if(v>=th)fan.push(f);else if(v<=-th)foe.push(f)}return{fan,foe}}
 /* старые сохранения v3 → v4: две новые фракции и отношения к соседям */
-function migrateSave(o){if(o.v===3){o.fac.mil={sat:50};o.fac.int={sat:50};o.seats.mil=0;o.seats.int=4;o.fatt=fattInit(o);o.v=4}return o}
+function migrateSave(o){if(o.v===3){o.fac.mil={sat:50};o.fac.int={sat:50};o.seats.mil=0;o.seats.int=4;o.fatt=fattInit(o);o.v=4}
+  /* поля редких сообщений и обращений раз в год: версия та же, просто дополняем */
+  if(o.evAt===undefined){o.evAt=-99;o.evHist=[];o.evNid=null;o.nat.forEach(n=>{n.actAt=-99})}return o}
 /* indicators and politics, called after the month is computed */
 function govTick(r,c){
   const D=DIFF[S.diff],T=S.tax,L=t=>S.log.unshift({m:S.month,t});
@@ -1222,7 +1298,7 @@ function drawB(g,t,mx,my,i){
 /* ===== ui/app.js ===== */
 /* Меню, панель строительства, карточки клеток и областей, события, верхняя панель. */
 const $=s=>document.querySelector(s);
-const SAVE_KEY='archipelago-v3',MONTH_MS=4000;
+const SAVE_KEY='archipelago-v3',MONTH_MS=40000;
 let TOOL='inspect',CAT='base',ROADA=-1,SEL=-1,HOV=-1,SPEED=1,PICK=0,cv,ctx,DPR=1,VW=0,VH=0,Z=1,cam={x:0,y:0},acc=0,lastTs=0,sheetMode=null,LAYER=null;
 let BOATS=[],SMOKE=[],smokeT=0;
 const TNAME={inspect:'Осмотр',road:'Дорога',bull:'Снос'};
@@ -1320,15 +1396,17 @@ function info(i){
 }
 
 /* ---------- events ---------- */
-function evTip(e,y){const t=e.t;
+function evTip(e,y){const t=e.t,X=EVN[t],R=v=>`Отношения ${v>0?'+':'−'}${Math.abs(v)}.`;
+  if(X){const rel=R(X.rel[y?0:1]),no=X.rel[1]?rel:'Ничего не изменится.';if(!y)return t==='mediate'?'Никто не обидится всерьёз. '+rel:'Всё останется как есть. '+no;
+    return({order:`Получите ${fmt(e.amt*e.price)} кр, партия уйдёт со склада. `,bargain:`Заплатите ${fmt(e.amt*e.price)} кр, партия придёт на склад. `,relief:`${e.amt} ед. еды уйдут со склада. `,summit:`Расход ${fmt(X.cost)} кр. `,dumping:`Расход ${fmt(X.cost)} кр. `,border:`Довольство военных −${X.mil}. `,debt:`Вернут на ${fmt(e.amt)} кр меньше. `,mediate:`Отношения со второй страной ${X.other}. `})[t]+rel}
   if(t==='loan')return y?`Отдадите ${fmt(e.amt)} кр, вернут ${fmt(e.amt*(1+e.rate))} кр за 12 месяцев. Отношения +10.`:'Деньги останутся у вас. Отношения −5.';
   if(t==='deal')return y?'Пошлины между вами обнуляются, их товары дешевле на 8%, отношения растут каждый месяц.':'Ничего не изменится, предложение может повториться.';
   if(t==='tariff')return y?'Ваша импортная пошлина станет 5%: меньше доход казны, зато мир и отношения +6.':'Год их пошлина на ваши товары будет 35%, отношения −10.';
   return y?`Население +${e.amt}, отношения +6. Беженцам нужно жильё, иначе они начнут уезжать.`:'Отношения −4.'}
 function showEvent(){const el=$('#event');if(!S.ev){el.hidden=true;return}
   const[h,p,y,n]=evText(S.ev),d=ND(natById(S.ev.nid));
-  el.hidden=false;el.innerHTML=`<div class="card-h"><span class="flag" style="background:${d.col}"></span><h4>${h}</h4></div><p>${p} Ответ до ${MONTHS[S.ev.exp%12].toLowerCase()}.</p><div class="btns"><button class="btn" type="button" id="ev-y" data-tip="${evTip(S.ev,1)}">${y}</button><button class="btn ghost" type="button" id="ev-n" data-tip="${evTip(S.ev,0)}">${n}</button></div>`;
-  $('#ev-y').onclick=()=>{if(S.ev.t==='loan'&&S.money<S.ev.amt){toast('Не хватает денег');return}evAnswer(true);showEvent();refresh()};
+  el.hidden=false;el.innerHTML=`<div class="card-h"><span class="flag" style="background:${d.col}"></span><h4>${h}</h4></div><p>${p} Срок ответа: ${MONTHS[S.ev.exp%12].toLowerCase()}.</p><div class="btns"><button class="btn" type="button" id="ev-y" data-tip="${evTip(S.ev,1)}">${y}</button><button class="btn ghost" type="button" id="ev-n" data-tip="${evTip(S.ev,0)}">${n}</button></div>`;
+  $('#ev-y').onclick=()=>{{const m=evLack(S.ev);if(m){toast(m);return}}evAnswer(true);showEvent();refresh()};
   $('#ev-n').onclick=()=>{evAnswer(false);showEvent();refresh()}}
 
 /* ---------- hud ---------- */
@@ -1606,7 +1684,7 @@ function bindEcon(){const el=$('#sheet');
 function worldHTML(){
   const r=S.rep,debt=debtTotal(),lent=S.lent.reduce((a,l)=>a+l.left,0);
   const mig=[['open','Открыты для всех'],['allies','Только союзникам'],['closed','Закрыты']];
-  const card=n=>{const d=ND(n),[lab,cls]=relLabel(n.rel),tar=natTariff(n);
+  const card=n=>{const d=ND(n),[lab,cls]=relLabel(n.rel),tar=natTariff(n),wait=dipWait(n),off=wait?' aria-disabled="true"':'';
     const buys=Object.keys(d.dem).map(k=>`${RES[k].n.toLowerCase()} ${natBuy(n,k).toFixed(0)}`).join(', ');
     const sells=Object.keys(d.sup).filter(k=>n.sl[k]>0||!r).map(k=>`${RES[k].n.toLowerCase()} ${natSell(n,k).toFixed(0)}`).join(', ')||'сейчас нечего';
     const my=S.loans.filter(l=>l.nid===n.id).reduce((a,l)=>a+l.left,0),their=S.lent.filter(l=>l.nid===n.id).reduce((a,l)=>a+l.left,0);
@@ -1620,18 +1698,19 @@ function worldHTML(){
       <div><span>Вы должны</span><span>${fmt(my)}</span></div><div><span>Должны вам</span><span>${fmt(their)}</span></div>
       <div><span>Миграция</span><span>${r&&r.mig[n.id]?(r.mig[n.id]>0?'+':'')+r.mig[n.id]:'0'}</span></div><div><span>Ставка займа</span><span>${Math.round(borrowRate(n)*100)}%</span></div></div>
     <div class="mkt"><b>Покупает:</b>${buys}<br><b>Продаёт:</b>${sells}</div>
-    <div class="acts"><button class="ibtn txt" type="button" data-a="deal" data-n="${n.id}" data-tip="${n.deal?`Пошлины вернутся (у ${d.n} ${Math.round(n.tar*100)}%), скидка на их товары пропадёт. Отношения −8.`:`Взаимные пошлины обнулятся, их товары станут дешевле на 8%, отношения +0,4 в месяц. Нужны отношения от 25, сейчас ${Math.round(n.rel)}.`}">${n.deal?'Расторгнуть договор':'Торговый договор'}</button>
-      <button class="ibtn txt" type="button" data-a="borrow" data-n="${n.id}" data-v="3000" data-tip="Получите 3 000 кр сразу, вернёте ${fmt(3000*(1+borrowRate(n)*2))} кр равными платежами за 24 месяца. Ставка ${Math.round(borrowRate(n)*100)}% растёт с вашим долгом и плохими отношениями. Врагам (ниже −30) не дают.">Взять 3 000</button>
-      <button class="ibtn txt" type="button" data-a="lend" data-n="${n.id}" data-v="2000" data-tip="Отдадите 2 000 кр, вернут 2 160 кр за 12 месяцев. Отношения +6. Если у страны кончатся деньги, выплаты будут задерживаться.">Одолжить 2 000</button>
-      <button class="ibtn txt" type="button" data-a="aid" data-n="${n.id}" data-tip="1 000 кр в подарок. Отношения +${Math.max(2,10-n.aid*2)}: каждая следующая помощь даёт меньше.">Помощь 1 000</button>
-      <button class="ibtn txt" type="button" data-a="emb" data-n="${n.id}" data-tip="${n.emb?'Торговля и миграция с этой страной возобновятся.':'Запрет торговли и миграции. Отношения −25 сразу и −1,5 каждый месяц, договор расторгается.'}">${n.emb?'Снять эмбарго':'Эмбарго'}</button></div></div>`};
+    ${wait?`<p class="dip-wait" data-tip="С каждой страной можно иметь дело раз в год: договор, заём, помощь или эмбарго.">Следующее обращение через ${wait} ${plural(wait,'месяц','месяца','месяцев')}</p>`:''}
+    <div class="acts"><button class="ibtn txt"${off} type="button" data-a="deal" data-n="${n.id}" data-tip="${n.deal?`Пошлины вернутся (у ${d.n} ${Math.round(n.tar*100)}%), скидка на их товары пропадёт. Отношения −8.`:`Взаимные пошлины обнулятся, их товары станут дешевле на 8%, отношения +0,4 в месяц. Нужны отношения от 25, сейчас ${Math.round(n.rel)}.`}">${n.deal?'Расторгнуть договор':'Торговый договор'}</button>
+      <button class="ibtn txt"${off} type="button" data-a="borrow" data-n="${n.id}" data-v="3000" data-tip="Получите 3 000 кр сразу, вернёте ${fmt(3000*(1+borrowRate(n)*2))} кр равными платежами за 24 месяца. Ставка ${Math.round(borrowRate(n)*100)}% растёт с вашим долгом и плохими отношениями. Врагам (ниже −30) не дают.">Взять 3 000</button>
+      <button class="ibtn txt"${off} type="button" data-a="lend" data-n="${n.id}" data-v="2000" data-tip="Отдадите 2 000 кр, вернут 2 160 кр за 12 месяцев. Отношения +6. Если у страны кончатся деньги, выплаты будут задерживаться.">Одолжить 2 000</button>
+      <button class="ibtn txt"${off} type="button" data-a="aid" data-n="${n.id}" data-tip="1 000 кр в подарок. Отношения +${Math.max(2,10-n.aid*2)}: каждая следующая помощь даёт меньше.">Помощь 1 000</button>
+      <button class="ibtn txt"${off} type="button" data-a="emb" data-n="${n.id}" data-tip="${n.emb?'Торговля и миграция с этой страной возобновятся.':'Запрет торговли и миграции. Отношения −25 сразу и −1,5 каждый месяц, договор расторгается.'}">${n.emb?'Снять эмбарго':'Эмбарго'}</button></div></div>`};
   return`<div class="sheet-in"><div class="sheet-top"><h2>Мир и дипломатия</h2><button class="ibtn" type="button" id="sh-x" aria-label="Закрыть">✕</button></div>
   <div class="sec"><h3>Ваша страна</h3><div class="mini" style="max-width:520px"><div><span>Население</span><span>${fmt(S.pop)}</span></div><div><span>Настроение</span><span>${Math.round(S.happy)}%</span></div>
     <div><span>Внешний долг</span><span>${fmt(debt)}</span></div><div><span>Вам должны</span><span>${fmt(lent)}</span></div></div>
     <p class="log" style="font-size:12.5px">Люди переезжают туда, где настроение выше. Если у вас лучше, а в доме есть место, к вам едут иммигранты.</p>
     <div class="seg" role="radiogroup" aria-label="Границы">${mig.map(([k,t])=>`<button class="tg" type="button" role="radio" data-mig="${k}" data-tip="${({open:'Иммигранты едут из любой страны, где настроение ниже вашего.',allies:'Иммигрантов пускают только из стран с отношениями от 40.',closed:'Никто не въезжает. Уезжать жители всё равно могут.'})[k]}" aria-pressed="${S.mig===k}" aria-checked="${S.mig===k}">${t}</button>`).join('')}</div></div>
   <div class="sec"><h3>Соседи</h3><div class="nations">${S.nat.map(card).join('')}</div>
-  <p class="log" style="font-size:12.5px">Договор возможен при отношениях от 25: пошлины обнуляются, цены их товаров ниже на 8%. Займы берутся на 2 года, выдаются на год под 8%. Отношения растут от торговли, помощи и займов.</p></div></div>`;
+  <p class="log" style="font-size:12.5px">Договор возможен при отношениях от 25: пошлины обнуляются, цены их товаров ниже на 8%. Займы берутся на 2 года, выдаются на год под 8%. Отношения растут от торговли, помощи и займов. К каждой стране можно обратиться раз в год.</p></div></div>`;
 }
 function bindWorld(){const el=$('#sheet');
   el.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const m=dip(b.dataset.a,b.dataset.n,+b.dataset.v||0);toast(m);refresh()});
