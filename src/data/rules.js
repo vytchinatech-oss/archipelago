@@ -31,7 +31,7 @@ const MINK={fin:.02,trdPrice:.015,trdPort:.05,enPow:.04,enCoal:.05,ind:.03,agr:.
 const CAND={skill:5,hon:.72,loy:.65,risk:.5,salBase:5,salK:2,salRand:4};
 const CABK={firedUnrest:8,firedPeo:4,theftFin:.04,theftBase:4,theftSkill:2,caught:.025,caughtAppr:6,plot:.04,plotAppr:SCALE.bad,plotUnrest:15,plotArmy:8};
 /* Автопилот: когда министр действует. */
-const AUTO={resRisk:800,resSafe:3000,step:.01,eps:.005,
+const AUTO={importOf:{agr:['food'],en:['coal'],ind:['wood','iron','coal','cotton']},resRisk:800,resSafe:3000,step:.01,eps:.005,
   finMood:[SCALE.bad,SCALE.good],finInc:[.16,.13],finCalm:SCALE.bad,finCalmInc:.08,finRich:15000,finRichMood:SCALE.good,finRichInc:.06,
   tradeImp:[.04,.12],tradeExp:[.03,.06],
   dipNear:15,dipAidCash:3000,dipBroke:-1500,dipDebtMax:8000,dipLoanGap:12,dipLoan:3000,

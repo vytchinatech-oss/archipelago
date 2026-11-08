@@ -115,6 +115,7 @@ h1{font:800 clamp(38px,10vw,92px)/.95 var(--f-display);letter-spacing:-.02em;mar
 .tbl td:first-child{font-family:var(--f-body);font-weight:600;font-size:13px}
 .tg{all:unset;cursor:pointer;font:600 10.5px/1 var(--f-body);padding:5px 7px;border-radius:7px;background:rgba(234,242,238,.07);color:var(--muted)}
 .tg[aria-pressed="true"]{background:rgba(121,214,154,.18);color:var(--good)}
+.tg[aria-disabled="true"]{opacity:.5}
 .tg:focus-visible{outline:2px solid var(--sun)}
 .budget{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
 .bcol{background:var(--ink-2);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:5px}
@@ -359,7 +360,7 @@ const MINK={fin:.02,trdPrice:.015,trdPort:.05,enPow:.04,enCoal:.05,ind:.03,agr:.
 const CAND={skill:5,hon:.72,loy:.65,risk:.5,salBase:5,salK:2,salRand:4};
 const CABK={firedUnrest:8,firedPeo:4,theftFin:.04,theftBase:4,theftSkill:2,caught:.025,caughtAppr:6,plot:.04,plotAppr:SCALE.bad,plotUnrest:15,plotArmy:8};
 /* Автопилот: когда министр действует. */
-const AUTO={resRisk:800,resSafe:3000,step:.01,eps:.005,
+const AUTO={importOf:{agr:['food'],en:['coal'],ind:['wood','iron','coal','cotton']},resRisk:800,resSafe:3000,step:.01,eps:.005,
   finMood:[SCALE.bad,SCALE.good],finInc:[.16,.13],finCalm:SCALE.bad,finCalmInc:.08,finRich:15000,finRichMood:SCALE.good,finRichInc:.06,
   tradeImp:[.04,.12],tradeExp:[.03,.06],
   dipNear:15,dipAidCash:3000,dipBroke:-1500,dipDebtMax:8000,dipLoanGap:12,dipLoan:3000,
@@ -517,11 +518,11 @@ const FAC={
 const FACK={floor:4,share:70,lo:SCALE.crisis,loM:.9,hi:SCALE.top,hiM:1.05,natW:10,smooth:RATE.slow,soldierPct:.04,coupAngry:.004,peoUnrest:2,fanFrom:.25};
 const POSTS={
   fin:{n:'Финансов',b:`Собираемость налогов +${PCT(MINK.fin)}% за уровень навыка.`,a:'Сам меняет подоходный налог и налог на бизнес, чтобы держать бюджет в плюсе.'},
-  trd:{n:'Торговли',b:`Экспортные цены +${PCT(MINK.trdPrice)}% и пропускная способность портов +${PCT(MINK.trdPort)}% за уровень.`,a:'Сам ставит пошлины: осторожный защищает своих производителей, рисковый открывает рынок.'},
+  trd:{n:'Торговли',b:`Экспортные цены +${PCT(MINK.trdPrice)}% и пропускная способность портов +${PCT(MINK.trdPort)}% за уровень.`,a:'Сам ставит пошлины и ведёт весь вывоз и ввоз, ваши кнопки в это время закрыты: осторожный защищает своих производителей, рисковый открывает рынок.'},
   dip:{n:'Иностранных дел',b:`Отношения со всеми +${COMMA(MINK.dipRel)} в месяц и ставка займов −${PCT(MINK.dipRate)}% за уровень.`,a:'Сам отвечает на просьбы и ультиматумы, подписывает договоры, помогает соседям.'},
-  en:{n:'Энергетики',b:`Мощность электростанций +${PCT(MINK.enPow)}%, расход угля −${PCT(MINK.enCoal)}% за уровень.`,a:'Сам строит ветряки, а рисковый и ТЭС, когда не хватает энергии или здания остались без электричества. Выключатели ввоза не трогает.'},
-  ind:{n:'Промышленности',b:`Выработка шахт, лесопилок и заводов +${PCT(MINK.ind)}% за уровень.`,a:'Сам строит склады рядом с предприятиями без логистики. Выключатели ввоза не трогает.'},
-  agr:{n:'Сельского хозяйства',b:`Урожай и улов +${PCT(MINK.agr)}% за уровень.`,a:'Сам строит фермы, когда не хватает еды. Выключатели ввоза не трогает.'},
+  en:{n:'Энергетики',b:`Мощность электростанций +${PCT(MINK.enPow)}%, расход угля −${PCT(MINK.enCoal)}% за уровень.`,a:'Сам строит ветряки, а рисковый и ТЭС, когда не хватает энергии или здания остались без электричества. Ведёт ввоз угля, ваша кнопка в это время закрыта.'},
+  ind:{n:'Промышленности',b:`Выработка шахт, лесопилок и заводов +${PCT(MINK.ind)}% за уровень.`,a:'Сам строит склады рядом с предприятиями без логистики. Ведёт ввоз сырья, ваши кнопки в это время закрыты.'},
+  agr:{n:'Сельского хозяйства',b:`Урожай и улов +${PCT(MINK.agr)}% за уровень.`,a:'Сам строит фермы, когда не хватает еды. Ведёт ввоз еды, ваша кнопка в это время закрыта.'},
   soc:{n:'Социальной политики',b:`Настроение +${COMMA(MINK.soc)} за уровень.`,a:'Сам строит рынки, парки, школы и больницы рядом с жильём.'},
   mvd:{n:'Внутренних дел',b:`Преступность −${PCT(MINK.mvdCrime)}% и рост протестов −${PCT(MINK.mvdUnrest)}% за уровень.`,a:'Сам строит полицию рядом с жильём, когда её не хватает.'}};
 const FN=['Аркадий','Борис','Вера','Глеб','Дарья','Евгений','Жанна','Захар','Ирина','Кирилл','Лидия','Марк','Нина','Олег','Полина','Роман','Светлана','Тимур','Ульяна','Филипп','Эльвира','Юрий','Яна','Станислав','Майя'];
@@ -1035,6 +1036,10 @@ function hire(p,id){const c=S.cand[p].find(x=>x.id===id);if(!c)return'Канди
 function fire(p,silent){const m=S.min[p];if(!m)return'';delete S.min[p];
   if(!m.loy){S.unrest=Math.min(100,S.unrest+CABK.firedUnrest);S.fac.peo.sat-=CABK.firedPeo;S.log.unshift({m:S.month,t:`Уволенный ${m.name} ушёл в оппозицию и критикует власть.`})}
   else if(!silent)S.log.unshift({m:S.month,t:`${m.name} покинул пост министра ${POSTS[p].n.toLowerCase()}.`});return`${m.name} уволен`}
+/* Какой министр с доверенной сферой ведёт выключатель ресурса (m: 'e' вывоз, 'i' ввоз). Пока он есть, игрок кнопку не меняет. */
+function tradeBoss(k,m){const on=p=>S.min[p]&&S.min[p].auto?S.min[p]:null;if(on('trd'))return on('trd');
+  if(m==='i')for(const p in AUTO.importOf)if(AUTO.importOf[p].includes(k)&&on(p))return on(p);return null}
+function setTrade(k,m){const b=tradeBoss(k,m);if(b)return`Этим ведает ${b.name}. Переведите министра в советники или уволите его`;S.trade[k][m]=S.trade[k][m]?0:1;return''}
 /* building helper for autopilot ministers */
 function autoBuild(type,isTarget){let best=-1,bs=0;
   for(let i=0;i<N*N;i++){if(!nb4(i).some(j=>NET[j]))continue;if(!canBuild(type,i).ok)continue;let sc=0;
@@ -1054,6 +1059,7 @@ function ministerTurn(p,c,r,doIt){
   if(p==='trd'){const ti=AUTO.tradeImp[risk?0:1],te=AUTO.tradeExp[risk?0:1];let s='Пошлины в норме.';
     if(Math.abs(T.imp-ti)>AUTO.eps){s=`Советую импортную пошлину ${Math.round(ti*100)}%: ${risk?'дешёвый импорт оживит торговлю':'защитим своих производителей'}.`;if(doIt)T.imp=+(T.imp+Math.sign(ti-T.imp)*AUTO.step).toFixed(2)}
     else if(Math.abs(T.exp-te)>AUTO.eps){s=`Советую экспортную пошлину ${Math.round(te*100)}%.`;if(doIt)T.exp=+(T.exp+Math.sign(te-T.exp)*AUTO.step).toFixed(2)}
+    if(doIt)for(const k of RK){S.trade[k].e=1;S.trade[k].i=1}
     if(!c.ports)s='Без порта торговли нет: постройте порт.';return s}
   if(p==='dip'){let s='Отношения стабильны.';
     if(S.ev){const e=S.ev,y=evWise(e,risk,c);s=`По запросу «${evText(e)[0]}» советую: ${y?evText(e)[2].toLowerCase():evText(e)[3].toLowerCase()}.`;if(doIt){evAnswer(y&&!evLack(e));S.log.unshift({m:S.month,t:`${m.name} ответил на запрос: ${y?'согласие':'отказ'}.`})}return s}
@@ -1061,9 +1067,9 @@ function ministerTurn(p,c,r,doIt){
     const near=S.nat.find(n=>!n.deal&&!n.emb&&n.rel>=AUTO.dipNear&&n.rel<RELK.friend&&aidGain(n)>DIPA.aidMin&&!dipWait(n));if(near&&S.money>res+AUTO.dipAidCash){s=`${ND(near).n} почти готов к договору: помощь ${fmt(DIPA.aidCost)} кр поможет.`;if(doIt)dip('aid',near.id)}
     if(S.money<AUTO.dipBroke&&risk&&debtTotal()<AUTO.dipDebtMax&&!S.loans.some(l=>l.since>S.month-AUTO.dipLoanGap)){s='Казна пуста: возьмём заём у самого дешёвого кредитора.';if(doIt){const n=S.nat.filter(n=>n.rel>=DIPA.borrowFrom&&n.money>=AUTO.dipLoan*DIPA.borrowCash&&!dipWait(n)).sort((a,b)=>borrowRate(a)-borrowRate(b))[0];if(n){dip('borrow',n.id,AUTO.dipLoan);S.loans[S.loans.length-1].since=S.month}}}return s}
   if(p==='en'){if(c.unpow>0)return act('wind',i=>hasB(i,(d,j)=>d.pow<0&&!PW[j]),`${c.unpow} зданий без электричества.`);
-    if(c.pr<1)return act(risk&&r.prod.coal>AUTO.coalOk?'power':'wind',()=>1,'Энергии не хватает на всех.');if(r.fuel<AUTO.fuelLow)return S.trade.coal.i?'ТЭС не хватает угля: нужна шахта или порт.':'ТЭС не хватает угля, а ввоз угля у вас выключен.';return'Энергосеть в порядке.'}
-  if(p==='ind'){if(c.log<AUTO.logLow)return act('store',i=>hasB(i,(d,j)=>d.out&&!COV.store[j]),'Предприятиям нужен склад рядом.');if(r.short.inputs>AUTO.inputsLow)return['wood','iron','coal','cotton'].some(k=>!S.trade[k].i)?'Заводам не хватает сырья, а ввоз части сырья у вас выключен.':'Заводам не хватает сырья: нужна добыча или порт.';return'Промышленность работает.'}
-  if(p==='agr'){if(r.short.food>AUTO.foodShort||S.stock.food<S.pop*AUTO.foodStock)return act('farm',i=>S.type[i]===GRASS?fert(i):0,S.trade.food.i?'Еды не хватает: нужны фермы.':'Еды не хватает: нужны фермы, а ввоз еды у вас выключен.');return'Еды достаточно.'}
+    if(c.pr<1)return act(risk&&r.prod.coal>AUTO.coalOk?'power':'wind',()=>1,'Энергии не хватает на всех.');if(r.fuel<AUTO.fuelLow){if(S.trade.coal.i)return'ТЭС не хватает угля: нужна шахта или порт.';if(doIt){S.trade.coal.i=1;return'ТЭС не хватает угля: включаю ввоз угля.'}return'ТЭС не хватает угля, а ввоз угля у вас выключен.'}return'Энергосеть в порядке.'}
+  if(p==='ind'){if(c.log<AUTO.logLow)return act('store',i=>hasB(i,(d,j)=>d.out&&!COV.store[j]),'Предприятиям нужен склад рядом.');if(r.short.inputs>AUTO.inputsLow){if(AUTO.importOf.ind.every(k=>S.trade[k].i))return'Заводам не хватает сырья: нужна добыча или порт.';if(doIt){for(const k of AUTO.importOf.ind)S.trade[k].i=1;return'Заводам не хватает сырья: включаю ввоз сырья.'}return'Заводам не хватает сырья, а ввоз части сырья у вас выключен.'}return'Промышленность работает.'}
+  if(p==='agr'){if(r.short.food>AUTO.foodShort||S.stock.food<S.pop*AUTO.foodStock){const off=!S.trade.food.i;if(doIt)S.trade.food.i=1;return act('farm',i=>S.type[i]===GRASS?fert(i):0,!off?'Еды не хватает: нужны фермы.':doIt?'Еды не хватает: нужны фермы, включаю ввоз еды.':'Еды не хватает: нужны фермы, а ввоз еды у вас выключен.')}return'Еды достаточно.'}
   if(p==='soc'){const homeT=k=>i=>hasB(i,(d,j)=>d.home&&!COV[k][j]);
     if(c.poor>0)return act('shop',homeT('shop'),'Дома без рынка пустуют.');if(c.cv.park<AUTO.park)return act('park',homeT('park'),'Мало парков у жилья.');
     if(S.pop>=B.school.need&&c.cv.school<AUTO.school)return act('school',homeT('school'),'Детям нужны школы.');if(S.pop>=B.clinic.need&&c.cv.clinic<AUTO.clinic)return act('clinic',homeT('clinic'),'Нужна больница.');return'Социальная сфера в порядке.'}
@@ -1766,8 +1772,9 @@ function renderSheet(){const el=$('#sheet'),sc=el.scrollTop;const m=sheetMode;el
 function econHTML(){
   const r=S.rep,T=S.tax,c=r?r.cen:census();
   const sl=(id,lab,v,max,hint)=>`<div class="sl" data-tip="${hint}"><label for="${id}">${lab}<span>${Math.round(v*100)}%</span></label><input type="range" id="${id}" min="0" max="${max}" step="1" value="${Math.round(v*100)}"><small>${hint}</small></div>`;
+  const tgl=(k,m,t,tip)=>{const w=tradeBoss(k,m);return`<button class="tg" type="button" data-k="${k}" data-m="${m}"${w?' aria-disabled="true"':''} data-tip="${w?`Этим ведает ${w.name}. Чтобы вернуть управление, переведите министра в советники или уволите его.`:tip}" aria-pressed="${!!S.trade[k][m]}">${t}</button>`};
   const row=k=>{const b=r&&r.best[k];return`<tr><td>${rd(k)}${RES[k].n}</td><td>${fmt(S.stock[k])}</td><td>${r?'+'+fmt(r.prod[k]):'—'}</td><td>${r?'−'+fmt(r.cons[k]):'—'}</td><td>${S.dom[k].toFixed(1)}</td><td>${b?b.p.toFixed(1)+' '+nm(b.nid):'—'}</td><td>${r?fmt(r.exp[k]):'—'}</td><td>${r?fmt(r.imp[k]):'—'}</td>
-    <td><button class="tg" type="button" data-k="${k}" data-m="e" data-tip="Порт продаёт излишек сверх запаса на 2 месяца туда, где цена выше. Выключите, чтобы копить ресурс." aria-pressed="${!!S.trade[k].e}">вывоз</button> <button class="tg" type="button" data-k="${k}" data-m="i" data-tip="Порт докупает нехватку у самой дешёвой страны. Выключите, чтобы не зависеть от импорта." aria-pressed="${!!S.trade[k].i}">ввоз</button></td></tr>`};
+    <td>${tgl(k,'e','вывоз','Порт продаёт излишек сверх запаса на 2 месяца туда, где цена выше. Выключите, чтобы копить ресурс.')} ${tgl(k,'i','ввоз','Порт докупает нехватку у самой дешёвой страны. Выключите, чтобы не зависеть от импорта.')}</td></tr>`};
   const bl=(a,b,cls='',tip='')=>`<div class="${cls}"${tip?` data-tip="${tip}"`:''}><span>${a}</span><span>${b}</span></div>`,BL=r?budgetLines(r):null;
   const maxF=r?Math.max(20,...r.F.map(f=>Math.abs(f[1]))):1;
   return`<div class="sheet-in"><div class="sheet-top"><h2>Экономика</h2><button class="ibtn" type="button" id="sh-x" aria-label="Закрыть">✕</button></div>
@@ -1786,7 +1793,7 @@ function econHTML(){
 }
 function bindEcon(){const el=$('#sheet');
   for(const[id,k]of[['tx-inc','inc'],['tx-biz','biz'],['tx-imp','imp'],['tx-exp','exp']]){const inp=$('#'+id);inp.oninput=()=>{S.tax[k]=inp.value/100;inp.previousElementSibling.querySelector('span').textContent=inp.value+'%'}}
-  el.querySelectorAll('.tg').forEach(b=>b.onclick=()=>{const o=S.trade[b.dataset.k];o[b.dataset.m]=o[b.dataset.m]?0:1;b.setAttribute('aria-pressed',!!o[b.dataset.m])})}
+  el.querySelectorAll('.tg[data-k]').forEach(b=>b.onclick=()=>{const m=setTrade(b.dataset.k,b.dataset.m);if(m)toast(m);b.setAttribute('aria-pressed',!!S.trade[b.dataset.k][b.dataset.m])})}
 function worldHTML(){
   const r=S.rep,debt=debtTotal(),lent=S.lent.reduce((a,l)=>a+l.left,0);
   const mig=[['open','Открыты для всех'],['allies','Только друзьям'],['closed','Закрыты']];

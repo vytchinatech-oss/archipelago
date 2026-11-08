@@ -11,6 +11,10 @@ function hire(p,id){const c=S.cand[p].find(x=>x.id===id);if(!c)return'Канди
 function fire(p,silent){const m=S.min[p];if(!m)return'';delete S.min[p];
   if(!m.loy){S.unrest=Math.min(100,S.unrest+CABK.firedUnrest);S.fac.peo.sat-=CABK.firedPeo;S.log.unshift({m:S.month,t:`Уволенный ${m.name} ушёл в оппозицию и критикует власть.`})}
   else if(!silent)S.log.unshift({m:S.month,t:`${m.name} покинул пост министра ${POSTS[p].n.toLowerCase()}.`});return`${m.name} уволен`}
+/* Какой министр с доверенной сферой ведёт выключатель ресурса (m: 'e' вывоз, 'i' ввоз). Пока он есть, игрок кнопку не меняет. */
+function tradeBoss(k,m){const on=p=>S.min[p]&&S.min[p].auto?S.min[p]:null;if(on('trd'))return on('trd');
+  if(m==='i')for(const p in AUTO.importOf)if(AUTO.importOf[p].includes(k)&&on(p))return on(p);return null}
+function setTrade(k,m){const b=tradeBoss(k,m);if(b)return`Этим ведает ${b.name}. Переведите министра в советники или уволите его`;S.trade[k][m]=S.trade[k][m]?0:1;return''}
 /* building helper for autopilot ministers */
 function autoBuild(type,isTarget){let best=-1,bs=0;
   for(let i=0;i<N*N;i++){if(!nb4(i).some(j=>NET[j]))continue;if(!canBuild(type,i).ok)continue;let sc=0;
@@ -30,6 +34,7 @@ function ministerTurn(p,c,r,doIt){
   if(p==='trd'){const ti=AUTO.tradeImp[risk?0:1],te=AUTO.tradeExp[risk?0:1];let s='Пошлины в норме.';
     if(Math.abs(T.imp-ti)>AUTO.eps){s=`Советую импортную пошлину ${Math.round(ti*100)}%: ${risk?'дешёвый импорт оживит торговлю':'защитим своих производителей'}.`;if(doIt)T.imp=+(T.imp+Math.sign(ti-T.imp)*AUTO.step).toFixed(2)}
     else if(Math.abs(T.exp-te)>AUTO.eps){s=`Советую экспортную пошлину ${Math.round(te*100)}%.`;if(doIt)T.exp=+(T.exp+Math.sign(te-T.exp)*AUTO.step).toFixed(2)}
+    if(doIt)for(const k of RK){S.trade[k].e=1;S.trade[k].i=1}
     if(!c.ports)s='Без порта торговли нет: постройте порт.';return s}
   if(p==='dip'){let s='Отношения стабильны.';
     if(S.ev){const e=S.ev,y=evWise(e,risk,c);s=`По запросу «${evText(e)[0]}» советую: ${y?evText(e)[2].toLowerCase():evText(e)[3].toLowerCase()}.`;if(doIt){evAnswer(y&&!evLack(e));S.log.unshift({m:S.month,t:`${m.name} ответил на запрос: ${y?'согласие':'отказ'}.`})}return s}
@@ -37,9 +42,9 @@ function ministerTurn(p,c,r,doIt){
     const near=S.nat.find(n=>!n.deal&&!n.emb&&n.rel>=AUTO.dipNear&&n.rel<RELK.friend&&aidGain(n)>DIPA.aidMin&&!dipWait(n));if(near&&S.money>res+AUTO.dipAidCash){s=`${ND(near).n} почти готов к договору: помощь ${fmt(DIPA.aidCost)} кр поможет.`;if(doIt)dip('aid',near.id)}
     if(S.money<AUTO.dipBroke&&risk&&debtTotal()<AUTO.dipDebtMax&&!S.loans.some(l=>l.since>S.month-AUTO.dipLoanGap)){s='Казна пуста: возьмём заём у самого дешёвого кредитора.';if(doIt){const n=S.nat.filter(n=>n.rel>=DIPA.borrowFrom&&n.money>=AUTO.dipLoan*DIPA.borrowCash&&!dipWait(n)).sort((a,b)=>borrowRate(a)-borrowRate(b))[0];if(n){dip('borrow',n.id,AUTO.dipLoan);S.loans[S.loans.length-1].since=S.month}}}return s}
   if(p==='en'){if(c.unpow>0)return act('wind',i=>hasB(i,(d,j)=>d.pow<0&&!PW[j]),`${c.unpow} зданий без электричества.`);
-    if(c.pr<1)return act(risk&&r.prod.coal>AUTO.coalOk?'power':'wind',()=>1,'Энергии не хватает на всех.');if(r.fuel<AUTO.fuelLow)return S.trade.coal.i?'ТЭС не хватает угля: нужна шахта или порт.':'ТЭС не хватает угля, а ввоз угля у вас выключен.';return'Энергосеть в порядке.'}
-  if(p==='ind'){if(c.log<AUTO.logLow)return act('store',i=>hasB(i,(d,j)=>d.out&&!COV.store[j]),'Предприятиям нужен склад рядом.');if(r.short.inputs>AUTO.inputsLow)return['wood','iron','coal','cotton'].some(k=>!S.trade[k].i)?'Заводам не хватает сырья, а ввоз части сырья у вас выключен.':'Заводам не хватает сырья: нужна добыча или порт.';return'Промышленность работает.'}
-  if(p==='agr'){if(r.short.food>AUTO.foodShort||S.stock.food<S.pop*AUTO.foodStock)return act('farm',i=>S.type[i]===GRASS?fert(i):0,S.trade.food.i?'Еды не хватает: нужны фермы.':'Еды не хватает: нужны фермы, а ввоз еды у вас выключен.');return'Еды достаточно.'}
+    if(c.pr<1)return act(risk&&r.prod.coal>AUTO.coalOk?'power':'wind',()=>1,'Энергии не хватает на всех.');if(r.fuel<AUTO.fuelLow){if(S.trade.coal.i)return'ТЭС не хватает угля: нужна шахта или порт.';if(doIt){S.trade.coal.i=1;return'ТЭС не хватает угля: включаю ввоз угля.'}return'ТЭС не хватает угля, а ввоз угля у вас выключен.'}return'Энергосеть в порядке.'}
+  if(p==='ind'){if(c.log<AUTO.logLow)return act('store',i=>hasB(i,(d,j)=>d.out&&!COV.store[j]),'Предприятиям нужен склад рядом.');if(r.short.inputs>AUTO.inputsLow){if(AUTO.importOf.ind.every(k=>S.trade[k].i))return'Заводам не хватает сырья: нужна добыча или порт.';if(doIt){for(const k of AUTO.importOf.ind)S.trade[k].i=1;return'Заводам не хватает сырья: включаю ввоз сырья.'}return'Заводам не хватает сырья, а ввоз части сырья у вас выключен.'}return'Промышленность работает.'}
+  if(p==='agr'){if(r.short.food>AUTO.foodShort||S.stock.food<S.pop*AUTO.foodStock){const off=!S.trade.food.i;if(doIt)S.trade.food.i=1;return act('farm',i=>S.type[i]===GRASS?fert(i):0,!off?'Еды не хватает: нужны фермы.':doIt?'Еды не хватает: нужны фермы, включаю ввоз еды.':'Еды не хватает: нужны фермы, а ввоз еды у вас выключен.')}return'Еды достаточно.'}
   if(p==='soc'){const homeT=k=>i=>hasB(i,(d,j)=>d.home&&!COV[k][j]);
     if(c.poor>0)return act('shop',homeT('shop'),'Дома без рынка пустуют.');if(c.cv.park<AUTO.park)return act('park',homeT('park'),'Мало парков у жилья.');
     if(S.pop>=B.school.need&&c.cv.school<AUTO.school)return act('school',homeT('school'),'Детям нужны школы.');if(S.pop>=B.clinic.need&&c.cv.clinic<AUTO.clinic)return act('clinic',homeT('clinic'),'Нужна больница.');return'Социальная сфера в порядке.'}

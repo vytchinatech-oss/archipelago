@@ -244,16 +244,20 @@ test('Н16: гвардия исчезает вместе с монархией �
   assert.equal(r.a, 0); assert.match(r.t, /монархии/); assert.equal(r.old, 0); assert.equal(r.on, 'Гвардия набрана'); assert.equal(r.g, 1);
 });
 
-test('Н17: автопилот не трогает выключатели вывоза и ввоза', () => {
-  const r = load()(`setup();grid();near('power',S.hall);near('factory',S.hall);for(let k=0;k<5;k++)near('house',S.hall);S.pop=40;S.stock.food=0;S.stock.coal=0;
-    for(const p in POSTS){hire(p,S.cand[p][0].id);S.min[p].auto=1;S.min[p].hon=true;S.min[p].loy=true}
-    for(const k of RK)S.trade[k]={e:0,i:0};for(let m=0;m<6&&!S.over;m++){tick();computeCov()}RK.filter(k=>S.trade[k].e||S.trade[k].i).join()`);
-  assert.equal(r, '');
+test('Н17: советник не трогает выключатели, доверенный министр ведёт их, игрок ждёт', () => {
+  const r = load()(`const go=auto=>{setup();grid();near('power',S.hall);near('factory',S.hall);for(let k=0;k<5;k++)near('house',S.hall);S.pop=40;S.stock.food=0;S.stock.coal=0;
+      for(const p in POSTS){hire(p,S.cand[p][0].id);S.min[p].auto=auto;S.min[p].hon=true;S.min[p].loy=true}
+      for(const k of RK)S.trade[k]={e:0,i:0};for(let m=0;m<3&&!S.over;m++){tick();computeCov()}return RK.filter(k=>S.trade[k].e||S.trade[k].i).length};
+    const adv=go(0),trust=go(1);const blocked=setTrade('food','e');const on=S.trade.food.e;
+    S.min.trd.auto=0;const coalLocked=!!tradeBoss('coal','i'),coalExp=!!tradeBoss('coal','e');S.min.en.auto=0;S.min.ind.auto=0;S.trade.coal.i=1;const free=setTrade('coal','i');
+    S.min.agr.auto=0;fire('agr',true);S.trade.food.i=0;({adv,trust,blocked,on,coalLocked,coalExp,free,coal:S.trade.coal.i,food:setTrade('food','i'),foodOn:S.trade.food.i})`);
+  assert.equal(r.adv, 0); assert.equal(r.trust, 10); assert.match(r.blocked, /советники или уволите/); assert.equal(r.on, 1);
+  assert.equal(r.coalLocked, true); assert.equal(r.coalExp, false); assert.equal(r.free, ''); assert.equal(r.coal, 0); assert.equal(r.food, ''); assert.equal(r.foodOn, 1);
 });
 
 test('Н17: пойманного вора снимают с поста, описания не обещают лишнего', () => {
   const r = load()(`setup();hire('ind',S.cand.ind[0].id);S.min.ind.hon=false;S.min.ind.loy=true;const a0=S.appr;Math.random=()=>0;tick();({left:!!S.min.ind,caught:S.log.some(l=>/снят с поста/.test(l.t)),a:POSTS.mvd.a,agr:POSTS.agr.a})`);
-  assert.equal(r.left, false); assert.ok(r.caught); assert.doesNotMatch(r.a, /гасит/); assert.doesNotMatch(r.agr, /включает/);
+  assert.equal(r.left, false); assert.ok(r.caught); assert.doesNotMatch(r.a, /гасит/);
 });
 
 test('Н18: в логике нет дробных коэффициентов', () => {

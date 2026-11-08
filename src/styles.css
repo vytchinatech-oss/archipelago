@@ -109,6 +109,7 @@ h1{font:800 clamp(38px,10vw,92px)/.95 var(--f-display);letter-spacing:-.02em;mar
 .tbl td:first-child{font-family:var(--f-body);font-weight:600;font-size:13px}
 .tg{all:unset;cursor:pointer;font:600 10.5px/1 var(--f-body);padding:5px 7px;border-radius:7px;background:rgba(234,242,238,.07);color:var(--muted)}
 .tg[aria-pressed="true"]{background:rgba(121,214,154,.18);color:var(--good)}
+.tg[aria-disabled="true"]{opacity:.5}
 .tg:focus-visible{outline:2px solid var(--sun)}
 .budget{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
 .bcol{background:var(--ink-2);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:5px}
