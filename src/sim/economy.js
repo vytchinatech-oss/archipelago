@@ -197,15 +197,16 @@ function tick(){
 function surplusK(r){let best=null,bv=0;for(const k of RK){const v=r.prod[k]*RES[k].base;if(r.prod[k]>0&&S.dom[k]<RES[k].base*ADV.cheap&&v>bv){bv=v;best=k}}return best}
 /* Куда девать лишнее: порт, вывоз, переработка. Одна функция для советника и карточки (СТ4). */
 function outlet(k,c,r){if(!c.ports)return'Постройте порт: лишнее купят соседи';if(!S.trade[k].e)return`Включите вывоз: ${RES[k].n.toLowerCase()} сейчас не продаётся за границу`;
-  const p=PROC[k];if(p&&!c.cnt[p])return`Постройте ${B[p].n.toLowerCase()}: переработка выгоднее сырья`;return r&&r.portUse>=ADV.portFull?'Порт загружен: нужен склад рядом с ним или второй порт':`Соседи сейчас берут мало: ${RES[k].n.toLowerCase()} выгоднее везти туда, где торговый договор или кризис`}
+  const p=PROC[k];if(p&&!c.cnt[p])return`Постройте ${B[p].n.toLowerCase()}: переработка выгоднее сырья`;return r&&r.portUse>=ADV.portFull?'Порт загружен: нужен склад рядом с ним или второй порт':'Соседи сейчас берут мало: подпишите торговый договор, тогда вывоз вырастет'}
 /* Почему предприятие в убытке — одна причина, самая важная. */
 function firmWhy(i,r,c){const f=r.fin[i],t=f.t,d=B[t],x=r.bs[i],s=c.st[i]||0;
   if(d.pow<0&&!PW[i])return`Нет электричества: выработка падает до ${PCT(PROD.noPower)}%, а зарплаты платятся полностью.`;
-  if(s<ADV.staff)return'Мало рабочих: содержание платится целиком, а выпуск маленький.';
+  if(s<ADV.staffLow)return'Мало рабочих: содержание платится целиком, а выпуск маленький.';
   if(d.in&&x&&x.run<PROD.shortRun)return`Не хватает сырья: загрузка ${Math.round(x.run*100)}%. Добывайте его или включите ввоз.`;
   if(t==='shop')return`Мало покупок: рынок живёт на наценку ${PCT(SHOPK.margin)}% с товаров, тканей и кофе.`;
-  const k=Object.keys(d.out)[0];if(S.dom[k]<RES[k].base*ADV.cheap)return`Лишнее некуда продать: цена внутри ${COMMA(S.dom[k].toFixed(1))} кр при базовой ${RES[k].base}. ${outlet(k,c,r)}.`;
+  const k=Object.keys(d.out)[0];if(S.dom[k]<RES[k].base*ADV.cheap)return`Лишнее некуда продать: цена внутри ${COMMA(S.dom[k].toFixed(1))} кр при обычной ${RES[k].base}. ${outlet(k,c,r)}.`;
   if(x&&x.out){const made=x.out[k]*S.dom[k];if(f.rev<made*ADV.cheap)return`Продано меньше, чем выпущено: остальное лежит на складе. ${outlet(k,c,r)}.`}
+  if(s<ADV.staff)return'Мало рабочих: содержание платится целиком, а выпуск маленький.';
   return'Зарплаты и содержание выше выручки: ставка выросла быстрее цен.'}
 
 function checkGoals(c,r){const out=[];while(S.goal<GOALS.length&&GOALS[S.goal].ok(c,r)){const G=GOALS[S.goal];S.money+=G.rw;out.push(G);S.goal++;S.log.unshift({m:S.month,t:`Цель выполнена: ${G.t}. Награда ${fmt(G.rw)} кр.`})}return out}
@@ -258,7 +259,7 @@ function advisor(c){
   const un=c.work?(c.work-c.emp)/c.work:0;
   if(c.jobs>c.work*ADV.jobsOver&&c.jobs-c.work>ADV.jobsGap)return`Рабочих мест ${c.jobs}, рабочих ${c.work}. Сначала заняты фермы, энергия и службы, затем добыча, заводы простаивают. Нужно больше жилья.`;
   const glut=r?surplusK(r):null;
-  if(un>ADV.unemp)return`Безработица ${Math.round(un*100)}%. `+(glut?`${RES[glut].n} уже в избытке, ещё одно такое же предприятие не поможет. ${outlet(glut,c,r)}.`:'Нужны фермы, шахты и заводы.');
+  if(un>ADV.unemp)return`Безработица ${Math.round(un*100)}%. `+(glut?`${RES[glut].n}: и так в избытке, новые предприятия на нём не помогут — нужны другие отрасли. ${outlet(glut,c,r)}.`:'Нужны фермы, шахты и заводы.');
   if(c.jobs-c.emp>ADV.jobsFree&&c.home-S.pop<ADV.roomLow)return'Есть свободные рабочие места, но негде жить. Стройте жильё.';
   if(r&&c.serve<S.pop*ADV.serve&&S.pop>ADV.servePop)return`Жителям не хватает рынков. Рынок обслуживает ${B.shop.serve} человек.`;
   if(c.unpow)return`${c.unpow} ${plural(c.unpow,'здание','здания','зданий')} вне зоны электричества. Ставьте подстанции или ветряки рядом.`;

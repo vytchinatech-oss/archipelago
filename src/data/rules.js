@@ -55,7 +55,7 @@ const AUTO={importOf:{agr:['food'],en:['coal'],ind:['wood','iron','coal','cotton
 /* Подсказки советника: при каких цифрах что говорить. surplus/cheap: ресурс в избытке, если цена внутри ниже cheap от базы.
    PROC: какой завод перерабатывает излишек сырья. */
 const PROC={food:'cannery',cotton:'textile',wood:'factory',iron:'factory',coal:'factory'};
-const ADV={fuel:.9,food:.1,foodLog:.15,jobsOver:1.25,jobsGap:15,unemp:.15,jobsFree:8,roomLow:4,serve:.7,servePop:40,poor:2,police:.6,log:.95,inputs:.2,goods:.7,cabinet:.35,firmLoss:30,cheap:.8,staff:.5,portFull:.95};
+const ADV={fuel:.9,food:.1,foodLog:.15,jobsOver:1.25,jobsGap:15,unemp:.15,jobsFree:8,roomLow:4,serve:.7,servePop:40,poor:2,police:.6,log:.95,inputs:.2,goods:.7,cabinet:.35,firmLoss:30,cheap:.8,staff:.5,staffLow:.25,portFull:.95};
 /* Власть. */
 const GOVK={term:120,appr0:55,army0:60,sat0:{agr:55,ind:55,trd:55,peo:60,mil:50,int:50},seats0:{agr:22,ind:18,trd:14,peo:42,mil:0,int:4},richJobs:2,parlLo:SCALE.crisis,parlSpan:SCALE.top-SCALE.crisis,satSpeed:RATE.normal,pollNoise:6,inflW:{food:.5,goods:.25,cloth:.15,coffee:.1}};
 /* Цели довольства фракций. */

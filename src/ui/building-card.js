@@ -44,7 +44,7 @@ function bInfo(i,b,c){
     H.push('<h5>Счёт предприятия за месяц</h5>'+kv([['Выручка',money(fin.rev)+' кр'],...(fin.inp>.5?[['Сырьё',money(-fin.inp)+' кр']]:[]),['Зарплаты',(fin.wage>.5?money(-fin.wage):'0')+' кр'],
       ...(fin.mgr>.5?[['Управляющие из особняков',money(-fin.mgr)+' кр']]:[]),['Содержание',money(-fin.up)+' кр'],[fin.net>=0?'Итог: в казну':'Итог: из казны',`<b class="${fin.net>=0?'up':'dn'}">${money(fin.net)} кр</b>`],
       [`<span data-tip="Цена постройки, делённая на итог за год. Меняется вместе с ценами, торговлей и отношениями с соседями.">Окупаемость ⓘ</span>`,pay?`${COMMA(pay.toFixed(1))} ${plural(Math.round(pay),'год','года','лет')} при таком итоге`:pill('в убытке','bad')],
-      ...(k0?[['Цена внутри · за рубежом',`${S.dom[k0].toFixed(1)} · ${best?best.p.toFixed(1)+' '+nm(best.nid):'—'}`]]:[])])+
+      ...(k0?[['Цена внутри · за рубежом',`${COMMA(S.dom[k0].toFixed(1))} · ${best?COMMA(best.p.toFixed(1))+' '+nm(best.nid):'—'}`]]:[])])+
       (fin.net<0?`<p><b>Почему в убытке.</b> ${firmWhy(i,r,c)}</p>`:'')+`<p>${t==='shop'?`Выручка рынка — наценка ${PCT(SHOPK.margin)}% на товары, ткани и кофе.`:'Выручку ресурса делят все, кто выпустил его в этом месяце. Лишнее, что не купили жители, заводы и соседи, лежит на складе и денег не приносит.'}</p>`)}
   // port
   if(t==='port'&&r){const share=c.ports?d.cap*s/c.ports:0,ex={},im={};for(const k of RK){if(r.exp[k])ex[k]=r.exp[k]*share;if(r.imp[k])im[k]=r.imp[k]*share}

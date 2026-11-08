@@ -384,7 +384,7 @@ const AUTO={importOf:{agr:['food'],en:['coal'],ind:['wood','iron','coal','cotton
 /* Подсказки советника: при каких цифрах что говорить. surplus/cheap: ресурс в избытке, если цена внутри ниже cheap от базы.
    PROC: какой завод перерабатывает излишек сырья. */
 const PROC={food:'cannery',cotton:'textile',wood:'factory',iron:'factory',coal:'factory'};
-const ADV={fuel:.9,food:.1,foodLog:.15,jobsOver:1.25,jobsGap:15,unemp:.15,jobsFree:8,roomLow:4,serve:.7,servePop:40,poor:2,police:.6,log:.95,inputs:.2,goods:.7,cabinet:.35,firmLoss:30,cheap:.8,staff:.5,portFull:.95};
+const ADV={fuel:.9,food:.1,foodLog:.15,jobsOver:1.25,jobsGap:15,unemp:.15,jobsFree:8,roomLow:4,serve:.7,servePop:40,poor:2,police:.6,log:.95,inputs:.2,goods:.7,cabinet:.35,firmLoss:30,cheap:.8,staff:.5,staffLow:.25,portFull:.95};
 /* Власть. */
 const GOVK={term:120,appr0:55,army0:60,sat0:{agr:55,ind:55,trd:55,peo:60,mil:50,int:50},seats0:{agr:22,ind:18,trd:14,peo:42,mil:0,int:4},richJobs:2,parlLo:SCALE.crisis,parlSpan:SCALE.top-SCALE.crisis,satSpeed:RATE.normal,pollNoise:6,inflW:{food:.5,goods:.25,cloth:.15,coffee:.1}};
 /* Цели довольства фракций. */
@@ -1017,15 +1017,16 @@ function tick(){
 function surplusK(r){let best=null,bv=0;for(const k of RK){const v=r.prod[k]*RES[k].base;if(r.prod[k]>0&&S.dom[k]<RES[k].base*ADV.cheap&&v>bv){bv=v;best=k}}return best}
 /* Куда девать лишнее: порт, вывоз, переработка. Одна функция для советника и карточки (СТ4). */
 function outlet(k,c,r){if(!c.ports)return'Постройте порт: лишнее купят соседи';if(!S.trade[k].e)return`Включите вывоз: ${RES[k].n.toLowerCase()} сейчас не продаётся за границу`;
-  const p=PROC[k];if(p&&!c.cnt[p])return`Постройте ${B[p].n.toLowerCase()}: переработка выгоднее сырья`;return r&&r.portUse>=ADV.portFull?'Порт загружен: нужен склад рядом с ним или второй порт':`Соседи сейчас берут мало: ${RES[k].n.toLowerCase()} выгоднее везти туда, где торговый договор или кризис`}
+  const p=PROC[k];if(p&&!c.cnt[p])return`Постройте ${B[p].n.toLowerCase()}: переработка выгоднее сырья`;return r&&r.portUse>=ADV.portFull?'Порт загружен: нужен склад рядом с ним или второй порт':'Соседи сейчас берут мало: подпишите торговый договор, тогда вывоз вырастет'}
 /* Почему предприятие в убытке — одна причина, самая важная. */
 function firmWhy(i,r,c){const f=r.fin[i],t=f.t,d=B[t],x=r.bs[i],s=c.st[i]||0;
   if(d.pow<0&&!PW[i])return`Нет электричества: выработка падает до ${PCT(PROD.noPower)}%, а зарплаты платятся полностью.`;
-  if(s<ADV.staff)return'Мало рабочих: содержание платится целиком, а выпуск маленький.';
+  if(s<ADV.staffLow)return'Мало рабочих: содержание платится целиком, а выпуск маленький.';
   if(d.in&&x&&x.run<PROD.shortRun)return`Не хватает сырья: загрузка ${Math.round(x.run*100)}%. Добывайте его или включите ввоз.`;
   if(t==='shop')return`Мало покупок: рынок живёт на наценку ${PCT(SHOPK.margin)}% с товаров, тканей и кофе.`;
-  const k=Object.keys(d.out)[0];if(S.dom[k]<RES[k].base*ADV.cheap)return`Лишнее некуда продать: цена внутри ${COMMA(S.dom[k].toFixed(1))} кр при базовой ${RES[k].base}. ${outlet(k,c,r)}.`;
+  const k=Object.keys(d.out)[0];if(S.dom[k]<RES[k].base*ADV.cheap)return`Лишнее некуда продать: цена внутри ${COMMA(S.dom[k].toFixed(1))} кр при обычной ${RES[k].base}. ${outlet(k,c,r)}.`;
   if(x&&x.out){const made=x.out[k]*S.dom[k];if(f.rev<made*ADV.cheap)return`Продано меньше, чем выпущено: остальное лежит на складе. ${outlet(k,c,r)}.`}
+  if(s<ADV.staff)return'Мало рабочих: содержание платится целиком, а выпуск маленький.';
   return'Зарплаты и содержание выше выручки: ставка выросла быстрее цен.'}
 
 function checkGoals(c,r){const out=[];while(S.goal<GOALS.length&&GOALS[S.goal].ok(c,r)){const G=GOALS[S.goal];S.money+=G.rw;out.push(G);S.goal++;S.log.unshift({m:S.month,t:`Цель выполнена: ${G.t}. Награда ${fmt(G.rw)} кр.`})}return out}
@@ -1078,7 +1079,7 @@ function advisor(c){
   const un=c.work?(c.work-c.emp)/c.work:0;
   if(c.jobs>c.work*ADV.jobsOver&&c.jobs-c.work>ADV.jobsGap)return`Рабочих мест ${c.jobs}, рабочих ${c.work}. Сначала заняты фермы, энергия и службы, затем добыча, заводы простаивают. Нужно больше жилья.`;
   const glut=r?surplusK(r):null;
-  if(un>ADV.unemp)return`Безработица ${Math.round(un*100)}%. `+(glut?`${RES[glut].n} уже в избытке, ещё одно такое же предприятие не поможет. ${outlet(glut,c,r)}.`:'Нужны фермы, шахты и заводы.');
+  if(un>ADV.unemp)return`Безработица ${Math.round(un*100)}%. `+(glut?`${RES[glut].n}: и так в избытке, новые предприятия на нём не помогут — нужны другие отрасли. ${outlet(glut,c,r)}.`:'Нужны фермы, шахты и заводы.');
   if(c.jobs-c.emp>ADV.jobsFree&&c.home-S.pop<ADV.roomLow)return'Есть свободные рабочие места, но негде жить. Стройте жильё.';
   if(r&&c.serve<S.pop*ADV.serve&&S.pop>ADV.servePop)return`Жителям не хватает рынков. Рынок обслуживает ${B.shop.serve} человек.`;
   if(c.unpow)return`${c.unpow} ${plural(c.unpow,'здание','здания','зданий')} вне зоны электричества. Ставьте подстанции или ветряки рядом.`;
@@ -1666,7 +1667,7 @@ function bInfo(i,b,c){
     H.push('<h5>Счёт предприятия за месяц</h5>'+kv([['Выручка',money(fin.rev)+' кр'],...(fin.inp>.5?[['Сырьё',money(-fin.inp)+' кр']]:[]),['Зарплаты',(fin.wage>.5?money(-fin.wage):'0')+' кр'],
       ...(fin.mgr>.5?[['Управляющие из особняков',money(-fin.mgr)+' кр']]:[]),['Содержание',money(-fin.up)+' кр'],[fin.net>=0?'Итог: в казну':'Итог: из казны',`<b class="${fin.net>=0?'up':'dn'}">${money(fin.net)} кр</b>`],
       [`<span data-tip="Цена постройки, делённая на итог за год. Меняется вместе с ценами, торговлей и отношениями с соседями.">Окупаемость ⓘ</span>`,pay?`${COMMA(pay.toFixed(1))} ${plural(Math.round(pay),'год','года','лет')} при таком итоге`:pill('в убытке','bad')],
-      ...(k0?[['Цена внутри · за рубежом',`${S.dom[k0].toFixed(1)} · ${best?best.p.toFixed(1)+' '+nm(best.nid):'—'}`]]:[])])+
+      ...(k0?[['Цена внутри · за рубежом',`${COMMA(S.dom[k0].toFixed(1))} · ${best?COMMA(best.p.toFixed(1))+' '+nm(best.nid):'—'}`]]:[])])+
       (fin.net<0?`<p><b>Почему в убытке.</b> ${firmWhy(i,r,c)}</p>`:'')+`<p>${t==='shop'?`Выручка рынка — наценка ${PCT(SHOPK.margin)}% на товары, ткани и кофе.`:'Выручку ресурса делят все, кто выпустил его в этом месяце. Лишнее, что не купили жители, заводы и соседи, лежит на складе и денег не приносит.'}</p>`)}
   // port
   if(t==='port'&&r){const share=c.ports?d.cap*s/c.ports:0,ex={},im={};for(const k of RK){if(r.exp[k])ex[k]=r.exp[k]*share;if(r.imp[k])im[k]=r.imp[k]*share}
@@ -1862,7 +1863,7 @@ function econHTML(){
     ${sl('tx-inc','Подоходный налог',T.inc,30,`С зарплат всех работающих, управляющие из особняков получают в ${WAGE.richMul} раза больше. Выше ${PCT(TAXK.incFree)}% портит настроение.`)}
     ${sl('tx-imp','Импортная пошлина',T.imp,50,'С ввоза, кроме стран с договором. Жители платят за импорт больше, а настроение падает, когда на привозное уходит большая доля их покупок.')}
     ${sl('tx-exp','Экспортная пошлина',T.exp,30,'С вывоза. Высокая пошлина сокращает объём экспорта.')}</div>
-    <p class="log" style="font-size:12.5px">Налог на прибыль появится вместе с частными предприятиями. Сейчас все предприятия государственные: их итог целиком идёт в казну.</p></div>
+    <p class="log" style="font-size:12.5px">Налог на прибыль появится вместе с частными предприятиями. Сейчас все предприятия государственные: их прибыль идёт в казну, убыток покрывает казна.</p></div>
   <div class="sec"><h3>Бюджет за прошлый месяц</h3>${r?`<div class="budget">
     <div class="bcol">${BL.inc.map(x=>bl(x[0],money(x[1]),'',x[2])).join('')}${bl('Доходы',money(BL.inc.reduce((a,x)=>a+x[1],0)),'tot')}</div>
     <div class="bcol">${BL.out.map(x=>bl(x[0],money(-x[1]),'',x[2])).join('')}${bl('Расходы',money(-BL.out.reduce((a,x)=>a+x[1],0)),'tot')}${bl('Итог месяца',`<b class="${r.net>=0?'up':'dn'}">${money(r.net)} кр</b>`,'tot')}${Math.abs(r.auto)>=.5?bl('Вне бюджета: решения министров',money(r.auto),'','Стройка, помощь и займы, которые министры сделали сами. В итог месяца не входят.'):''}</div></div>`:'<p class="log">Отчёт появится через месяц.</p>'}</div>
