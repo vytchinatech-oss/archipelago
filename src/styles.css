@@ -228,3 +228,4 @@ button.stat:focus-visible{outline:2px solid var(--sun)}
 .tut-skip{all:unset;cursor:pointer;font:500 12px/1 var(--f-body);color:var(--muted);padding:9px 6px;text-decoration:underline;text-underline-offset:3px}
 .tut-skip:focus-visible{outline:2px solid var(--sun)}
 .card.tut{position:relative;z-index:5}
+.ver{margin:0;font:500 12px/1.3 var(--f-mono);color:var(--muted);opacity:.8}

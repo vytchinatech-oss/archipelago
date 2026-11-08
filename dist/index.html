@@ -234,6 +234,7 @@ button.stat:focus-visible{outline:2px solid var(--sun)}
 .tut-skip{all:unset;cursor:pointer;font:500 12px/1 var(--f-body);color:var(--muted);padding:9px 6px;text-decoration:underline;text-underline-offset:3px}
 .tut-skip:focus-visible{outline:2px solid var(--sun)}
 .card.tut{position:relative;z-index:5}
+.ver{margin:0;font:500 12px/1.3 var(--f-mono);color:var(--muted);opacity:.8}
 
 </style>
 
@@ -256,6 +257,7 @@ button.stat:focus-visible{outline:2px solid var(--sun)}
       <button class="btn ghost" id="b-tut" type="button" aria-expanded="false" data-tip="Новый город с пошаговым обучением. Можно выбрать основы или полный курс.">Обучение</button>
     </div>
     <div class="tut-pick" id="tut-pick" hidden></div>
+    <p class="ver" id="ver" data-tip="Номер версии и дата сборки. Назовите их, когда сообщаете об ошибке."></p>
     <div class="howto">
       <div><b>Области</b>Карта разделена на области. Стройте только в купленных, остальные открываются за деньги.</div>
       <div><b>Дороги</b>Здание работает, только если дорога соединяет его с ратушей. По мелководью можно строить мосты.</div>
@@ -304,6 +306,7 @@ button.stat:focus-visible{outline:2px solid var(--sun)}
   <div class="tip" id="tip" role="tooltip" hidden></div>
 </section>
 <script>
+const GAME_VERSION="0.5.3",BUILD_DATE="8 ноября 2026";
 'use strict';
 /* ===== core/constants.js ===== */
 /* Размеры карты, тайлы, типы рельефа, месяцы. Подключается первым. */
@@ -560,6 +563,17 @@ const TUT_COURSES={
   short:{n:'Основы',d:'Стройка, время и главные окна. 5–8 минут.',steps:['welcome','cam','road','house','food','power','shop','inspect','goal','time','layer','econ','gov','world','done']},
   full:{n:'Полный курс',d:'Плюс области, добыча, порт, заводы, налоги, министры и соседи. Около 15 минут.',steps:['welcome','cam','road','house','food','power','shop','inspect','goal','time','layer','region','saw','port','chain','tax','gov2','world2','done']},
 };
+
+/* ===== data/texts.js ===== */
+/* Словарь текстов для игрока. С этапа 0а все новые тексты — здесь, не строкой в коде.
+   Ключ → строка; {имя} подставляется из vars. Другие языки — отдельные таблицы с теми же ключами. */
+const TEXTS={
+  ru:{
+    'menu.version':'Версия {v} · сборка {date}',
+  },
+};
+let LANG='ru';
+function tx(key,vars){const s=(TEXTS[LANG]&&TEXTS[LANG][key])??TEXTS.ru[key]??key;return vars?s.replace(/\{(\w+)\}/g,(m,k)=>k in vars?vars[k]:m):s}
 
 /* ===== sim/world.js ===== */
 /* Генерация мира, новая игра, сохранение и загрузка. */
@@ -1433,6 +1447,7 @@ function drawPreview(c,W){const g=c.getContext('2d'),s=c.width/N;
     if(t>=SAND){g.fillStyle='rgba(255,236,190,.75)';if(x<N-1&&W.type[i+1]>=SAND&&W.reg[i+1]!==W.reg[i])g.fillRect((x+1)*s-.5,y*s,1,s);if(y<N-1&&W.type[i+N]>=SAND&&W.reg[i+N]!==W.reg[i])g.fillRect(x*s,(y+1)*s-.5,s,1)}}
   const hx=W.hall%N,hy=W.hall/N|0;g.fillStyle='#f4b63f';g.fillRect(hx*s-s*.5,hy*s-s*.5,s*2,s*2);g.strokeStyle='#2b1c02';g.strokeRect(hx*s-s*.5,hy*s-s*.5,s*2,s*2)}
 function buildMenu(){
+  const ver=$('#ver');if(ver&&typeof GAME_VERSION!=='undefined')ver.textContent=tx('menu.version',{v:GAME_VERSION,date:BUILD_DATE});
   const box=$('#maps');box.innerHTML='';
   MAPS.forEach((m,k)=>{const b=document.createElement('button');b.type='button';b.className='map';b.setAttribute('aria-pressed',k===PICK);
     const W=PREV[k],cnt={coal:0,iron:0,gold:0};W.regions.forEach(g=>cnt[g.min]++);
