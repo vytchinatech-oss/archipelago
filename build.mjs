@@ -28,7 +28,8 @@ export function buildInfo(now = new Date()) {
 
 export function build() {
   const info = buildInfo();
-  const js = `const GAME_VERSION=${JSON.stringify(info.version)},BUILD_DATE=${JSON.stringify(info.date)};\n` + bundle([...CORE, ...DATA, ...SIM, ...VIEW]);
+  // Объявление идёт после 'use strict', иначе строгий режим в браузере выключится.
+  const js = bundle([...CORE, ...DATA, ...SIM, ...VIEW]).replace("'use strict';\n", `'use strict';\nconst GAME_VERSION=${JSON.stringify(info.version)},BUILD_DATE=${JSON.stringify(info.date)};\n`);
   const html = read('shell.html').replace('/*STYLES*/', read('styles.css')).replace('/*SCRIPTS*/', js);
   mkdirSync(join(ROOT, 'dist'), { recursive: true });
   writeFileSync(join(ROOT, 'dist', 'index.html'), html);

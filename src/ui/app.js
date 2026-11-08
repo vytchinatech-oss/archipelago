@@ -23,7 +23,7 @@ function drawPreview(c,W){const g=c.getContext('2d'),s=c.width/N;
     if(t>=SAND){g.fillStyle='rgba(255,236,190,.75)';if(x<N-1&&W.type[i+1]>=SAND&&W.reg[i+1]!==W.reg[i])g.fillRect((x+1)*s-.5,y*s,1,s);if(y<N-1&&W.type[i+N]>=SAND&&W.reg[i+N]!==W.reg[i])g.fillRect(x*s,(y+1)*s-.5,s,1)}}
   const hx=W.hall%N,hy=W.hall/N|0;g.fillStyle='#f4b63f';g.fillRect(hx*s-s*.5,hy*s-s*.5,s*2,s*2);g.strokeStyle='#2b1c02';g.strokeRect(hx*s-s*.5,hy*s-s*.5,s*2,s*2)}
 function buildMenu(){
-  const ver=$('#ver');if(ver&&typeof GAME_VERSION!=='undefined')ver.textContent=tx('menu.version',{v:GAME_VERSION,date:BUILD_DATE});
+  const ver=$('#ver');if(ver&&typeof GAME_VERSION!=='undefined'){ver.textContent=tx('menu.version',{v:GAME_VERSION,date:BUILD_DATE});ver.dataset.tip=tx('menu.versionTip')}
   const box=$('#maps');box.innerHTML='';
   MAPS.forEach((m,k)=>{const b=document.createElement('button');b.type='button';b.className='map';b.setAttribute('aria-pressed',k===PICK);
     const W=PREV[k],cnt={coal:0,iron:0,gold:0};W.regions.forEach(g=>cnt[g.min]++);

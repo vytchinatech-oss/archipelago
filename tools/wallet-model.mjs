@@ -18,7 +18,7 @@ export function sim(cfg){
  const mq=t=>(M[q[t]||0]||1)*(t==='hall'?1.2:1);
  const stateOwned=t=>own==='state'||(own==='mixed'&&(FOOD.has(t)||t==='coalmine'));
  const firms=[];for(const[t,n]of Object.entries(CITY[city].c))for(let i=0;i<n;i++){const d={...B[t],jobs:jobs[t]??B[t].jobs};
-   firms.push({t,d,pub:PUBLIC.has(t),state:stateOwned(t),cash:d.jobs*w0*3,inv:{},staff:0,closed:0,bad:0,rev:0,inp:0,w:w0,paid:0,pr:0})}
+   firms.push({t,d,pub:PUBLIC.has(t),state:stateOwned(t),cash:d.jobs*w0*mq(t)*3,inv:{},staff:0,closed:0,bad:0,rev:0,inp:0,w:w0*mq(t),paid:0,pr:0})}
  let pop=cfg.pop0||CITY[city].pop;const Pool={cash:0};const H={cash:pop*w0*.6},R={cash:0},G={cash:20000},F={cash:0};
  const startMoney=()=>Pool.cash+H.cash+R.cash+G.cash+F.cash+firms.reduce((s,f)=>s+f.cash,0);const M0=startMoney();
  const price={...base},stock=()=>{};let Wn=w0;
@@ -80,7 +80,7 @@ export function sim(cfg){
     const keep=6*(f.staff*f.d.jobs*(f.w||w0)+f.d.up);if(f.cash>keep){const x=f.cash-keep;f.cash=keep;R.cash+=x*(1-tInc);G.cash+=x*tInc}
     if(f.bad>=3){f.closed=12;f.bad=0;for(const x in f.inv)f.inv[x]*=.5}}
   const sp=R.cash*.3;R.cash-=sp;H.cash+=sp;
-  for(const f of firms){if(f.closed>0){f.closed--;if(f.closed===0){const need=f.d.jobs*(wr==='fix'?w0:Wn)*3;const src=Pool.cash>=need?Pool:(R.cash>=need?R:(!cfg.zones&&G.cash>need?G:null));if(src){src.cash-=need;f.cash+=need;f.w=wr==='fix'?w0:Wn}else f.closed=6}}}
+  for(const f of firms){if(f.closed>0){f.closed--;if(f.closed===0){const need=f.d.jobs*(wr==='fix'?w0:Wn)*mq(f.t)*3;const src=Pool.cash>=need?Pool:(R.cash>=need?R:(!cfg.zones&&G.cash>need?G:null));if(src){src.cash-=need;f.cash+=need;f.w=(wr==='fix'?w0:Wn)*mq(f.t)}else f.closed=6}}}
   // цены
   for(const x of RK){const sup=Math.max(0,prod[x]+imp[x]+avail(x)*.2),dem=need[x];const tgt=dem<.5?base[x]*.7:base[x]*Math.max(.5,Math.min(2,Math.pow((dem+2)/(sup+2),.6)));price[x]+=(tgt-price[x])*.4}
 
@@ -88,7 +88,7 @@ export function sim(cfg){
    const inv=Math.min(Math.max(0,H.cash),wages*(1-tInc)*(cfg.save||0));H.cash-=inv;H._inv=inv;Pool.cash+=inv;
    const w=wr==='fix'?w0:Wn;
    const roi=t=>{const d={...B[t],jobs:jobs[t]??B[t].jobs};let rv=0,ci=0;for(const x in d.out){const ex2=FDEM[x]?base[x]*1.3*.85:0;rv+=d.out[x]*.8*Math.max(price[x],ex2)}for(const x in d.in||{})ci+=d.in[x]*.8*price[x];
-     if(t==='shop')rv=d.jobs*w*1.2;return (rv-ci-d.jobs*w*mq(t)-d.up)/(d.cost*kc)};
+     if(t==='shop')rv=d.jobs*w*mq(t)*1.2;return (rv-ci-d.jobs*w*mq(t)-d.up)/(d.cost*kc)};
    const vac0=firms.filter(f=>f.d.jobs&&f.closed<=0).reduce((q,f)=>q+f.d.jobs*(1-f.staff),0);const free=left+Math.max(0,25-vac0);const used=firms.filter(f=>!f.state&&!f.pub).length;
    const okP=t=>!cfg.brake||Object.keys(B[t].out||{}).every(x=>price[x]>=base[x]*(cfg.brake));const cand=(cfg.allow||[]).filter(okP).filter(t=>(jobs[t]??B[t].jobs)*.3<=free).map(t=>[t,roi(t)]).filter(a=>a[1]>=(cfg.minRoi||.01)).sort((a,b)=>b[1]-a[1]);
    if(cand.length&&used<(cfg.zoneCap||60)){const t=cand[0][0],d={...B[t],jobs:jobs[t]??B[t].jobs},need=d.cost*kc+d.jobs*w*mq(t)*2;if(Pool.cash>=need){Pool.cash-=need;H.cash+=d.cost*kc*.5;F.cash+=d.cost*kc*.5;firms.push({t,d,pub:false,state:false,cash:d.jobs*w*mq(t)*2,inv:{},staff:0,closed:0,bad:0,rev:0,inp:0,w:w*mq(t),paid:0,pr:0});built++;if(firstPriv===null)firstPriv=m}}
@@ -99,11 +99,11 @@ export function sim(cfg){
   const biz=firms.filter(f=>!f.pub&&f.d.jobs);
   if(m>=months-60)for(const f of biz){const a=tl[f.t]||(tl[f.t]={n:0,cl:0,pr:0});a.n++;if(f.closed>0)a.cl++;a.pr+=f.pr}
   if(cfg.shock&&m===203)cfg._sh={un:left/work,G:G.cash,closed:biz.filter(f=>f.closed>0).length/biz.length};
-  hist.push({sp:spentH,inc:spentH+H.cash-hStart+(H._inv||0),un:left/work,closed:biz.filter(f=>f.closed>0).length/biz.length,loss:biz.filter(f=>f.pr<-.5).length/biz.length,food:sat.food,goods:sat.goods,G:G.cash,H:H.cash,w:wages/Math.max(1,emp)});
+  hist.push({Wn,sp:spentH,inc:spentH+H.cash-hStart+(H._inv||0),un:left/work,closed:biz.filter(f=>f.closed>0).length/biz.length,loss:biz.filter(f=>f.pr<-.5).length/biz.length,food:sat.food,goods:sat.goods,G:G.cash,H:H.cash,w:wages/Math.max(1,emp)});
  }
  const L=hist.slice(-60),av=k=>L.reduce((s,h)=>s+h[k],0)/L.length;
  const a=hist[hist.length-61]||hist[0],z=hist[hist.length-1];
- return {закрыто:Math.round(av('closed')*100),убыток:Math.round(av('loss')*100),безраб:Math.round(av('un')*100),сытость:Math.round(Math.min(1,av('food'))*100),товары:Math.round(av('goods')*100),казна_в_мес:Math.round((z.G-a.G)/60),зарплата:+av('w').toFixed(1),кошелёк_жителей:Math.round(z.H),расхождение:Math.round(startMoney()-M0),типы:Object.fromEntries(Object.entries(tl).map(([t,a])=>[B[t].n,[Math.round(a.cl/a.n*100)+'%',Math.round(a.pr/a.n),a.pr>0?+(B[t].cost*kc/(a.pr/a.n)/12).toFixed(1):'никогда']])),траты:Math.round(av('sp')/Math.max(1,av('inc'))*100),шок:cfg._sh,snaps,built,firstPriv};
+ return {закрыто:Math.round(av('closed')*100),убыток:Math.round(av('loss')*100),безраб:Math.round(av('un')*100),сытость:Math.round(Math.min(1,av('food'))*100),товары:Math.round(av('goods')*100),казна_в_мес:Math.round((z.G-a.G)/60),зарплата:+av('w').toFixed(1),база:+av('Wn').toFixed(1),кошелёк_жителей:Math.round(z.H),расхождение:Math.round(startMoney()-M0),типы:Object.fromEntries(Object.entries(tl).map(([t,a])=>[B[t].n,[Math.round(a.cl/a.n*100)+'%',Math.round(a.pr/a.n),a.pr>0?+(B[t].cost*kc/(a.pr/a.n)/12).toFixed(1):'никогда']])),траты:Math.round(av('sp')/Math.max(1,av('inc'))*100),шок:cfg._sh,snaps,built,firstPriv};
 }
 // Запуск: node tools/wallet-model.mjs [zones|qual]. Без аргумента — оба набора.
 const MODE=process.argv[2]||'all';
@@ -124,16 +124,20 @@ if(MODE==='all'||MODE==='qual'){
   const Q0={k:2.2,w0:12,tInc:.15,tBiz:.2,wage:'market',q:QUAL,M:QM,jobs:JOBS2,prices:PRICES2,share:.55,margin:.2};
   // Город с теми же зданиями, но мест на заводах меньше: жителей столько же на одно место, чтобы безработица сравнивалась честно.
   const jobsOf=(c,j)=>Object.entries(CITY[c].c).reduce((a,[t,n])=>a+n*(j[t]??B[t].jobs??0),0),pop2=Math.round(CITY.city.pop*jobsOf('city',JOBS2)/jobsOf('city',{}));
-  Object.assign(Q0,{pop0:pop2});console.log('Жителей в городе с новыми местами:',pop2,'(было',CITY.city.pop+')');
-  const row=(n,r)=>console.log(n.padEnd(34),'| закрыто',r.закрыто+'%','| безраб',r.безраб+'%','| база',r.зарплата,'| казна/мес',r.казна_в_мес,'| траты жителей',r.траты+'% дохода','| расхождение',r.расхождение);
-  console.log('\nКвалификация, город 800, 30 лет');
-  for(const own of['state','private','mixed'])row(own==='state'?'Госпредприятия':own==='private'?'Частные':'Смешанно',sim({...Q0,own,city:'city'}));
-  row('Старые цены ×2,2 и старые места',sim({...Q0,own:'private',city:'city',jobs:{},prices:null,chain:{goods:1.5,cloth:1.35,cans:1.4},pop0:CITY.city.pop}));
-  row('Наценка рынка 10% (было)',sim({...Q0,own:'private',city:'city',margin:.1}));
-  row('Без надбавок (одна ставка)',sim({...Q0,own:'private',city:'city',M:[1]}));
-  row('Порт закрыт 2 года, частные',sim({...Q0,own:'private',city:'city',shock:1}));
-  console.log('\nОкупаемость, лет: стоимость × kc / прибыль (частные, город 800)');
-  for(const kc of[1,10,30]){const r=sim({...Q0,own:'private',city:'city',kc});console.log(' цены зданий ×'+kc,JSON.stringify(Object.fromEntries(Object.entries(r.типы).map(([n,a])=>[n,a[2]]))))}
-  console.log('\nЗоны, старт 150, копят 10%, с тормозом');
-  for(const kc of[1,10,30]){const r=sim({...Q0,own:'state',city:'start',zones:1,save:.1,allow:ALL,brake:.9,kc});console.log(' цены зданий ×'+kc,'| первый частник, месяц:',r.firstPriv,'| частных к 30 году:',r.snaps[30]?.част,'| жителей:',r.snaps[30]?.жит,'| база:',r.snaps[30]?.ст,'| расхождение',r.расхождение)}
+  const C8={city:'city',pop0:pop2};console.log('Жителей в городе с новыми местами:',pop2,'(было',CITY.city.pop+')');
+  const row=(n,r)=>console.log(n.padEnd(34),'| закрыто',r.закрыто+'%','| безраб',r.безраб+'%','| база',r.база,'| ср. зарплата',r.зарплата,'| казна/мес',r.казна_в_мес,'| расхождение',r.расхождение);
+  console.log('\nКвалификация, город 800 (с новыми местами '+pop2+' жителей), 30 лет');
+  const P8={...Q0,...C8};
+  for(const own of['state','private','mixed'])row(own==='state'?'Госпредприятия':own==='private'?'Частные':'Смешанно',sim({...P8,own}));
+  row('Старые цены ×2,2 и старые места',sim({...P8,own:'private',jobs:{},prices:null,chain:{goods:1.5,cloth:1.35,cans:1.4},pop0:CITY.city.pop}));
+  row('Наценка рынка 10% (было)',sim({...P8,own:'private',margin:.1}));
+  row('Без надбавок (одна ставка)',sim({...P8,own:'private',M:[1]}));
+  row('Порт закрыт 2 года, частные',sim({...P8,own:'private',shock:1}));
+  row('Частные, подоходный 20%',sim({...P8,own:'private',tInc:.2}));
+  row('Частные, подоходный 25%, прибыль 25%',sim({...P8,own:'private',tInc:.25,tBiz:.25}));
+  row('Смешанно, подоходный 20%',sim({...P8,own:'mixed',tInc:.2}));
+  console.log('\nОкупаемость, лет: стоимость × kc / прибыль (частные, город 800, подоходный 20%)');
+  for(const kc of[1,10,25]){const r=sim({...P8,own:'private',tInc:.2,kc});console.log(' цены зданий ×'+kc,JSON.stringify(Object.fromEntries(Object.entries(r.типы).map(([n,a])=>[n,a[2]]))))}
+  console.log('\nЗоны, старт 150, госпредприятия, копят 10%, с тормозом, подоходный 20%');
+  for(const M of[QM,[1]])for(const kc of[1,10,25]){const r=sim({...Q0,M,tInc:.2,own:'state',city:'start',zones:1,save:.1,allow:ALL,brake:.9,kc});console.log((M.length>1?' надбавки':' одна ставка')+', цены зданий ×'+kc,'| первый частник, месяц:',r.firstPriv,'| частных к 10 / 30 году:',r.snaps[10]?.част,'/',r.snaps[30]?.част,'| жителей к 30:',r.snaps[30]?.жит,'| база:',r.snaps[30]?.ст,'| казна к 10 году:',r.snaps[10]?.казна,'| расхождение',r.расхождение)}
 }

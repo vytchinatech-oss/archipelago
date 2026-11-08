@@ -3,6 +3,7 @@
 const TEXTS={
   ru:{
     'menu.version':'Версия {v} · сборка {date}',
+    'menu.versionTip':'Номер версии и дата сборки. Назовите их, когда сообщаете об ошибке.',
   },
 };
 let LANG='ru';
