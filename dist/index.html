@@ -443,26 +443,26 @@ const B={
   hall:{n:'Ратуша',cat:'',cost:0,up:0,jobs:10,pow:12,d:'Сердце города. Каждое здание должно быть связано с ней дорогой.'},
   hut:{n:'Барак',cat:'home',cost:40*CAP,up:1*PRICEX,home:14,pow:-.5,on:LANDB,d:'Дёшево и тесно: 14 жителей. Если бараков много, настроение падает.'},
   house:{n:'Дом',cat:'home',cost:60*CAP,up:1*PRICEX,home:10,pow:-.5,on:LANDB,d:'Жильё для 10 рабочих.'},
-  villa:{n:'Особняк',cat:'home',cost:240*CAP,up:2*PRICEX,home:5,rich:1,pow:-1,on:LANDB,need:80,d:'5 управляющих. Каждому платят как '+WAGE.richMul+' рабочим (платят предприятия), с этого идёт налог. Пьют много кофе. С населения 80.'},
+  villa:{n:'Особняк',cat:'home',cost:240*CAP,up:2*PRICEX,home:5,rich:1,pow:-1,on:LANDB,need:80,d:'5 управляющих. Не работают, каждому платят как '+WAGE.richMul+' рабочим из общей зарплаты предприятий: ставка рабочих от этого ниже, налога в сумме не больше. Пьют много кофе. С населения 80.'},
   tower:{n:'Многоэтажка',cat:'home',cost:380*CAP,up:5*PRICEX,home:48,pow:-3,on:LANDB,need:200,d:'Жильё на 48 человек. С населения 200.'},
   farm:{n:'Пшеничное поле',cat:'farm',cost:110*CAP,up:3*PRICEX,jobs:8,pow:-.5,on:[GRASS],out:{food:16},fert:1,d:'16 еды в месяц. Урожай зависит от плодородия.'},
   veg:{n:'Овощная ферма',cat:'farm',cost:150*CAP,up:4*PRICEX,jobs:10,pow:-1,on:[GRASS,SAND],out:{food:24},fert:1,water:1,d:'24 еды, но нужна вода в 2 клетках для полива.'},
   ranch:{n:'Ранчо',cat:'farm',cost:130*CAP,up:3*PRICEX,jobs:5,pow:-.5,on:[GRASS,HILL],out:{food:11},d:'11 еды при всего 5 рабочих. Годится для холмов.'},
   fish:{n:'Рыбацкий причал',cat:'farm',cost:150*CAP,up:3*PRICEX,jobs:6,pow:0,on:[SAND,GRASS,FOREST],coast:1,out:{food:15},d:'15 еды из моря. Ставится у воды.'},
-  coffee:{n:'Кофейная плантация',cat:'farm',cost:220*CAP,up:4*PRICEX,jobs:12,pow:0,on:[GRASS,HILL],warm:1,out:{coffee:8},fert:1,d:'8 кофе. Дорогой экспорт, любимый напиток богачей. Только в тёплых областях.'},
+  coffee:{n:'Кофейная плантация',cat:'farm',cost:220*CAP,up:4*PRICEX,jobs:12,pow:0,on:[GRASS,HILL],warm:1,out:{coffee:8},fert:1,d:'8 кофе. Дорогой экспорт, любимый напиток управляющих. Только в тёплых областях.'},
   cotton:{n:'Хлопковое поле',cat:'farm',cost:120*CAP,up:3*PRICEX,jobs:9,pow:0,on:[GRASS,SAND],out:{cotton:12},fert:1,d:'12 хлопка для ткацкой фабрики. В тёплых областях +30%.'},
   saw:{n:'Лесопилка',cat:'mine',cost:160*CAP,up:4*PRICEX,jobs:10,pow:-2,on:LANDB,out:{wood:12},d:'До 12 древесины. Чем больше леса вокруг, тем выше выработка.'},
   coalmine:{n:'Угольная шахта',cat:'mine',cost:220*CAP,up:5*PRICEX,jobs:12,pow:-2,on:[HILL,MOUNT],dep:'coal',out:{coal:12},d:'12 угля. Уголь топит ТЭС и нужен заводу. Только на угольных залежах.'},
   ironmine:{n:'Железный рудник',cat:'mine',cost:260*CAP,up:6*PRICEX,jobs:12,pow:-3,on:[HILL,MOUNT],dep:'iron',out:{iron:10},d:'10 железа для завода. Только на железных залежах.'},
   goldmine:{n:'Золотой прииск',cat:'mine',cost:420*CAP,up:8*PRICEX,jobs:14,pow:-2,on:[HILL,MOUNT],dep:'gold',out:{gold:3},d:'3 золота. Внутри не нужно, но за границей стоит дороже всего.'},
   factory:{n:'Механический завод',cat:'ind',cost:480*CAP,up:10*PRICEX,jobs:16,pow:-6,on:LANDB,in:{wood:4,iron:4,coal:2},out:{goods:12},d:'4 древесины + 4 железа + 2 угля → 12 товаров. Глубокая переработка: рабочий здесь создаёт больше всех.'},
-  textile:{n:'Ткацкая фабрика',cat:'ind',cost:380*CAP,up:8*PRICEX,jobs:10,pow:-4,on:LANDB,in:{cotton:8},out:{cloth:8},d:'8 хлопка → 8 тканей. Жители покупают одежду на рынках.'},
+  textile:{n:'Ткацкая фабрика',acc:'ткацкую фабрику',cat:'ind',cost:380*CAP,up:8*PRICEX,jobs:10,pow:-4,on:LANDB,in:{cotton:8},out:{cloth:8},d:'8 хлопка → 8 тканей. Жители покупают одежду на рынках.'},
   cannery:{n:'Консервный завод',cat:'ind',cost:420*CAP,up:8*PRICEX,jobs:10,pow:-3,on:LANDB,in:{food:12},out:{cans:8},d:'12 еды → 8 консервов на экспорт. Берёт только излишки еды.'},
   power:{n:'Угольная ТЭС',cat:'pow',cost:500*CAP,up:12*PRICEX,jobs:8,pow:60,fuel:{coal:4},on:LANDB,d:'60 энергии, сжигает 4 угля в месяц. Без угля мощность падает.'},
   wind:{n:'Ветряк',cat:'pow',cost:140*CAP,up:2*PRICEX,jobs:1,pow:10,on:[SAND,GRASS,HILL],d:'10 энергии без топлива.'},
   sub:{n:'Подстанция',cat:'pow',cost:90*CAP,up:1*PRICEX,on:LANDB,d:'Передаёт энергию дальше: работает, если сама стоит в зоне электричества.'},
   shop:{n:'Рынок',cat:'svc',cost:150*CAP,up:3*PRICEX,jobs:6,pow:-1,serve:120,on:LANDB,d:'Продаёт товары, ткани и кофе до 120 жителям в своём ореоле и берёт наценку '+PCT(SHOPK.margin)+'%. Дом без рынка заселён на '+PCT(HOME.noShop)+'%.'},
-  school:{n:'Школа',cat:'svc',cost:300*CAP,up:6*PRICEX,jobs:8,pow:-1,on:LANDB,need:60,d:'Образованные жители получают зарплату до +'+PCT(ECO.schoolWage)+'%: больше налога и выше настроение.'},
+  school:{n:'Школа',cat:'svc',cost:300*CAP,up:6*PRICEX,jobs:8,pow:-1,on:LANDB,need:60,d:'Образованные получают до +'+PCT(ECO.schoolWage)+'% к зарплате: выше настроение и подоходный налог, но предприятия и госслужба платят больше.'},
   clinic:{n:'Больница',cat:'svc',cost:400*CAP,up:8*PRICEX,jobs:10,pow:-2,on:LANDB,need:80,d:'Здоровье жителей в ореоле: заметно поднимает настроение.'},
   police:{n:'Полиция',cat:'svc',cost:300*CAP,up:6*PRICEX,jobs:8,pow:-1,on:LANDB,need:120,d:'Без полиции в городе от 120 жителей растёт преступность.'},
   store:{n:'Склад',cat:'com',cost:260*CAP,up:4*PRICEX,jobs:6,pow:-1,stor:300,on:LANDB,d:'+300 места под каждый ресурс, +25 к пропускной способности порта. Предприятия в ореоле склада работают быстрее.'},
@@ -1013,21 +1013,22 @@ function tick(){
   r.cen=c;S.rep=r;return r;
 }
 
-/* Ресурс, которого выпускают больше, чем нужно стране: цена внутри упала ниже ADV.cheap от базы. Самый крупный по выпуску. */
-function surplusK(r){let best=null,bv=0;for(const k of RK){const v=r.prod[k]*RES[k].base;if(r.prod[k]>0&&S.dom[k]<RES[k].base*ADV.cheap&&v>bv){bv=v;best=k}}return best}
+/* Ресурс, которого выпускают больше, чем нужно стране: цена внутри упала ниже ADV.cheap от базы. Первым — тот, чьи предприятия теряют больше, потом крупнейший по выпуску. */
+function surplusK(r){const loss={};for(const i in r.fin){const f=r.fin[i],o=B[f.t].out;if(o&&f.net<0)for(const k in o)loss[k]=(loss[k]||0)-f.net}
+  let best=null,bv=-1;for(const k of RK){if(!(r.prod[k]>0)||S.dom[k]>=RES[k].base*ADV.cheap)continue;const v=(loss[k]||0)*1e6+r.prod[k]*RES[k].base;if(v>bv){bv=v;best=k}}return best}
 /* Куда девать лишнее: порт, вывоз, переработка. Одна функция для советника и карточки (СТ4). */
 function outlet(k,c,r){if(!c.ports)return'Постройте порт: лишнее купят соседи';if(!S.trade[k].e)return`Включите вывоз: ${RES[k].n.toLowerCase()} сейчас не продаётся за границу`;
-  const p=PROC[k];if(p&&!c.cnt[p])return`Постройте ${B[p].n.toLowerCase()}: переработка выгоднее сырья`;return r&&r.portUse>=ADV.portFull?'Порт загружен: нужен склад рядом с ним или второй порт':'Соседи сейчас берут мало: подпишите торговый договор, тогда вывоз вырастет'}
+  const p=PROC[k],feed=p&&Object.keys(B[p].in).every(x=>x===k||(r&&r.prod[x]>0)||S.trade[x].i);if(p&&!c.cnt[p]&&feed)return`Постройте ${B[p].acc||B[p].n.toLowerCase()}: переработка выгоднее сырья`;return r&&r.portUse>=ADV.portFull?'Порт загружен: нужен склад рядом с ним или второй порт':'Соседи сейчас берут мало: подпишите торговый договор, тогда вывоз вырастет'}
 /* Почему предприятие в убытке — одна причина, самая важная. */
 function firmWhy(i,r,c){const f=r.fin[i],t=f.t,d=B[t],x=r.bs[i],s=c.st[i]||0;
   if(d.pow<0&&!PW[i])return`Нет электричества: выработка падает до ${PCT(PROD.noPower)}%, а зарплаты платятся полностью.`;
   if(s<ADV.staffLow)return'Мало рабочих: содержание платится целиком, а выпуск маленький.';
   if(d.in&&x&&x.run<PROD.shortRun)return`Не хватает сырья: загрузка ${Math.round(x.run*100)}%. Добывайте его или включите ввоз.`;
-  if(t==='shop')return`Мало покупок: рынок живёт на наценку ${PCT(SHOPK.margin)}% с товаров, тканей и кофе.`;
+  if(t==='shop')return`Мало покупок: рынок живёт на наценку ${PCT(SHOPK.margin)}% с товаров, тканей и кофе. Ставьте рынок среди домов и следите, чтобы товары были на складе.`;
   const k=Object.keys(d.out)[0];if(S.dom[k]<RES[k].base*ADV.cheap)return`Лишнее некуда продать: цена внутри ${COMMA(S.dom[k].toFixed(1))} кр при обычной ${RES[k].base}. ${outlet(k,c,r)}.`;
   if(x&&x.out){const made=x.out[k]*S.dom[k];if(f.rev<made*ADV.cheap)return`Продано меньше, чем выпущено: остальное лежит на складе. ${outlet(k,c,r)}.`}
   if(s<ADV.staff)return'Мало рабочих: содержание платится целиком, а выпуск маленький.';
-  return'Зарплаты и содержание выше выручки: ставка выросла быстрее цен.'}
+  return'Зарплаты и содержание выше выручки: ставка выросла быстрее цен. Выход — вывоз туда, где дороже, или переработка.'}
 
 function checkGoals(c,r){const out=[];while(S.goal<GOALS.length&&GOALS[S.goal].ok(c,r)){const G=GOALS[S.goal];S.money+=G.rw;out.push(G);S.goal++;S.log.unshift({m:S.month,t:`Цель выполнена: ${G.t}. Награда ${fmt(G.rw)} кр.`})}return out}
 
@@ -1639,7 +1640,7 @@ function bInfo(i,b,c){
   // top numbers
   const top=[];
   if(d.jobs){const w=Math.round(d.jobs*s);top.push([`${w}/${d.jobs}`,'рабочих','Сколько человек работает здесь из возможного. Рабочие распределяются по приоритету: еда, энергия, службы, добыча, заводы.'])}
-  if(d.home){const hf=homeF(i),cap=Math.round(d.home*hf),live=c.home?Math.round(cap*Math.min(1,S.pop/c.home)):0;top.push([`${live}/${d.home}`,d.rich?'богачей':'жителей','Сейчас живёт / мест. Без электричества и рынка рядом мест меньше.'])}
+  if(d.home){const hf=homeF(i),cap=Math.round(d.home*hf),live=c.home?Math.round(cap*Math.min(1,S.pop/c.home)):0;top.push([`${live}/${d.home}`,d.rich?'управляющих':'жителей','Сейчас живёт / мест. Без электричества и рынка рядом мест меньше.'])}
   if(x&&x.out){const k=Object.keys(d.out)[0];top.push([(x.out[k]||0).toFixed(1),`${RES[k].n.toLowerCase()} в мес.`,`Максимум ${d.out[k]} при полной загрузке.`])}
   if(d.in&&x)top.push([pct(x.run),'загрузка сырьём','Какая доля нужного сырья нашлась на складах и в импорте.']);
   if(d.pow>0){const p=t==='hall'?d.pow:Math.round(d.pow*s*(d.fuel&&r?r.fuel:1));top.push([`+${p}`,'энергии',`Номинал ${d.pow}. Зависит от рабочих${d.fuel?' и угля':''}.`])}
@@ -1755,7 +1756,7 @@ const H_=k=>S.hist.map(x=>x[k]);
 function sheetTop(t){return`<div class="sheet-top"><h2>${t}</h2><button class="ibtn" type="button" id="sh-x" aria-label="Закрыть">✕</button></div>`}
 function statHTML(k){const r=S.rep,c=r?r.cen:census(),h=S.hist[S.hist.length-1]||{};let t='',b='';
   if(k==='pop'){t='Жители';const mig=r?Object.entries(r.mig):[];
-    b=chart([{v:H_('pop'),col:'#79d69a',n:'Жители',area:1}],{label:'Население'})+kv([['Жители / мест',`${fmt(S.pop)} / ${fmt(c.home)}`],['Рабочая сила · богачи',`${fmt(c.work)} · ${fmt(c.richPop)}`],
+    b=chart([{v:H_('pop'),col:'#79d69a',n:'Жители',area:1}],{label:'Население'})+kv([['Жители / мест',`${fmt(S.pop)} / ${fmt(c.home)}`],['Рабочая сила · управляющие',`${fmt(c.work)} · ${fmt(c.richPop)}`],
       ['Дома заселены не полностью',c.poor?pill(c.poor,'bad'):pill('нет')],['Естественный рост за месяц',r?(r.dp>=0?'+':'')+r.dp.toFixed(1):'—'],['Миграция',mig.map(([id,m])=>`${nm(id)} ${m>0?'+':''}${m}`).join(', ')||'нет'],['Граница',{open:'открыта',allies:'только друзьям',closed:'закрыта'}[S.mig]]])+
       '<p class="log" style="font-size:12.5px">Люди приезжают, когда есть свободное жильё и настроение от '+POPK.growFrom+'%. Дом без электричества заселён на '+PCT(HOME.noPower)+'%, без рынка на '+PCT(HOME.noShop)+'%.</p>'}
   if(k==='job'){t='Работа';const G=[['Ратуша',0],['Еда',1],['Энергия',2],['Службы и логистика',3],['Добыча',4],['Заводы',5]],agg=G.map(()=>[0,0]);

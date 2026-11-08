@@ -16,7 +16,7 @@ function bInfo(i,b,c){
   // top numbers
   const top=[];
   if(d.jobs){const w=Math.round(d.jobs*s);top.push([`${w}/${d.jobs}`,'рабочих','Сколько человек работает здесь из возможного. Рабочие распределяются по приоритету: еда, энергия, службы, добыча, заводы.'])}
-  if(d.home){const hf=homeF(i),cap=Math.round(d.home*hf),live=c.home?Math.round(cap*Math.min(1,S.pop/c.home)):0;top.push([`${live}/${d.home}`,d.rich?'богачей':'жителей','Сейчас живёт / мест. Без электричества и рынка рядом мест меньше.'])}
+  if(d.home){const hf=homeF(i),cap=Math.round(d.home*hf),live=c.home?Math.round(cap*Math.min(1,S.pop/c.home)):0;top.push([`${live}/${d.home}`,d.rich?'управляющих':'жителей','Сейчас живёт / мест. Без электричества и рынка рядом мест меньше.'])}
   if(x&&x.out){const k=Object.keys(d.out)[0];top.push([(x.out[k]||0).toFixed(1),`${RES[k].n.toLowerCase()} в мес.`,`Максимум ${d.out[k]} при полной загрузке.`])}
   if(d.in&&x)top.push([pct(x.run),'загрузка сырьём','Какая доля нужного сырья нашлась на складах и в импорте.']);
   if(d.pow>0){const p=t==='hall'?d.pow:Math.round(d.pow*s*(d.fuel&&r?r.fuel:1));top.push([`+${p}`,'энергии',`Номинал ${d.pow}. Зависит от рабочих${d.fuel?' и угля':''}.`])}

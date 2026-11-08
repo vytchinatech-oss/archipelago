@@ -28,7 +28,7 @@ const BOT = `var BOTK={reserve:500*CAP,rich:2000*CAP,spare:300,taxMax:.2,taxStep
     if(r&&r.net<0&&S.money<BOTK.rich&&T.inc<BOTK.taxMax)T.inc=+(T.inc+BOTK.taxStep).toFixed(2);else if(r&&r.net>0&&S.money>BOTK.rich&&T.inc>TAXK.incFree)T.inc=+(T.inc-BOTK.taxStep).toFixed(2);
     if(t==='lit')litWind();else if(t&&near(t,S.hall)<0&&B[t].out)near(['farm','saw','cotton','ranch'][S.month%4],S.hall)};
   var botGame=(mi,gov,months)=>{setup(mi,gov,'norm');S.money=1e6;bigGrid();S.money=START.money;S.hh=START.hh;portUp();let low=Infinity;
-    for(let m=0;m<months&&!S.over;m++){if(m%2==0)botMove();const r=tick();computeCov();checkGoals(r.cen,r);if(m>=months-120)low=Math.min(low,S.money);
+    for(let m=0;m<months&&!S.over;m++){if(m%2==0)botMove();const r=tick();computeCov();checkGoals(r.cen,r);low=Math.min(low,S.money);
       for(const k of RK)if(!(S.stock[k]>=0)||!isFinite(S.dom[k]))throw new Error('ресурс '+k);
       if(!isFinite(S.money)||!isFinite(S.happy)||!isFinite(S.appr)||S.pop<0)throw new Error('ядро на месяце '+m);
       for(const n of S.nat)if(!isFinite(n.money)||n.rel>100||n.rel<-100)throw new Error('страна '+n.id)}
@@ -39,7 +39,7 @@ for (const gov of ['demo', 'parl', 'mon']) {
     const r = load()(`${BOT};botGame(1,'${gov}',360)`);
     assert.equal(r.over, null, r.over && r.over.reason);
     assert.ok(r.pop > 100, 'население ' + r.pop);
-    assert.ok(r.low > 0, 'казна в последние 10 лет опускалась до ' + Math.round(r.low));
+    assert.ok(r.low > 0, 'казна опускалась до ' + Math.round(r.low));
   });
 }
 
@@ -47,7 +47,7 @@ for (const mi of [0, 2]) {
   test(`карта ${mi}: 20 лет разумной игры, казна не уходит в минус`, () => {
     const r = load()(`${BOT};botGame(${mi},'parl',240)`);
     assert.equal(r.over, null, r.over && r.over.reason);
-    assert.ok(r.low > 0, 'казна в последние 10 лет опускалась до ' + Math.round(r.low));
+    assert.ok(r.low > 0, 'казна опускалась до ' + Math.round(r.low));
   });
 }
 

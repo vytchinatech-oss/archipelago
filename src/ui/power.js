@@ -54,7 +54,7 @@ const H_=k=>S.hist.map(x=>x[k]);
 function sheetTop(t){return`<div class="sheet-top"><h2>${t}</h2><button class="ibtn" type="button" id="sh-x" aria-label="Закрыть">✕</button></div>`}
 function statHTML(k){const r=S.rep,c=r?r.cen:census(),h=S.hist[S.hist.length-1]||{};let t='',b='';
   if(k==='pop'){t='Жители';const mig=r?Object.entries(r.mig):[];
-    b=chart([{v:H_('pop'),col:'#79d69a',n:'Жители',area:1}],{label:'Население'})+kv([['Жители / мест',`${fmt(S.pop)} / ${fmt(c.home)}`],['Рабочая сила · богачи',`${fmt(c.work)} · ${fmt(c.richPop)}`],
+    b=chart([{v:H_('pop'),col:'#79d69a',n:'Жители',area:1}],{label:'Население'})+kv([['Жители / мест',`${fmt(S.pop)} / ${fmt(c.home)}`],['Рабочая сила · управляющие',`${fmt(c.work)} · ${fmt(c.richPop)}`],
       ['Дома заселены не полностью',c.poor?pill(c.poor,'bad'):pill('нет')],['Естественный рост за месяц',r?(r.dp>=0?'+':'')+r.dp.toFixed(1):'—'],['Миграция',mig.map(([id,m])=>`${nm(id)} ${m>0?'+':''}${m}`).join(', ')||'нет'],['Граница',{open:'открыта',allies:'только друзьям',closed:'закрыта'}[S.mig]]])+
       '<p class="log" style="font-size:12.5px">Люди приезжают, когда есть свободное жильё и настроение от '+POPK.growFrom+'%. Дом без электричества заселён на '+PCT(HOME.noPower)+'%, без рынка на '+PCT(HOME.noShop)+'%.</p>'}
   if(k==='job'){t='Работа';const G=[['Ратуша',0],['Еда',1],['Энергия',2],['Службы и логистика',3],['Добыча',4],['Заводы',5]],agg=G.map(()=>[0,0]);
