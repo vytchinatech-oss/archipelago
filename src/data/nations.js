@@ -19,7 +19,7 @@ const EVN={
   bargain:{mul:.6,amt:40,rel:[2,0],from:-30,lowMonths:3,cashK:2},
   relief:{amt:30,rel:[10,-3],from:-30,keep:2,wise:3},
   summit:{cost:600*CAP,gap:60,rel:[7,-1],from:-40,to:RELK.friend,cashK:2},
-  dumping:{share:.15,min:200*CAP,max:1500*CAP,rel:[5,-5]},
+  dumping:{share:.15,min:200*FLOW,max:1500*FLOW,rel:[5,-5]},
   border:{mil:4,rel:[6,-7],below:-10},
   debt:{share:.25,min:300*CAP,rel:[8,-3],wise:5000*CAP},
   mediate:{rel:[6,-2],other:-6,from:15,wise:20},

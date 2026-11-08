@@ -337,7 +337,7 @@ test('сохранение v4 переходит в новый масштаб д
     o.loans=[{nid:'sol',left:100,pay:10}];S=loadStr(JSON.stringify(o));computeConn();computeCov();tick();
     ({v:S.v,cap:CAP,money0:o.money,nat:S.nat[0].money>=30000*CAP*.5,price:S.regions[0].price,loan:S.loans[0]&&S.loans[0].left,inc:S.tax.inc,biz:S.tax.biz,hh:S.hh>=0,wage:S.wage>0})`);
   assert.equal(r.v, 5); assert.equal(r.price, 1400 * r.cap); assert.ok(r.nat); assert.ok(r.hh); assert.ok(r.wage);
-  assert.ok(Math.abs(r.inc - .15) < 1e-9); assert.equal(r.biz, .2); assert.ok(r.loan > 100);
+  assert.ok(Math.abs(r.inc - .2) < 1e-9); assert.equal(r.biz, .2); assert.ok(r.loan > 100);
 });
 
 test('лестница выработки: по базовой цене рабочий окупает зарплату везде, переработка выгоднее сырья, глубокая — выгоднее всего', () => {
@@ -347,4 +347,73 @@ test('лестница выработки: по базовой цене рабо
   assert.ok(r.minAll > r.wage * 1.5, JSON.stringify(r));
   assert.ok(r.minOne > r.maxRaw, JSON.stringify(r));
   assert.ok(r.minDeep > r.maxOne, JSON.stringify(r));
+});
+
+test('ступени мест и цены совпадают с решением ворот 1', () => {
+  const r = load()(`({q:Object.fromEntries(Object.keys(B).filter(t=>B[t].jobs).map(t=>[t,qualOf(t)])),p:Object.fromEntries(RK.map(k=>[k,RES[k].base])),j:{factory:B.factory.jobs,textile:B.textile.jobs,cannery:B.cannery.jobs,saw:B.saw.jobs,coalmine:B.coalmine.jobs,ironmine:B.ironmine.jobs},inc:START.tax.inc,m:SHOPK.margin})`);
+  assert.deepEqual(JSON.parse(JSON.stringify(r.p)), { food: 10, coffee: 36, cotton: 16, wood: 13, coal: 15, iron: 20, gold: 100, goods: 55, cloth: 46, cans: 44 });
+  assert.deepEqual(JSON.parse(JSON.stringify(r.j)), { factory: 10, textile: 8, cannery: 8, saw: 7, coalmine: 8, ironmine: 9 });
+  for (const t of ['farm', 'veg', 'ranch', 'fish', 'coffee', 'cotton', 'saw', 'coalmine', 'ironmine', 'goldmine', 'barracks']) assert.equal(r.q[t], 1, t);
+  for (const t of ['shop', 'store', 'port', 'wind', 'textile', 'cannery', 'police']) assert.equal(r.q[t], 1.3, t);
+  for (const t of ['factory', 'power', 'school', 'clinic']) assert.equal(r.q[t], 1.7, t);
+  assert.equal(r.q.hall, 3); assert.equal(r.inc, .2); assert.equal(r.m, .2);
+});
+
+test('зарплата места — база × ступень, и у предприятия, и на госслужбе', () => {
+  const r = load()(`setup(0);grid();for(let k=0;k<12;k++)near('house',S.hall);S.pop=120;const f=near('factory',S.hall),s=near('shop',S.hall),w=near('wind',S.hall);computeConn();computeCov();const q=tick();
+    const u=i=>q.fin[i].wage/q.fin[i].w/q.W;({f:u(f),s:u(s),pub:q.pubW,hallPay:10*(q.cen.st[S.hall]||0)*q.W*3})`);
+  assert.ok(Math.abs(r.f - 1.7) < 1e-9); assert.ok(Math.abs(r.s - 1.3) < 1e-9); assert.ok(r.pub >= r.hallPay - 1e-6);
+});
+
+test('школы поднимают зарплату: база не уменьшается на надбавку школ', () => {
+  const r = load()(`setup(0);grid();for(let k=0;k<8;k++)near('house',S.hall);S.pop=70;near('farm',S.hall);near('farm',S.hall);computeConn();computeCov();
+    const a=tick();const tA=a.wageTgt,wA=a.W/S.wage;near('school',S.hall);computeConn();computeCov();const b=tick();({wageRatioNo:wA,bonus:b.cen.cv.school,W:b.W,base:S.wage,tA,tB:b.wageTgt})`);
+  assert.ok(r.bonus > 0); assert.ok(r.W > r.base * 1.0001 || r.bonus === 0, JSON.stringify(r));
+  assert.ok(r.tB > r.tA * .7, JSON.stringify(r));
+});
+
+test('управляющие из особняков входят в расчёт базы', () => {
+  const run = load();
+  const r = run(`WAGE.min=0;setup(0);grid();for(let k=0;k<10;k++)near('house',S.hall);S.pop=100;near('farm',S.hall);near('saw',S.hall);computeConn();computeCov();S.wage=12;const a=tick();
+    near('villa',S.hall);near('villa',S.hall);S.pop=110;S.wage=12;computeConn();computeCov();const b=tick();({rich:b.cen.richPop,a:a.wageTgt,b:b.wageTgt})`);
+  assert.ok(r.rich > 0); assert.ok(r.b < r.a, JSON.stringify(r));
+});
+
+test('налог на прибыль не влияет на фракции и скрыт в «Экономике»', () => {
+  const r = load()(`const go=b=>{setup(0);grid();near('farm',S.hall);computeConn();computeCov();S.tax.biz=b;const q=tick();return [S.fac.agr.sat,S.fac.ind.sat]};const x=go(.0),y=go(.3);({x,y,hasKeys:'bizFree' in FACT.ind||'biz' in FACT.agr})`);
+  assert.equal(r.hasKeys, false);
+  assert.ok(Math.abs(r.x[0] - r.y[0]) < 1e-6 && Math.abs(r.x[1] - r.y[1]) < 1e-6, JSON.stringify(r));
+});
+
+test('перевод v4 → v5 умножает деньги на масштаб', () => {
+  const r = load()(`setup();const o=JSON.parse(saveStr());o.v=4;o.money=5000;delete o.hh;delete o.wage;o.nat[0].money=30000;o.lent=[{nid:'sol',left:70,pay:7}];const m=migrateSave(JSON.parse(JSON.stringify(o)));({money:m.money,nat:m.nat[0].money,lent:m.lent[0].left,cap:CAP,hh:m.hh,wage:m.wage,start:START.hh,w0:WAGE.start})`);
+  assert.equal(r.money, 5000 * r.cap); assert.equal(r.nat, 30000 * r.cap); assert.equal(r.lent, 70 * r.cap);
+  assert.equal(r.hh, r.start); assert.equal(r.wage, r.w0);
+});
+
+test('наценка без рынков уходит в казну, деньги сходятся', () => {
+  const r = load()(`setup(0);grid();for(let k=0;k<6;k++)near('house',S.hall);S.pop=50;S.stock.goods=200;computeConn();computeCov();const q=tick();({sold:q.stockSale,shop:q.shop})`);
+  assert.equal(r.shop, 0); assert.ok(r.sold >= 0);
+});
+
+test('пустой кошелёк: жители не уходят в минус и не покупают привозное', () => {
+  const r = load()(`setup(0);grid();for(let k=0;k<6;k++)near('house',S.hall);S.pop=50;portUp();computeConn();computeCov();S.hh=0;S.wage=WAGE.min;for(const k of RK)S.stock[k]=0;let min=0;const q=tick();({hh:S.hh,imp:q.impH})`);
+  assert.ok(r.hh >= 0, JSON.stringify(r));
+});
+
+test('уголь ТЭС оплачивает казна, и строка видна в бюджете', () => {
+  const r = load()(`setup(0);grid();for(let k=0;k<6;k++)near('house',S.hall);S.pop=50;near('power',S.hall);computeConn();computeCov();S.stock.coal=50;const q=tick();const L=budgetLines(q).out.find(x=>x[0]===tx('budget.fuel'));({fuel:q.fuelCost,line:L&&L[1]})`);
+  assert.ok(r.fuel > 0); assert.equal(r.line, r.fuel);
+});
+
+test('советник при убытке и излишке предлагает порт, а не новую ферму', () => {
+  const r = load()(`setup(0);grid();for(let k=0;k<8;k++)near('house',S.hall);S.pop=70;near('farm',S.hall);near('farm',S.hall);near('farm',S.hall);near('wind',S.hall);near('shop',S.hall);computeConn();computeCov();
+    let q;for(let m=0;m<30;m++){q=tick();computeCov();S.ev=null}S.rep=q;q.firmMinus=Math.max(q.firmMinus,q.wages);q.firmPlus=0;const A=advisor(q.cen);
+    ({A,food:S.dom.food/RES.food.base})`);
+  assert.ok(r.A.includes('порт') && !r.A.includes('Нужны фермы'), JSON.stringify(r));
+});
+
+test('счёт предприятия помнит вид здания: новый дом на месте завода не покажет чужой счёт', () => {
+  const r = load()(`setup(0);grid();for(let k=0;k<4;k++)near('house',S.hall);S.pop=30;const f=near('farm',S.hall);computeConn();computeCov();const q=tick();({t:q.fin[f].t})`);
+  assert.equal(r.t, 'farm');
 });

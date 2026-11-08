@@ -59,8 +59,8 @@ const isFirm=t=>!!B[t].out||t==='shop';
 const qualOf=t=>QUAL[B[t].q||'none'];
 /* Строки бюджета за месяц. Отчёт показывает ровно их, их сумма равна r.net (стандарт СТ2). */
 function budgetLines(r){return{
-  inc:[['Подоходный налог',r.inc],['Прибыль госпредприятий',r.firmPlus,'Сумма итогов всех госпредприятий в плюсе. Подробно — в карточке здания.'],['Импортные пошлины',r.dImp],['Экспортные пошлины',r.dExp],['Продажа госзапасов',r.stockSale,'Со складов страны продано то, что в этом месяце никто не выпускал.'],['Возврат ваших займов',r.loanIn]].filter((x,i)=>i<4||x[1]>0),
-  out:[['Зарплаты госслужбы',r.pubW,'Ратуша, электростанции, школы, больницы, полиция, склады, порт и казармы.'],['Убытки госпредприятий',r.firmMinus,'Сумма итогов всех госпредприятий в минусе. Подробно — в карточке здания.'],['Содержание зданий и дорог',r.up],['Уголь для ТЭС',r.fuelCost],['Выплаты по займам',r.loanOut],['Проценты по долгу казны',r.int],['Зарплаты министров',r.sal],['Неучтённые расходы',r.theft,'Кто-то из министров ворует. Кто именно, станет ясно при скандале.'],['Гвардия',r.guard]].filter((x,i)=>i<3||x[1]>0)}}
+  inc:[['Подоходный налог',r.inc],[tx('budget.firmPlus'),r.firmPlus,tx('budget.firmPlusTip')],['Импортные пошлины',r.dImp],['Экспортные пошлины',r.dExp],[tx('budget.stockSale'),r.stockSale,tx('budget.stockSaleTip')],['Возврат ваших займов',r.loanIn]].filter((x,i)=>i<4||x[1]>0),
+  out:[[tx('budget.pubW'),r.pubW,tx('budget.pubWTip')],[tx('budget.firmMinus'),r.firmMinus,tx('budget.firmMinusTip')],['Содержание зданий и дорог',r.up],[tx('budget.fuel'),r.fuelCost],['Выплаты по займам',r.loanOut],['Проценты по долгу казны',r.int],['Зарплаты министров',r.sal],['Неучтённые расходы',r.theft,'Кто-то из министров ворует. Кто именно, станет ясно при скандале.'],['Гвардия',r.guard]].filter((x,i)=>i<3||x[1]>0)}}
 /* Деньги из казны, которые уходят жителям страны: стройка, земля, подарки знати. Стандарт СТ1: деньги не исчезают. */
 function spend(v){S.money-=v;S.hh+=v}
 /* Доходы казны от налогов, пошлин и госпредприятий за месяц. */
@@ -83,7 +83,7 @@ function tick(){
   // зарплаты: база на страну × ступень места, со школами выше. Предприятия платят со своего счёта, госслужбу оплачивает казна.
   const W=S.wage*(1+ECO.schoolWage*c.cv.school);r.W=W;let firmW=0;
   for(const i of c.list){const t=S.bld[i].t,d=B[t],q=qualOf(t),w=(d.jobs||0)*(c.st[i]||0);
-    if(isFirm(t)){r.fin[i]={rev:0,inp:0,wage:w*W*q,mgr:0,up:d.up,w,wq:w*q};firmW+=w*q}else r.pubW+=w*W*q}
+    if(isFirm(t)){r.fin[i]={rev:0,inp:0,wage:w*W*q,mgr:0,up:d.up,w,wq:w*q,t};firmW+=w*q}else r.pubW+=w*W*q}
   r.mgr=firmW>0?c.richPop*W*WAGE.richMul:0;if(firmW>0)for(const i in r.fin)r.fin[i].mgr=r.mgr*r.fin[i].wq/firmW;
   r.wages=r.pubW+r.mgr+Object.values(r.fin).reduce((a,f)=>a+f.wage,0);
   r.inc=Math.min(r.wages,r.wages*T.inc*(1+MINK.fin*M('fin')));S.hh+=r.wages-r.inc;
@@ -244,7 +244,7 @@ function advisor(c){
   if(r&&r.short.food>ADV.food)return'Еды не хватает. Нужны поля, рыбаки или импорт через порт.';
   const un=c.work?(c.work-c.emp)/c.work:0;
   if(c.jobs>c.work*ADV.jobsOver&&c.jobs-c.work>ADV.jobsGap)return`Рабочих мест ${c.jobs}, рабочих ${c.work}. Сначала заняты фермы, энергия и службы, затем добыча, заводы простаивают. Нужно больше жилья.`;
-  if(un>ADV.unemp)return`Безработица ${Math.round(un*100)}%. Нужны фермы, шахты и заводы.`;
+  if(un>ADV.unemp){const over=r&&RK.filter(k=>r.prod[k]>0&&S.dom[k]<RES[k].base*ADV.lowPrice).sort((a,b)=>S.stock[b]-S.stock[a])[0];if(over)return tx(c.ports?'adv.unempProcess':'adv.unempPort',{p:Math.round(un*100),res:RES[over].n.toLowerCase()});return`Безработица ${Math.round(un*100)}%. Нужны фермы, шахты и заводы.`}
   if(c.jobs-c.emp>ADV.jobsFree&&c.home-S.pop<ADV.roomLow)return'Есть свободные рабочие места, но негде жить. Стройте жильё.';
   if(r&&c.serve<S.pop*ADV.serve&&S.pop>ADV.servePop)return`Жителям не хватает рынков. Рынок обслуживает ${B.shop.serve} человек.`;
   if(c.unpow)return`${c.unpow} ${plural(c.unpow,'здание','здания','зданий')} вне зоны электричества. Ставьте подстанции или ветряки рядом.`;
@@ -254,7 +254,9 @@ function advisor(c){
   if(c.log<ADV.log)return`Логистика ${Math.round(c.log*100)}%: поставьте склад рядом с предприятиями.`;
   if(r&&r.short.inputs>ADV.inputs)return'Заводам не хватает сырья. Добывайте или закупайте через порт.';
   if(r&&r.sat.goods<ADV.goods&&c.serve>0)return'На рынках мало товаров. Нужен завод или импорт.';
-  if(r&&r.firmMinus>r.firmPlus&&r.firmMinus>ADV.firmLoss){const n=Object.values(r.fin).filter(f=>f.net<0).length;return`Госпредприятия в убытке: ${n} ${plural(n,'предприятие','предприятия','предприятий')} теряют ${fmt(r.firmMinus)} кр в месяц. Осмотрите их: нет сбыта, сырья или рабочих.`}
+  if(r&&r.firmMinus>r.firmPlus&&r.firmMinus>r.wages*ADV.firmLoss){const sum=fmt(r.firmMinus),over=RK.filter(k=>r.prod[k]>0&&S.dom[k]<RES[k].base*ADV.lowPrice).sort((a,b)=>S.stock[b]-S.stock[a])[0];
+    if(!c.ports&&over)return tx('adv.lossNoPort',{sum});if(over)return tx('adv.lossSurplus',{sum,res:RES[over].n.toLowerCase()});
+    return tx('adv.loss',{n:Object.values(r.fin).filter(f=>f.net<0).length,sum})}
   if(r&&r.sal&&r.sal+r.theft>taxIncome(r)*ADV.cabinet)return`Кабинет министров обходится в ${Math.round((r.sal+r.theft)/Math.max(1,taxIncome(r))*100)}% доходов казны. Для такого города это дорого.`;
   return'';
 }

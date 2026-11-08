@@ -11,12 +11,14 @@ const COMMA=v=>String(v).replace('.',',');
 /* Масштаб денег (DESIGN.md, «Собственность, кошельки и зоны»). Цены товаров выросли в 2,2 раза, разовые суммы — стройка, земля, награды,
    займы, подарки, казны соседей — в CAP раз: так поле окупается за 5–6 лет, а не за пару месяцев. */
 const CAP=10;
+/* Масштаб месячных потоков: цены и зарплаты выросли примерно вдвое. Им меряются пороги, которые сравнивают с оборотом, а не с запасом денег. */
+const FLOW=2;
 /* Старт новой игры и области. hh — сбережения жителей. */
-const START={money:4000*CAP,hh:1000,pop:18,happy:62,tax:{inc:.20,biz:.20,imp:.10,exp:.05},stock:{food:80,wood:30,coal:20,goods:20}};
+const START={money:16000*CAP,hh:1000,pop:18,happy:62,tax:{inc:.20,biz:.20,imp:.10,exp:.05},stock:{food:80,wood:30,coal:20,goods:20}};
 const REGK={base:200*CAP,perTile:12*CAP,round:500,goldMul:1.3,fertMin:.75,fertRand:.45,tileMin:.85,tileRand:.3};
 /* Дороги и снос. */
 const ROADK={deep:120*CAP,shal:40*CAP,forest:15*CAP,land:5*CAP,forestClear:15*CAP,demolish:5*CAP,upRoad:.25,upBridge:1};
-/* Зарплата: одна ставка на страну. Цель — доля share от стоимости, которую рабочий предприятия создаёт за месяц (выручка минус сырьё).
+/* Зарплата: база на страну × ступень места (QUAL). Цель — доля share от стоимости, которую рабочий предприятия создаёт за месяц (выручка минус сырьё).
    При нехватке рабочих цель выше, при безработице ниже: множитель 1 + tight × (мест/рабочих − 1) в пределах tightMin…tightMax.
    Ставка идёт к цели со скоростью speed. Жители особняков — управляющие, получают ставку × richMul из счёта предприятий. */
 /* Ступень места: надбавка к базовой зарплате. Зарплату определяет место, а не человек (DESIGN.md, «Ворота 1»). */
@@ -25,7 +27,7 @@ const WAGE={start:12,share:.55,tight:.5,tightMin:.75,tightMax:1.25,min:4,max:80,
 /* Рынок берёт наценку сверху на товары, ткани и кофе, свои и привозные. Еду жители покупают без наценки. */
 const SHOPK={margin:.2,goods:['goods','cloth','coffee']};
 /* Выработка. nearR: сколько клеток считается «рядом» для леса и воды. smallCity: сколько предприятий работает без склада. */
-const PROD={nearR:2,forestFull:7,commuteMin:.3,commuteFree:6,commuteStep:.025,smallCity:4,noStore:.75,noPower:.35,forestBase:.35,forestAdd:.65,mount:1.3,warm:1.3,limRun:.99,shortRun:.95,storeStaff:.5};
+const PROD={nearR:2,forestFull:7,commuteMin:.3,commuteFree:6,commuteStep:.025,smallCity:4,noStore:.75,noPower:.35,forestBase:.35,forestAdd:.65,mount:1.3,warm:1.3,limRun:.99,lossStaff:.6,shortRun:.95,storeStaff:.5};
 const HOME={noPower:.5,noShop:.6};
 /* Потребление на жителя в месяц. canReserve: сколько месяцев еды консервный завод не трогает. */
 const NEED={food:.12,canReserve:1.5,goods:.05,cloth:.03,coffee:.004,coffeeRich:.06};
@@ -50,16 +52,16 @@ const AUTO={importOf:{agr:['food'],en:['coal'],ind:['wood','iron','coal','cotton
   dipNear:15,dipAidCash:3000*CAP,dipBroke:-1500*CAP,dipDebtMax:8000*CAP,dipLoanGap:12,dipLoan:3000*CAP,
   fuelLow:.9,coalOk:4,logLow:.95,inputsLow:.2,foodShort:.05,foodStock:.2,park:.6,school:.5,clinic:.5,police:.7,unrest:40};
 /* Подсказки советника: при каких цифрах что говорить. */
-const ADV={fuel:.9,food:.1,foodLog:.15,jobsOver:1.25,jobsGap:15,unemp:.15,jobsFree:8,roomLow:4,serve:.7,servePop:40,poor:2,police:.6,log:.95,inputs:.2,goods:.7,cabinet:.35,firmLoss:100};
+const ADV={fuel:.9,food:.1,foodLog:.15,jobsOver:1.25,jobsGap:15,unemp:.15,jobsFree:8,roomLow:4,serve:.7,servePop:40,poor:2,police:.6,log:.95,inputs:.2,goods:.7,cabinet:.35,firmLoss:.15,lowPrice:.8};
 /* Власть. */
 const GOVK={term:120,appr0:55,army0:60,sat0:{agr:55,ind:55,trd:55,peo:60,mil:50,int:50},seats0:{agr:22,ind:18,trd:14,peo:42,mil:0,int:4},richJobs:2,parlLo:SCALE.crisis,parlSpan:SCALE.top-SCALE.crisis,satSpeed:RATE.normal,pollNoise:6,inflW:{food:.5,goods:.25,cloth:.15,coffee:.1}};
 /* Цели довольства фракций. */
 const FACT={agr:{base:58,food:25,imp:30,min:3},ind:{base:55,run:.8,runK:40,pow:40,log:40,min:3},
-  trd:{base:50,expMax:20,expDiv:40,impFree:.1,imp:100,expFree:.05,exp:150,deal:5,min:3},peo:{mood:.9,job:10},
+  trd:{base:50,expMax:20,expDiv:40*FLOW,impFree:.1,imp:100,expFree:.05,exp:150,deal:5,min:3},peo:{mood:.9,job:10},
   mil:{base:42,soldMax:25,sold:20,broke:-10,ok:5,guard:8},int:{base:40,school:15,clinic:12,gov:{demo:8,parl:5,mon:-10},min:2}};
 /* Отношение фракций к соседям. */
 const FATT={ownFrom:.5,pad:60,sphere:2,trdBase:.2,peo:1.5,milAggr:-.8,milTense:-.4,milAlly:.3,intReg:{rep:.6,mon:0,auth:-.6},relMax:1.2,relDeal:.4,relEmb:.8};
-const APPR={mood:.55,job:15,growthMax:10,growth:50,inflFree:.08,inflMax:15,infl:100,broke:10,debtRatio:.6,debt:10,base:10,soc:.5,speed:RATE.normal};
+const APPR={mood:.55,job:15,growthMax:10,growth:50,inflFree:.08,inflMax:15,infl:100,broke:10,debtRatio:.6*CAP/FLOW,debt:10,base:10,soc:.5,speed:RATE.normal};
 const UNR={below:SCALE.crisis,rise:.6,calm:3,broke:-2000*CAP,brokeAdd:3,hunger:.3,hungerAdd:5,apprBelow:SCALE.crisis,apprAdd:2,warn:[50,80],warnReset:40};
 const ARMY={base:30,mil:.4,guard:12,rich:5,broke:-15,mood:.3,appr:.2,speed:RATE.normal,guardCost:80,coupBelow:SCALE.bad,coupArmy:.12,coupUnrest:.04,coupPlot:.01,coupPlotAppr:SCALE.bad,coupWarn:.02};
 const REFORM={cost:3000*CAP,gap:60,army:60,appr:50,parl:60,toMon:-10,fromMon:5,monAva:10,monSol:-10,repSol:10,repAva:-5};
@@ -82,6 +84,6 @@ const GOALS=[
   {t:'Купите вторую область',ok:()=>S.regions.filter(g=>g.own).length>=2,rw:500*CAP},
   {t:'Подпишите торговый договор',ok:()=>S.nat.some(n=>n.deal),rw:800*CAP},
   {t:'Население 300',ok:()=>S.pop>=300,rw:1000*CAP},
-  {t:'Профицит бюджета 400 кр за месяц',ok:(c,r)=>r&&r.net>=400,rw:1000*CAP},
+  {t:`Профицит бюджета ${400*FLOW} кр за месяц`,ok:(c,r)=>r&&r.net>=400*FLOW,rw:1000*CAP},
   {t:'Население 1000',ok:()=>S.pop>=1000,rw:3000*CAP},
 ];
