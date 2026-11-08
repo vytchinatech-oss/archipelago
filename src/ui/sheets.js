@@ -15,9 +15,9 @@ function econHTML(){
   return`<div class="sheet-in"><div class="sheet-top"><h2>Экономика</h2><button class="ibtn" type="button" id="sh-x" aria-label="Закрыть">✕</button></div>
   <div class="sec"><h3>Налоги и пошлины</h3><div class="sliders">
     ${sl('tx-inc','Подоходный налог',T.inc,30,`С зарплат всех работающих, управляющие из особняков получают в ${WAGE.richMul} раза больше. Выше ${PCT(TAXK.incFree)}% портит настроение.`)}
-    ${sl('tx-biz','Налог на прибыль',T.biz,30,'Для частных предприятий: они появятся вместе с зонами. Сейчас все предприятия государственные, их прибыль целиком идёт в казну. Аграрии и промышленники следят за этим налогом уже сейчас.')}
-    ${sl('tx-imp','Импортная пошлина',T.imp,50,'С ввоза, кроме стран с договором. Жители платят за импорт больше, а настроение падает, когда на импорт уходит большая доля зарплат.')}
-    ${sl('tx-exp','Экспортная пошлина',T.exp,30,'С вывоза. Высокая пошлина сокращает объём экспорта.')}</div></div>
+    ${sl('tx-imp','Импортная пошлина',T.imp,50,'С ввоза, кроме стран с договором. Жители платят за импорт больше, а настроение падает, когда на привозное уходит большая доля их покупок.')}
+    ${sl('tx-exp','Экспортная пошлина',T.exp,30,'С вывоза. Высокая пошлина сокращает объём экспорта.')}</div>
+    <p class="log" style="font-size:12.5px">Налог на прибыль появится вместе с частными предприятиями. Сейчас все предприятия государственные: их итог целиком идёт в казну.</p></div>
   <div class="sec"><h3>Бюджет за прошлый месяц</h3>${r?`<div class="budget">
     <div class="bcol">${BL.inc.map(x=>bl(x[0],money(x[1]),'',x[2])).join('')}${bl('Доходы',money(BL.inc.reduce((a,x)=>a+x[1],0)),'tot')}</div>
     <div class="bcol">${BL.out.map(x=>bl(x[0],money(-x[1]),'',x[2])).join('')}${bl('Расходы',money(-BL.out.reduce((a,x)=>a+x[1],0)),'tot')}${bl('Итог месяца',`<b class="${r.net>=0?'up':'dn'}">${money(r.net)} кр</b>`,'tot')}${Math.abs(r.auto)>=.5?bl('Вне бюджета: решения министров',money(r.auto),'','Стройка, помощь и займы, которые министры сделали сами. В итог месяца не входят.'):''}</div></div>`:'<p class="log">Отчёт появится через месяц.</p>'}</div>
@@ -33,7 +33,7 @@ function econHTML(){
   <div class="sec"><h3>Журнал</h3><ul class="log">${S.log.slice(0,12).map(l=>`<li><b>${MONTHS[(l.m+11)%12].slice(0,3)} ${1+((Math.max(0,l.m-1))/12|0)}</b>${l.t}</li>`).join('')}</ul></div></div>`;
 }
 function bindEcon(){const el=$('#sheet');
-  for(const[id,k]of[['tx-inc','inc'],['tx-biz','biz'],['tx-imp','imp'],['tx-exp','exp']]){const inp=$('#'+id);inp.oninput=()=>{S.tax[k]=inp.value/100;inp.previousElementSibling.querySelector('span').textContent=inp.value+'%'}}
+  for(const[id,k]of[['tx-inc','inc'],['tx-imp','imp'],['tx-exp','exp']]){const inp=$('#'+id);inp.oninput=()=>{S.tax[k]=inp.value/100;inp.previousElementSibling.querySelector('span').textContent=inp.value+'%'}}
   el.querySelectorAll('.tg[data-k]').forEach(b=>b.onclick=()=>{const m=setTrade(b.dataset.k,b.dataset.m);if(m)toast(m);b.setAttribute('aria-pressed',!!S.trade[b.dataset.k][b.dataset.m])})}
 function worldHTML(){
   const r=S.rep,debt=debtTotal(),lent=S.lent.reduce((a,l)=>a+l.left,0);

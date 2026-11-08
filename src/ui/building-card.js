@@ -7,7 +7,7 @@ const fbar=(lab,v,tip)=>{const w=Math.max(0,Math.min(1,v))*100,col=v>=.95?'var(-
 const big=items=>`<div class="big">${items.map(([v,l,t])=>`<div${t?` data-tip="${t}" tabindex="0"`:''}><b>${v}</b><span>${l}</span></div>`).join('')}</div>`;
 const resList=o=>Object.keys(o).filter(k=>o[k]>.05).map(k=>`${rd(k)}${o[k].toFixed(1)} ${RES[k].n.toLowerCase()}`).join('<br>')||'—';
 function bInfo(i,b,c){
-  const d=B[b.t],r=S.rep,x=r&&r.bs?r.bs[i]:null,s=d.jobs?(c.st[i]||0):1,on=d.pow<0?!!PW[i]:true,t=b.t;
+  const d=B[b.t],r=S.rep,fin=r&&r.fin&&r.fin[i]&&r.fin[i].t===b.t?r.fin[i]:null,x=fin&&r.bs?r.bs[i]:null,s=d.jobs?(c.st[i]||0):1,on=d.pow<0?!!PW[i]:true,t=b.t;
   const ly=layerOf(t);if(ly)setLayer(ly);
   if(d.in&&x&&!x.inp){x.run=0;x.inp={};x.need={};x.out={};for(const k in d.in){x.inp[k]=0;x.need[k]=0}for(const k in d.out)x.out[k]=0}
   let status=!CONN[i]?['Нет дороги к ратуше','bad']:!on?['Нет электричества','bad']:d.jobs&&s<.5?['Мало рабочих','bad']:d.jobs&&s<1?['Не хватает рабочих','mid']:['Работает',''];
@@ -22,7 +22,7 @@ function bInfo(i,b,c){
   if(d.pow>0){const p=t==='hall'?d.pow:Math.round(d.pow*s*(d.fuel&&r?r.fuel:1));top.push([`+${p}`,'энергии',`Номинал ${d.pow}. Зависит от рабочих${d.fuel?' и угля':''}.`])}
   if(d.serve){top.push([Math.round(d.serve*s*(on?1:0)),'покупателей','Сколько жителей рынок может обслужить с текущим штатом.'])}
   if(d.cap){top.push([Math.round(d.cap*s*(on?1:0)),'ед. в месяц','Пропускная способность этого порта.'])}
-  const fin=r&&r.fin?r.fin[i]:null,firm=isFirm(t);
+  const firm=isFirm(t);
   if(fin)top.push([fmt(Math.abs(fin.net)),fin.net>=0?'кр/мес в казну':'кр/мес из казны','Итог счёта предприятия за прошлый месяц: выручка минус сырьё, зарплаты и содержание. Предприятие государственное: прибыль идёт в казну, убыток казна покрывает.']);
   else if(d.up)top.push([`−${d.up}`,'кр/мес казне','Содержание здания из бюджета.']);
   if(top.length)H.push(big(top.slice(0,6)));
@@ -45,7 +45,7 @@ function bInfo(i,b,c){
       ...(fin.mgr>.5?[['Управляющие из особняков',money(-fin.mgr)+' кр']]:[]),['Содержание',money(-fin.up)+' кр'],[fin.net>=0?'Итог: в казну':'Итог: из казны',`<b class="${fin.net>=0?'up':'dn'}">${money(fin.net)} кр</b>`],
       [`<span data-tip="Цена постройки, делённая на итог за год. Меняется вместе с ценами, торговлей и отношениями с соседями.">Окупаемость ⓘ</span>`,pay?`${COMMA(pay.toFixed(1))} ${plural(Math.round(pay),'год','года','лет')} при таком итоге`:pill('в убытке','bad')],
       ...(k0?[['Цена внутри · за рубежом',`${S.dom[k0].toFixed(1)} · ${best?best.p.toFixed(1)+' '+nm(best.nid):'—'}`]]:[])])+
-      `<p>${t==='shop'?`Выручка рынка — наценка ${PCT(SHOPK.margin)}% на товары, ткани и кофе.`:'Выручку ресурса делят все, кто выпустил его в этом месяце. Лишнее, что не купили жители, заводы и соседи, лежит на складе и денег не приносит.'}</p>`)}
+      (fin.net<0?`<p><b>Почему в убытке.</b> ${firmWhy(i,r,c)}</p>`:'')+`<p>${t==='shop'?`Выручка рынка — наценка ${PCT(SHOPK.margin)}% на товары, ткани и кофе.`:'Выручку ресурса делят все, кто выпустил его в этом месяце. Лишнее, что не купили жители, заводы и соседи, лежит на складе и денег не приносит.'}</p>`)}
   // port
   if(t==='port'&&r){const share=c.ports?d.cap*s/c.ports:0,ex={},im={};for(const k of RK){if(r.exp[k])ex[k]=r.exp[k]*share;if(r.imp[k])im[k]=r.imp[k]*share}
     H.push('<h5>Торговля за месяц (доля этого порта)</h5>'+kv([['Загрузка всех портов',pct(r.portUse)],['Вывезено',resList(ex)],['Ввезено',resList(im)],['Экспорт · импорт',`${fmt(r.expV*share)} · ${fmt(r.impV*share)} кр`],

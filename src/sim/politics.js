@@ -111,8 +111,8 @@ function govTick(r,c){
   facAttTick(r);const ne=f=>natEff(f);
   const runs=Object.values(r.run),avgRun=runs.length?runs.reduce((a,b)=>a+b,0)/runs.length:FACT.ind.run,deals=S.nat.filter(n=>n.deal).length,impF=r.need.food?r.imp.food/r.need.food:0;
   const sold=jobsBy.mil/Math.max(1,S.pop);r.soldiers=Math.round(jobsBy.mil);
-  const tgt={agr:FACT.agr.base+(S.dom.food/RES.food.base-1)*FACT.agr.food-(T.biz-FACT.agr.bizFree)*FACT.agr.biz-impF*FACT.agr.imp+M('agr')*FACT.agr.min+ne('agr'),
-    ind:FACT.ind.base+(avgRun-FACT.ind.run)*FACT.ind.runK-(1-c.pr)*FACT.ind.pow-(T.biz-FACT.ind.bizFree)*FACT.ind.biz-(1-c.log)*FACT.ind.log+M('ind')*FACT.ind.min+ne('ind'),
+  const tgt={agr:FACT.agr.base+(S.dom.food/RES.food.base-1)*FACT.agr.food-impF*FACT.agr.imp+M('agr')*FACT.agr.min+ne('agr'),
+    ind:FACT.ind.base+(avgRun-FACT.ind.run)*FACT.ind.runK-(1-c.pr)*FACT.ind.pow-(1-c.log)*FACT.ind.log+M('ind')*FACT.ind.min+ne('ind'),
     trd:FACT.trd.base+Math.min(FACT.trd.expMax,r.expV/FACT.trd.expDiv)-(T.imp-FACT.trd.impFree)*FACT.trd.imp-(T.exp-FACT.trd.expFree)*FACT.trd.exp+deals*FACT.trd.deal+M('trd')*FACT.trd.min+ne('trd'),
     peo:S.happy*FACT.peo.mood+(1-r.unemp)*FACT.peo.job+ne('peo'),
     mil:FACT.mil.base+Math.min(FACT.mil.soldMax,sold/FACK.soldierPct*FACT.mil.sold)+(S.money<0?FACT.mil.broke:FACT.mil.ok)+S.guard*FACT.mil.guard+ne('mil'),

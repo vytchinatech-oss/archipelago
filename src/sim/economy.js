@@ -78,10 +78,10 @@ function tick(){
     return got};
   /* Своя продукция по внутренней цене: деньги идут в общую выручку ресурса, её делят те, кто его выпустил. */
   const pool=z(),sell=(k,q,pay)=>{if(q<=0)return;const v=q*S.dom[k];st[k]-=q;pool[k]+=v;pay(v)};
-  // зарплаты: одна ставка на страну, со школами выше. Предприятия платят со своего счёта, госслужбу оплачивает казна.
+  // зарплаты: одна ставка на страну, школы добавляют сверх неё. Предприятия платят со своего счёта, госслужбу оплачивает казна.
   const W=S.wage*(1+ECO.schoolWage*c.cv.school);r.W=W;let firmW=0;
   for(const i of c.list){const t=S.bld[i].t,d=B[t],w=(d.jobs||0)*(c.st[i]||0);
-    if(isFirm(t)){r.fin[i]={rev:0,inp:0,wage:w*W,mgr:0,up:d.up,w};firmW+=w}else r.pubW+=w*W}
+    if(isFirm(t)){r.fin[i]={t,rev:0,inp:0,wage:w*W,mgr:0,up:d.up,w};firmW+=w}else r.pubW+=w*W}
   r.mgr=firmW>0?c.richPop*W*WAGE.richMul:0;if(firmW>0)for(const i in r.fin)r.fin[i].mgr=r.mgr*r.fin[i].w/firmW;
   r.wages=r.pubW+r.mgr+Object.values(r.fin).reduce((a,f)=>a+f.wage,0);
   r.inc=Math.min(r.wages,r.wages*T.inc*(1+MINK.fin*M('fin')));S.hh+=r.wages-r.inc;
@@ -151,16 +151,17 @@ function tick(){
   for(const L of S.lent){const n=natById(L.nid);if(n.money<0&&Math.random()<ECO.lateChance){r.ev.push(`${ND(n).n} задерживает выплату по вашему займу.`);continue}const p=Math.min(L.left,L.pay);L.left-=p;n.money-=p;r.loanIn+=p;r.fx+=p}
   S.lent=S.lent.filter(L=>L.left>ECO.loanDust);
   r.net=r.inc+r.firmPlus+r.dImp+r.dExp+r.stockSale+r.loanIn-r.pubW-r.firmMinus-r.up-r.fuelCost-r.loanOut-r.int;S.money+=r.net;
-  // ставка зарплаты на следующий месяц: доля стоимости, которую создал рабочий предприятия, с поправкой на нехватку рабочих
-  let va=0,vw=0;for(const i in r.fin){if(!B[S.bld[i].t].out)continue;va+=r.fin[i].rev-r.fin[i].inp;vw+=r.fin[i].w}
-  if(vw>0){const tight=c.work>0?c.jobs/c.work:1,f=Math.max(WAGE.tightMin,Math.min(WAGE.tightMax,1+WAGE.tight*(tight-1)));
-    r.vaW=va/vw;r.wageTgt=Math.max(WAGE.min,Math.min(WAGE.max,WAGE.share*r.vaW*f/(1+ECO.schoolWage*c.cv.school)));S.wage+=(r.wageTgt-S.wage)*WAGE.speed}
+  // ставка зарплаты на следующий месяц: доля стоимости, которую создают предприятия, на всех, кого они кормят
+  // (рабочих и управляющих из особняков, каждый управляющий за WAGE.richMul рабочих), с поправкой на нехватку рабочих
+  let va=0,vw=0,fw=0;for(const i in r.fin){fw+=r.fin[i].w;if(!B[S.bld[i].t].out)continue;va+=r.fin[i].rev-r.fin[i].inp;vw+=r.fin[i].w}
+  if(vw>0){const tight=c.work>0?c.jobs/c.work:1,f=Math.max(WAGE.tightMin,Math.min(WAGE.tightMax,1+WAGE.tight*(tight-1))),heads=vw+(fw>0?c.richPop*WAGE.richMul*vw/fw:0);
+    r.vaW=va/vw;r.wageTgt=Math.max(WAGE.min,Math.min(WAGE.max,WAGE.share*va*f/heads));S.wage+=(r.wageTgt-S.wage)*WAGE.speed}
   // mood
   const unemp=c.work>0?(c.work-c.emp)/c.work:0;
   const sh=S.pop>0?served/S.pop:0;
   const F=[['Базовое настроение',MOODK.base],['Товары на рынках',MOODK.goods*sh*r.sat.goods],['Одежда',MOODK.cloth*sh*r.sat.cloth],['Кофе',MOODK.coffee*r.sat.coffee*(served>0?1:0)],
     ['Парки рядом',MOODK.park*c.cv.park],['Школы',MOODK.school*c.cv.school*facM('int')],['Больницы',MOODK.clinic*c.cv.clinic*facM('int')],['Социальная политика',MINK.soc*M('soc')],['Преступность',S.pop>B.police.need?-MOODK.crime*(1-c.cv.police)*(1-MINK.mvdCrime*M('mvd')):0],['Безработица',-unemp*MOODK.unemp],['Подоходный налог',-(T.inc-TAXK.incFree)*MOODK.incTax],['Нехватка еды',-r.short.food*MOODK.hunger],
-    ['Цены на еду',r.short.food>MOODK.foodShort?0:-Math.max(0,S.dom.food/RES.food.base-1)*MOODK.foodPrice],['Траты на импорт',-Math.min(MOODK.importMax,MOODK.importK*r.impH/Math.max(MOODK.importMinWage,r.wages))],['Перебои с энергией',-(1-c.pr)*MOODK.blackout],
+    ['Цены на еду',r.short.food>MOODK.foodShort?0:-Math.max(0,S.dom.food/RES.food.base-1)*MOODK.foodPrice],['Траты на импорт',-MOODK.importK*Math.min(1,r.impH/Math.max(MOODK.importMinBuy,r.hhBuy))],['Перебои с энергией',-(1-c.pr)*MOODK.blackout],
     ['Теснота в бараках',c.home?-MOODK.huts*c.huts/c.home:0]];
   const tgt=Math.max(0,Math.min(100,F.reduce((a,f)=>a+f[1],0)));S.happy+=(tgt-S.happy)*MOODK.speed;r.F=F;r.tgt=tgt;r.unemp=unemp;
   // population and migration
@@ -191,6 +192,21 @@ function tick(){
   S.log.length=Math.min(S.log.length,50);
   r.cen=c;S.rep=r;return r;
 }
+
+/* Ресурс, которого выпускают больше, чем нужно стране: цена внутри упала ниже ADV.cheap от базы. Самый крупный по выпуску. */
+function surplusK(r){let best=null,bv=0;for(const k of RK){const v=r.prod[k]*RES[k].base;if(r.prod[k]>0&&S.dom[k]<RES[k].base*ADV.cheap&&v>bv){bv=v;best=k}}return best}
+/* Куда девать лишнее: порт, вывоз, переработка. Одна функция для советника и карточки (СТ4). */
+function outlet(k,c,r){if(!c.ports)return'Постройте порт: лишнее купят соседи';if(!S.trade[k].e)return`Включите вывоз: ${RES[k].n.toLowerCase()} сейчас не продаётся за границу`;
+  const p=PROC[k];if(p&&!c.cnt[p])return`Постройте ${B[p].n.toLowerCase()}: переработка выгоднее сырья`;return r&&r.portUse>=ADV.portFull?'Порт загружен: нужен склад рядом с ним или второй порт':`Соседи сейчас берут мало: ${RES[k].n.toLowerCase()} выгоднее везти туда, где торговый договор или кризис`}
+/* Почему предприятие в убытке — одна причина, самая важная. */
+function firmWhy(i,r,c){const f=r.fin[i],t=f.t,d=B[t],x=r.bs[i],s=c.st[i]||0;
+  if(d.pow<0&&!PW[i])return`Нет электричества: выработка падает до ${PCT(PROD.noPower)}%, а зарплаты платятся полностью.`;
+  if(s<ADV.staff)return'Мало рабочих: содержание платится целиком, а выпуск маленький.';
+  if(d.in&&x&&x.run<PROD.shortRun)return`Не хватает сырья: загрузка ${Math.round(x.run*100)}%. Добывайте его или включите ввоз.`;
+  if(t==='shop')return`Мало покупок: рынок живёт на наценку ${PCT(SHOPK.margin)}% с товаров, тканей и кофе.`;
+  const k=Object.keys(d.out)[0];if(S.dom[k]<RES[k].base*ADV.cheap)return`Лишнее некуда продать: цена внутри ${COMMA(S.dom[k].toFixed(1))} кр при базовой ${RES[k].base}. ${outlet(k,c,r)}.`;
+  if(x&&x.out){const made=x.out[k]*S.dom[k];if(f.rev<made*ADV.cheap)return`Продано меньше, чем выпущено: остальное лежит на складе. ${outlet(k,c,r)}.`}
+  return'Зарплаты и содержание выше выручки: ставка выросла быстрее цен.'}
 
 function checkGoals(c,r){const out=[];while(S.goal<GOALS.length&&GOALS[S.goal].ok(c,r)){const G=GOALS[S.goal];S.money+=G.rw;out.push(G);S.goal++;S.log.unshift({m:S.month,t:`Цель выполнена: ${G.t}. Награда ${fmt(G.rw)} кр.`})}return out}
 
@@ -241,7 +257,8 @@ function advisor(c){
   if(r&&r.short.food>ADV.food)return'Еды не хватает. Нужны поля, рыбаки или импорт через порт.';
   const un=c.work?(c.work-c.emp)/c.work:0;
   if(c.jobs>c.work*ADV.jobsOver&&c.jobs-c.work>ADV.jobsGap)return`Рабочих мест ${c.jobs}, рабочих ${c.work}. Сначала заняты фермы, энергия и службы, затем добыча, заводы простаивают. Нужно больше жилья.`;
-  if(un>ADV.unemp)return`Безработица ${Math.round(un*100)}%. Нужны фермы, шахты и заводы.`;
+  const glut=r?surplusK(r):null;
+  if(un>ADV.unemp)return`Безработица ${Math.round(un*100)}%. `+(glut?`${RES[glut].n} уже в избытке, ещё одно такое же предприятие не поможет. ${outlet(glut,c,r)}.`:'Нужны фермы, шахты и заводы.');
   if(c.jobs-c.emp>ADV.jobsFree&&c.home-S.pop<ADV.roomLow)return'Есть свободные рабочие места, но негде жить. Стройте жильё.';
   if(r&&c.serve<S.pop*ADV.serve&&S.pop>ADV.servePop)return`Жителям не хватает рынков. Рынок обслуживает ${B.shop.serve} человек.`;
   if(c.unpow)return`${c.unpow} ${plural(c.unpow,'здание','здания','зданий')} вне зоны электричества. Ставьте подстанции или ветряки рядом.`;
@@ -251,7 +268,9 @@ function advisor(c){
   if(c.log<ADV.log)return`Логистика ${Math.round(c.log*100)}%: поставьте склад рядом с предприятиями.`;
   if(r&&r.short.inputs>ADV.inputs)return'Заводам не хватает сырья. Добывайте или закупайте через порт.';
   if(r&&r.sat.goods<ADV.goods&&c.serve>0)return'На рынках мало товаров. Нужен завод или импорт.';
-  if(r&&r.firmMinus>r.firmPlus&&r.firmMinus>ADV.firmLoss){const n=Object.values(r.fin).filter(f=>f.net<0).length;return`Госпредприятия в убытке: ${n} ${plural(n,'предприятие','предприятия','предприятий')} теряют ${fmt(r.firmMinus)} кр в месяц. Осмотрите их: нет сбыта, сырья или рабочих.`}
+  if(r&&r.firmMinus>r.firmPlus&&r.firmMinus>ADV.firmLoss){const lose=Object.keys(r.fin).filter(i=>r.fin[i].net<0),n=lose.length,worst=lose.sort((a,b)=>r.fin[a].net-r.fin[b].net)[0];
+    return`Госпредприятия в убытке: ${n} ${plural(n,'предприятие','предприятия','предприятий')} теряют ${fmt(r.firmMinus)} кр в месяц. Больше всех теряет ${B[r.fin[worst].t].n.toLowerCase()}. ${firmWhy(+worst,r,c)}`}
+  if(glut&&r.firmMinus>ADV.firmLoss)return`${RES[glut].n} в избытке, цена внутри упала до ${COMMA(S.dom[glut].toFixed(1))} кр. ${outlet(glut,c,r)}.`;
   if(r&&r.sal&&r.sal+r.theft>taxIncome(r)*ADV.cabinet)return`Кабинет министров обходится в ${Math.round((r.sal+r.theft)/Math.max(1,taxIncome(r))*100)}% доходов казны. Для такого города это дорого.`;
   return'';
 }
