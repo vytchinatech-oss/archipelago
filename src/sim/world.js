@@ -54,7 +54,7 @@ function newGame(mi){
   const W=genWorld(mi),z=v=>Object.fromEntries(RK.map(k=>[k,v]));
   const s={v:2,mi,type:W.type,elev:W.elev,reg:W.reg,regions:W.regions,hall:W.hall,
     bld:Array(N*N).fill(null),road:new Uint8Array(N*N),
-    money:START.money,pop:START.pop,happy:START.happy,month:0,tax:Object.assign({},START.tax),
+    money:START.money,hh:START.hh,wage:WAGE.start,pop:START.pop,happy:START.happy,month:0,tax:Object.assign({},START.tax),
     stock:Object.assign(z(0),START.stock),dom:Object.fromEntries(RK.map(k=>[k,RES[k].base])),
     trade:Object.fromEntries(RK.map(k=>[k,{e:1,i:1}])),goal:0,log:[],rep:null,
     nat:initNations(),loans:[],lent:[],mig:'open',ev:null,evAt:-99,evHist:[],evNid:null,tut:null};

@@ -82,7 +82,7 @@ h1{font:800 clamp(38px,10vw,92px)/.95 var(--f-display);letter-spacing:-.02em;mar
 .card p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
 .kv{display:flex;flex-direction:column;gap:4px}
 .kv div{display:flex;justify-content:space-between;gap:12px;font-size:13px}
-.kv span:last-child{font-family:var(--f-mono);font-size:12.5px;text-align:right}
+.kv div>span:last-child{font-family:var(--f-mono);font-size:12.5px;text-align:right}
 .pill{display:inline-block;font:600 11px/1 var(--f-body);padding:4px 8px;border-radius:999px;background:rgba(121,214,154,.16);color:var(--good)}
 .pill.bad{background:rgba(255,125,104,.16);color:var(--bad)}
 .pill.mid{background:rgba(244,182,63,.16);color:var(--sun)}

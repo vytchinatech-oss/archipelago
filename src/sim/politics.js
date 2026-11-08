@@ -2,7 +2,7 @@
 function mkCand(post){const R=Math.random;const sk=1+Math.floor(R()*CAND.skill),f=FN[Math.floor(R()*FN.length)],l=LN[Math.floor(R()*LN.length)];
   const fem=/а$|я$/.test(f)&&f!=='Захар',ln=fem&&!/а$/.test(l)?l+'а':(!fem&&/а$/.test(l)?l.slice(0,-1):l);
   return{id:Math.random().toString(36).slice(2,8),name:`${f} ${ln}`,sk,hon:R()<CAND.hon,loy:R()<CAND.loy,risk:R()<CAND.risk,sal:CAND.salBase+sk*sk*CAND.salK+(R()*CAND.salRand|0)}}
-function govInit(s,gov,diff){s.v=4;s.gov=gov;s.diff=diff;s.nextEl=GOVK.term;s.unrest=0;s.appr=GOVK.appr0;s.army=GOVK.army0;s.guard=0;s.bribe=0;s.hist=[];s.over=null;s.reformAt=0;
+function govInit(s,gov,diff){s.v=5;s.gov=gov;s.diff=diff;s.nextEl=GOVK.term;s.unrest=0;s.appr=GOVK.appr0;s.army=GOVK.army0;s.guard=0;s.bribe=0;s.hist=[];s.over=null;s.reformAt=0;
   s.fac=Object.fromEntries(Object.entries(GOVK.sat0).map(([f,sat])=>[f,{sat}]));s.seats=Object.assign({},GOVK.seats0);s.fatt=fattInit(s);
   s.min={};s.cand={};for(const p in POSTS)s.cand[p]=[mkCand(p),mkCand(p),mkCand(p)];s.warned={}}
 const M=p=>S&&S.min&&S.min[p]?S.min[p].sk:0;
@@ -27,9 +27,7 @@ function ministerTurn(p,c,r,doIt){
   const act=(type,isT,why)=>{if(!doIt)return why;if(can<B[type].cost)return why+' Ждёт денег.';const i=autoBuild(type,isT);if(i>=0){S.log.unshift({m:S.month,t:`${m.name}: построен ${B[type].n.toLowerCase()}. ${why}`});return why}return why};
   const hasB=(i,f)=>{const b=S.bld[i];return b&&CONN[i]&&f(B[b.t],i,b)};
   if(p==='fin'){if((r.net<0||S.money<0)&&S.happy>AUTO.finMood[risk?0:1]){if(doIt&&T.inc<AUTO.finInc[risk?0:1])T.inc=+(T.inc+AUTO.step).toFixed(2);return'Бюджет в минусе: советую поднять подоходный налог на 1%.'}
-    if(r.net<0&&T.biz<TAXK.bizFree){if(doIt)T.biz=+(T.biz+AUTO.step).toFixed(2);return'Бюджет в минусе, а люди недовольны: поднимем налог на бизнес, не трогая людей.'}
     if(S.happy<AUTO.finCalm&&T.inc>AUTO.finCalmInc){if(doIt)T.inc=+(T.inc-AUTO.step).toFixed(2);return'Люди на грани протестов: снизим подоходный налог.'}
-    if(T.biz>TAXK.bizFree){if(doIt)T.biz=TAXK.bizFree;return`Налог на бизнес выше ${Math.round(TAXK.bizFree*100)}% душит предприятия, верните ${Math.round(TAXK.bizFree*100)}%.`}
     if(S.money>AUTO.finRich&&S.happy<AUTO.finRichMood&&T.inc>AUTO.finRichInc){if(doIt)T.inc=+(T.inc-AUTO.step).toFixed(2);return'Казна полна, а люди недовольны: снизим подоходный на 1%.'}return'Бюджет в порядке.'}
   if(p==='trd'){const ti=AUTO.tradeImp[risk?0:1],te=AUTO.tradeExp[risk?0:1];let s='Пошлины в норме.';
     if(Math.abs(T.imp-ti)>AUTO.eps){s=`Советую импортную пошлину ${Math.round(ti*100)}%: ${risk?'дешёвый импорт оживит торговлю':'защитим своих производителей'}.`;if(doIt)T.imp=+(T.imp+Math.sign(ti-T.imp)*AUTO.step).toFixed(2)}
@@ -81,13 +79,19 @@ function migrateSave(o){if(o.v===3){o.fac.mil={sat:50};o.fac.int={sat:50};o.seat
   /* торговля за год для обоснованных сообщений; сообщение старого вида без причины снимаем */
   o.nat.forEach(n=>{n.xy=n.xy||{};n.my=n.my||{}});if(o.ev&&!o.ev.r)o.ev=null;
   /* гвардия существует только при монархии */
-  if(o.gov!=='mon')o.guard=0;return o}
+  if(o.gov!=='mon')o.guard=0;
+  /* v4 → v5: кошельки и новый масштаб денег. Разовые суммы × CAP, цены заново от базовых, подоходный налог +5% к новой норме. */
+  if(o.v===4){const sc=l=>{l.left*=CAP;l.pay*=CAP};o.money*=CAP;o.hh=START.hh;o.wage=WAGE.start;o.loans.forEach(sc);o.lent.forEach(sc);
+    o.nat.forEach(n=>{n.money*=CAP});o.regions.forEach(g=>{g.price*=CAP});o.dom=Object.fromEntries(RK.map(k=>[k,RES[k].base]));
+    o.tax.inc=Math.min(TAXK.incMax,o.tax.inc+TAXK.incFree-TAXK.incFreeOld);o.tax.biz=START.tax.biz;o.hist=[];o.ev=null;o.v=5}
+  return o}
 /* indicators and politics, called after the month is computed */
 function govTick(r,c){
   const D=DIFF[S.diff],T=S.tax,L=t=>S.log.unshift({m:S.month,t});
   // ministers: salaries, theft, autopilot, plots
-  let sal=0,theft=0;for(const p in S.min){const m=S.min[p];sal+=m.sal;if(!m.hon)theft+=p==='fin'?(r.inc+r.biz)*CABK.theftFin:CABK.theftBase+m.sk*CABK.theftSkill}
-  r.sal=sal;r.theft=theft;S.money-=sal+theft;r.net-=sal+theft;
+  let sal=0,theft=0;for(const p in S.min){const m=S.min[p];sal+=m.sal;if(!m.hon)theft+=p==='fin'?r.inc*CABK.theftFin:CABK.theftBase+m.sk*CABK.theftSkill}
+  /* Министры — тоже жители: зарплата и украденное остаются в стране. */
+  r.sal=sal;r.theft=theft;spend(sal+theft);r.net-=sal+theft;
   const cash0=S.money;
   for(const p in S.min){const m=S.min[p];m.tip=ministerTurn(p,c,r,!!m.auto);
     if(!m.hon&&Math.random()<CABK.caught){S.appr-=CABK.caughtAppr;L(`Скандал: министр ${m.name} уличён в хищениях и снят с поста. Рейтинг падает.`);fire(p,true);continue}
@@ -107,8 +111,8 @@ function govTick(r,c){
   facAttTick(r);const ne=f=>natEff(f);
   const runs=Object.values(r.run),avgRun=runs.length?runs.reduce((a,b)=>a+b,0)/runs.length:FACT.ind.run,deals=S.nat.filter(n=>n.deal).length,impF=r.need.food?r.imp.food/r.need.food:0;
   const sold=jobsBy.mil/Math.max(1,S.pop);r.soldiers=Math.round(jobsBy.mil);
-  const tgt={agr:FACT.agr.base+(S.dom.food/RES.food.base-1)*FACT.agr.food-(T.biz-FACT.agr.bizFree)*FACT.agr.biz-impF*FACT.agr.imp+M('agr')*FACT.agr.min+ne('agr'),
-    ind:FACT.ind.base+(avgRun-FACT.ind.run)*FACT.ind.runK-(1-c.pr)*FACT.ind.pow-(T.biz-FACT.ind.bizFree)*FACT.ind.biz-(1-c.log)*FACT.ind.log+M('ind')*FACT.ind.min+ne('ind'),
+  const tgt={agr:FACT.agr.base+(S.dom.food/RES.food.base-1)*FACT.agr.food-impF*FACT.agr.imp+M('agr')*FACT.agr.min+ne('agr'),
+    ind:FACT.ind.base+(avgRun-FACT.ind.run)*FACT.ind.runK-(1-c.pr)*FACT.ind.pow-(1-c.log)*FACT.ind.log+M('ind')*FACT.ind.min+ne('ind'),
     trd:FACT.trd.base+Math.min(FACT.trd.expMax,r.expV/FACT.trd.expDiv)-(T.imp-FACT.trd.impFree)*FACT.trd.imp-(T.exp-FACT.trd.expFree)*FACT.trd.exp+deals*FACT.trd.deal+M('trd')*FACT.trd.min+ne('trd'),
     peo:S.happy*FACT.peo.mood+(1-r.unemp)*FACT.peo.job+ne('peo'),
     mil:FACT.mil.base+Math.min(FACT.mil.soldMax,sold/FACK.soldierPct*FACT.mil.sold)+(S.money<0?FACT.mil.broke:FACT.mil.ok)+S.guard*FACT.mil.guard+ne('mil'),
@@ -123,7 +127,7 @@ function govTick(r,c){
   let du=(S.happy<UNR.below?(UNR.below-S.happy)*UNR.rise:-UNR.calm)+(S.fac.peo.sat<FACK.lo?FACK.peoUnrest:0)+(S.money<UNR.broke?UNR.brokeAdd:0)+(r.short.food>UNR.hunger?UNR.hungerAdd:0)+(S.appr<UNR.apprBelow?UNR.apprAdd:0);du*=du>0?D.un*(1-MINK.mvdUnrest*M('mvd')):1;
   S.unrest=Math.max(0,Math.min(100,S.unrest+du));
   if(S.gov==='mon'){S.army+=((ARMY.base+S.fac.mil.sat*ARMY.mil+S.guard*ARMY.guard+(S.money>0?ARMY.rich:ARMY.broke)+(S.happy-50)*ARMY.mood+(S.appr-50)*ARMY.appr)-S.army)*ARMY.speed;
-    if(S.guard){r.guard=ARMY.guardCost;S.money-=r.guard;r.net-=r.guard}}
+    if(S.guard){r.guard=ARMY.guardCost;spend(r.guard);r.net-=r.guard}}
   const coup=S.gov==='mon'?Math.max(0,(ARMY.coupBelow-S.army)/100*ARMY.coupArmy+(S.unrest/100)*ARMY.coupUnrest+Object.values(S.min).filter(m=>!m.loy).length*(S.appr<ARMY.coupPlotAppr?ARMY.coupPlot:0)+['agr','ind','trd'].filter(f=>S.fac[f].sat<FACK.lo).length*FACK.coupAngry):0;
   S.coup=coup;S.parl=parl;
   h.push({m:S.month,gdp,cpi,infl,debt,pop:S.pop,happy:S.happy,unemp:r.unemp,money:S.money,appr:S.appr,trade:r.expV-r.impV,net:r.net,parl,unrest:S.unrest});if(h.length>240)h.shift();
@@ -142,10 +146,10 @@ function govTick(r,c){
 function endGame(reason){S.over={reason,month:S.month};S.log.unshift({m:S.month,t:reason})}
 /* Гвардия есть только при монархии. */
 function toggleGuard(){if(S.gov!=='mon')return'Гвардия бывает только при монархии';S.guard=S.guard?0:1;return S.guard?'Гвардия набрана':'Гвардия распущена'}
-function bribe(){if(S.money<BRIBE.cost)return'Не хватает денег';S.money-=BRIBE.cost;S.bribe+=BRIBE.sat;S.army+=BRIBE.army;S.log.unshift({m:S.month,t:'Знать получила щедрые подарки из казны.'});return'Сословия довольны'}
+function bribe(){if(S.money<BRIBE.cost)return'Не хватает денег';spend(BRIBE.cost);S.bribe+=BRIBE.sat;S.army+=BRIBE.army;S.log.unshift({m:S.month,t:'Знать получила щедрые подарки из казны.'});return'Сословия довольны'}
 function reform(to){
   const ok=S.gov==='mon'?(S.army>=REFORM.army&&S.appr>=REFORM.appr):(S.parl>=REFORM.parl);if(S.gov===to)return'Уже так';if(S.month<S.reformAt)return'Реформа возможна раз в 5 лет';
   if(!ok)return S.gov==='mon'?`Нужны лояльность армии от ${REFORM.army} и рейтинг от ${REFORM.appr}`:`Нужна поддержка парламента от ${REFORM.parl}%`;if(S.money<REFORM.cost)return`Реформа стоит ${fmt(REFORM.cost)} кр`;
-  S.money-=REFORM.cost;const from=S.gov;S.gov=to;S.reformAt=S.month+REFORM.gap;S.nextEl=S.month+GOVK.term;
+  spend(REFORM.cost);const from=S.gov;S.gov=to;S.reformAt=S.month+REFORM.gap;S.nextEl=S.month+GOVK.term;
   if(to==='mon')S.happy+=REFORM.toMon;if(from==='mon'){S.happy+=REFORM.fromMon;if(S.guard){S.guard=0;S.log.unshift({m:S.month,t:'Гвардия распущена вместе с монархией.'})}}const sol=natById('sol'),ava=natById('ava');if(to==='mon'){ava.rel+=REFORM.monAva;sol.rel+=REFORM.monSol}else if(from==='mon'){sol.rel+=REFORM.repSol;ava.rel+=REFORM.repAva}
   S.log.unshift({m:S.month,t:`Реформа: страна стала «${GOVS[to].n}».`});return`Теперь у вас ${GOVS[to].n.toLowerCase()}`}
