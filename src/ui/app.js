@@ -50,7 +50,7 @@ function toolTip(t){if(t==='inspect')return'Коснитесь клетки ил
   return p.join(' ')}
 const catTools=c=>c==='base'?['inspect','road','bull']:Object.keys(B).filter(k=>B[k].cat===c);
 function buildCats(){const el=$('#cats');el.innerHTML='';
-  for(const[c,n]of CATS){const b=document.createElement('button');b.type='button';b.className='cat';b.setAttribute('role','tab');b.setAttribute('aria-selected',c===CAT);b.textContent=n;b.dataset.tip=CTIP[c];
+  for(const[c,n]of CATS){const b=document.createElement('button');b.type='button';b.className='cat';b.setAttribute('role','tab');b.setAttribute('aria-selected',c===CAT);b.textContent=n;b.dataset.c=c;b.dataset.tip=CTIP[c];
     b.onclick=()=>{CAT=c;el.querySelectorAll('.cat').forEach(x=>x.setAttribute('aria-selected',x===b));buildTools()};el.appendChild(b)}
   buildTools()}
 function buildTools(){const nav=$('#tools');nav.innerHTML='';

@@ -9,12 +9,12 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 
 // Ядро и данные: константы и таблицы баланса.
 export const CORE = ['core/constants.js', 'core/util.js'];
-export const DATA = ['data/resources.js', 'data/buildings.js', 'data/maps.js', 'data/nations.js', 'data/government.js'];
+export const DATA = ['data/resources.js', 'data/buildings.js', 'data/maps.js', 'data/nations.js', 'data/government.js', 'data/tutorial.js'];
 // Симуляция: чистая логика без DOM. Её грузят тесты.
-export const SIM = ['sim/world.js', 'sim/nations.js', 'sim/economy.js', 'sim/politics.js'];
+export const SIM = ['sim/world.js', 'sim/nations.js', 'sim/economy.js', 'sim/politics.js', 'sim/tutorial.js'];
 // Отрисовка и интерфейс: работают только в браузере.
 export const VIEW = ['render/terrain.js', 'render/buildings.js',
-  'ui/app.js', 'ui/building-card.js', 'ui/power.js', 'ui/tooltips.js', 'ui/sheets.js', 'ui/map.js', 'ui/boot.js'];
+  'ui/app.js', 'ui/building-card.js', 'ui/power.js', 'ui/tooltips.js', 'ui/sheets.js', 'ui/map.js', 'ui/tutorial.js', 'ui/boot.js'];
 
 export const read = f => readFileSync(join(ROOT, 'src', f), 'utf8');
 export const bundle = files => "'use strict';\n" + files.map(f => `/* ===== ${f} ===== */\n` + read(f)).join('\n');

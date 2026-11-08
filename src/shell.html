@@ -23,7 +23,9 @@
     <div class="cta-row">
       <button class="btn" id="b-start" type="button">Основать город</button>
       <button class="btn ghost" id="b-cont" type="button" hidden>Продолжить</button>
+      <button class="btn ghost" id="b-tut" type="button" aria-expanded="false" data-tip="Новый город с пошаговым обучением. Можно выбрать основы или полный курс.">Обучение</button>
     </div>
+    <div class="tut-pick" id="tut-pick" hidden></div>
     <div class="howto">
       <div><b>Области</b>Карта разделена на области. Стройте только в купленных, остальные открываются за деньги.</div>
       <div><b>Дороги</b>Здание работает, только если дорога соединяет его с ратушей. По мелководью можно строить мосты.</div>
@@ -58,6 +60,7 @@
       <div class="chip" id="polit" tabindex="0" hidden></div>
       <div class="chip warn" id="advice" hidden></div>
     </div>
+    <div class="card tut" id="tut" role="status" hidden></div>
   </header>
   <div class="dock">
     <div class="card ev" id="event" hidden></div>

@@ -107,3 +107,28 @@ test('сохранение v3 загружается с новыми фракц�
     S=loadStr(JSON.stringify(o));computeConn();computeCov();tick();({v:S.v,mil:S.fac.mil.sat>=0,att:typeof S.fatt.int.kar})`);
   assert.equal(r.v, 4); assert.ok(r.mil); assert.equal(r.att, 'number');
 });
+
+test('обучение: у каждого шага есть текст и способ завершиться', () => {
+  const r = load()(`const bad=[];for(const c in TUT_COURSES)for(const id of TUT_COURSES[c].steps){const st=TUT[id];if(!st||!st.h||!st.p||!(st.next||st.ui||TUTOK[id]))bad.push(c+':'+id)}
+    ({bad:bad.join(','),time:Object.values(TUT_COURSES).every(c=>c.steps.includes('time'))})`);
+  assert.equal(r.bad, ''); assert.ok(r.time);
+});
+
+test('обучение: шаги стройки засчитываются по городу, время стоит до шага «время»', () => {
+  const r = load()(`S=newGame(0);govInit(S,'demo','norm');computeConn();computeCov();tutStart(S,'short');
+    const go=id=>{while(tutStep()!==id)tutAdvance()};const out={};
+    go('road');out.lock=tutLocksTime();out.road0=tutStateOk('road');grid();out.road1=tutStateOk('road');
+    go('house');out.house0=tutStateOk('house');near('house',S.hall);out.house1=tutStateOk('house');
+    go('time');out.lockAtTime=tutLocksTime();out.t0=tutStateOk('time');tick();out.t1=tutStateOk('time');
+    go('done');out.end=tutAdvance();out.tut=S.tut;
+    S=loadStr(saveStr());out.saved=S.tut;out`);
+  assert.equal(r.lock, true); assert.equal(r.road0, false); assert.equal(r.road1, true);
+  assert.equal(r.house0, false); assert.equal(r.house1, true);
+  assert.equal(r.lockAtTime, false); assert.equal(r.t0, false); assert.equal(r.t1, true);
+  assert.equal(r.end, null); assert.equal(r.tut, null); assert.equal(r.saved, null);
+});
+
+test('обучение: налоговый шаг ждёт изменения налога', () => {
+  const r = load()(`setup();tutStart(S,'full');while(tutStep()!=='tax')tutAdvance();const a=tutStateOk('tax');S.tax.inc+=.03;({a,b:tutStateOk('tax')})`);
+  assert.equal(r.a, false); assert.equal(r.b, true);
+});

@@ -8,7 +8,8 @@ function start(data){
   $('#b-layer').onclick=()=>toggleLayerMenu($('#lmenu').hidden);
   cv.addEventListener('pointerdown',()=>{if(!$('#lmenu').hidden)toggleLayerMenu(false)});
   document.querySelectorAll('[data-spd]').forEach(b=>b.onclick=()=>setSpeed(+b.dataset.spd));
-  buildOpts();buildMenu();
+  buildOpts();buildMenu();buildTutPick();
+  $('#b-tut').onclick=()=>{const p=$('#tut-pick'),on=p.hidden;p.hidden=!on;$('#b-tut').setAttribute('aria-expanded',on)};
   if(data&&data.s){try{S=loadStr(data.s);if(S.v===4)enterGame();else S=null}catch(e){S=null}}
   requestAnimationFrame(loop);
 }

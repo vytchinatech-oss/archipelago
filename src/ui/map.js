@@ -82,6 +82,7 @@ function loop(ts){
   requestAnimationFrame(loop);
   const dt=Math.min(100,ts-(lastTs||ts));lastTs=ts;
   if(!S||$('#game').hidden)return;
+  guard(()=>tutTick(dt));
   if(SPEED>0&&!S.over){acc+=dt*SPEED;let n=0;while(acc>=MONTH_MS&&n<3){acc-=MONTH_MS;n++;guard(doTick)}if(acc>=MONTH_MS)acc=0}
   if(KEYS.size){let mx=0,my=0;for(const k of KEYS){const v={ArrowUp:[0,-1],KeyW:[0,-1],ArrowDown:[0,1],KeyS:[0,1],ArrowLeft:[-1,0],KeyA:[-1,0],ArrowRight:[1,0],KeyD:[1,0]}[k];if(v){mx+=v[0];my+=v[1]}}
     const l=Math.hypot(mx,my)||1,sp=700*dt/1000/Z;cam.x+=mx/l*sp;cam.y+=my/l*sp;clampCam()}
@@ -116,4 +117,4 @@ function setupInput(){
   window.addEventListener('blur',()=>KEYS.clear());
   window.addEventListener('keydown',e=>{if(!S||$('#game').hidden||e.target.tagName==='INPUT')return;if(e.key==='Escape'){if(!$('#lmenu').hidden)toggleLayerMenu(false);else if(sheetMode)sheet(null);else{setTool('inspect');info(-1)}}if(e.key===' '){e.preventDefault();setSpeed(SPEED?0:1)}});
 }
-function setSpeed(s){SPEED=s;document.querySelectorAll('[data-spd]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.spd===s))}
+function setSpeed(s){if(s>0&&tutLocksTime()){toast('Время включится на шаге «Запустим время». Пока стройте спокойно');return}SPEED=s;document.querySelectorAll('[data-spd]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.spd===s))}

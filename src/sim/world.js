@@ -55,7 +55,7 @@ function newGame(mi){
     money:4000,pop:18,happy:62,month:0,tax:{inc:.10,biz:.12,imp:.10,exp:.05},
     stock:Object.assign(z(0),{food:80,wood:30,coal:20,goods:20}),dom:Object.fromEntries(RK.map(k=>[k,RES[k].base])),
     trade:Object.fromEntries(RK.map(k=>[k,{e:1,i:1}])),goal:0,log:[],rep:null,
-    nat:initNations(),loans:[],lent:[],mig:'open',ev:null};
+    nat:initNations(),loans:[],lent:[],mig:'open',ev:null,tut:null};
   const h=W.hall,clr=j=>{if(s.type[j]===FOREST)s.type[j]=GRASS};
   s.bld[h]={t:'hall'};clr(h);
   for(const j of[h+1,h+2,h+3])if(s.type[j]>=SAND&&s.type[j]<=HILL){s.road[j]=1;clr(j)}
