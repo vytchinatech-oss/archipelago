@@ -88,7 +88,7 @@ h1{font:800 clamp(38px,10vw,92px)/.95 var(--f-display);letter-spacing:-.02em;mar
 .card p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
 .kv{display:flex;flex-direction:column;gap:4px}
 .kv div{display:flex;justify-content:space-between;gap:12px;font-size:13px}
-.kv span:last-child{font-family:var(--f-mono);font-size:12.5px;text-align:right}
+.kv div>span:last-child{font-family:var(--f-mono);font-size:12.5px;text-align:right}
 .pill{display:inline-block;font:600 11px/1 var(--f-body);padding:4px 8px;border-radius:999px;background:rgba(121,214,154,.16);color:var(--good)}
 .pill.bad{background:rgba(255,125,104,.16);color:var(--bad)}
 .pill.mid{background:rgba(244,182,63,.16);color:var(--sun)}
@@ -434,7 +434,7 @@ const B={
   hall:{n:'Ратуша',cat:'',cost:0,up:0,jobs:10,pow:12,d:'Сердце города. Каждое здание должно быть связано с ней дорогой.'},
   hut:{n:'Барак',cat:'home',cost:40*CAP,up:1,home:14,pow:-.5,on:LANDB,d:'Дёшево и тесно: 14 жителей. Если бараков много, настроение падает.'},
   house:{n:'Дом',cat:'home',cost:60*CAP,up:1,home:10,pow:-.5,on:LANDB,d:'Жильё для 10 рабочих.'},
-  villa:{n:'Особняк',cat:'home',cost:240*CAP,up:2,home:5,rich:1,pow:-1,on:LANDB,need:80,d:'5 управляющих: получают зарплату как '+WAGE.richMul+' рабочих из счёта предприятий и платят с неё налог. Пьют много кофе. С населения 80.'},
+  villa:{n:'Особняк',cat:'home',cost:240*CAP,up:2,home:5,rich:1,pow:-1,on:LANDB,need:80,d:'5 управляющих. Каждому платят как '+WAGE.richMul+' рабочим (платят предприятия), с этого идёт налог. Пьют много кофе. С населения 80.'},
   tower:{n:'Многоэтажка',cat:'home',cost:380*CAP,up:5,home:48,pow:-3,on:LANDB,need:200,d:'Жильё на 48 человек. С населения 200.'},
   farm:{n:'Пшеничное поле',cat:'farm',cost:110*CAP,up:3,jobs:8,pow:-.5,on:[GRASS],out:{food:16},fert:1,d:'16 еды в месяц. Урожай зависит от плодородия.'},
   veg:{n:'Овощная ферма',cat:'farm',cost:150*CAP,up:4,jobs:10,pow:-1,on:[GRASS,SAND],out:{food:24},fert:1,water:1,d:'24 еды, но нужна вода в 2 клетках для полива.'},
@@ -868,8 +868,8 @@ const addNK=(o,id,k,v)=>{const x=o[id]||(o[id]={});x[k]=(x[k]||0)+v};
 const isFirm=t=>!!B[t].out||t==='shop';
 /* Строки бюджета за месяц. Отчёт показывает ровно их, их сумма равна r.net (стандарт СТ2). */
 function budgetLines(r){return{
-  inc:[['Подоходный налог',r.inc],['Прибыль госпредприятий',r.firmPlus],['Импортные пошлины',r.dImp],['Экспортные пошлины',r.dExp],['Продажа госзапасов',r.stockSale,'Со складов страны продано то, что в этом месяце никто не выпускал.'],['Возврат ваших займов',r.loanIn]].filter((x,i)=>i<4||x[1]>0),
-  out:[['Зарплаты госслужбы',r.pubW,'Ратуша, электростанции, школы, больницы, полиция, склады, порт и казармы.'],['Убытки госпредприятий',r.firmMinus],['Содержание зданий и дорог',r.up],['Уголь для ТЭС',r.fuelCost],['Выплаты по займам',r.loanOut],['Проценты по долгу казны',r.int],['Зарплаты министров',r.sal],['Неучтённые расходы',r.theft,'Кто-то из министров ворует. Кто именно, станет ясно при скандале.'],['Гвардия',r.guard]].filter((x,i)=>i<3||x[1]>0)}}
+  inc:[['Подоходный налог',r.inc],['Прибыль госпредприятий',r.firmPlus,'Сумма итогов всех госпредприятий в плюсе. Подробно — в карточке здания.'],['Импортные пошлины',r.dImp],['Экспортные пошлины',r.dExp],['Продажа госзапасов',r.stockSale,'Со складов страны продано то, что в этом месяце никто не выпускал.'],['Возврат ваших займов',r.loanIn]].filter((x,i)=>i<4||x[1]>0),
+  out:[['Зарплаты госслужбы',r.pubW,'Ратуша, электростанции, школы, больницы, полиция, склады, порт и казармы.'],['Убытки госпредприятий',r.firmMinus,'Сумма итогов всех госпредприятий в минусе. Подробно — в карточке здания.'],['Содержание зданий и дорог',r.up],['Уголь для ТЭС',r.fuelCost],['Выплаты по займам',r.loanOut],['Проценты по долгу казны',r.int],['Зарплаты министров',r.sal],['Неучтённые расходы',r.theft,'Кто-то из министров ворует. Кто именно, станет ясно при скандале.'],['Гвардия',r.guard]].filter((x,i)=>i<3||x[1]>0)}}
 /* Деньги из казны, которые уходят жителям страны: стройка, земля, подарки знати. Стандарт СТ1: деньги не исчезают. */
 function spend(v){S.money-=v;S.hh+=v}
 /* Доходы казны от налогов, пошлин и госпредприятий за месяц. */
@@ -1514,7 +1514,7 @@ function buildCats(){const el=$('#cats');el.innerHTML='';
   buildTools()}
 function buildTools(){const nav=$('#tools');nav.innerHTML='';
   for(const t of catTools(CAT)){const b=document.createElement('button');b.type='button';b.className='tool';b.dataset.t=t;
-    const cost=t==='road'?'5+':t==='bull'?'5':t==='inspect'?'':fmt(B[t].cost);
+    const cost=t==='road'?fmt(ROADK.land)+'+':t==='bull'?fmt(ROADK.demolish):t==='inspect'?'':fmt(B[t].cost);
     b.innerHTML=`<canvas width="96" height="80"></canvas><span class="n">${TNAME[t]||B[t].n}</span><span class="c">${cost?cost+' кр':'&nbsp;'}</span>`;
     b.setAttribute('aria-pressed',t===TOOL);if(B[t]&&B[t].need&&S.pop<B[t].need)b.dataset.locked='';b.dataset.tip=toolTip(t);
     drawIcon(b.querySelector('canvas'),t);b.onclick=()=>setTool(t);nav.appendChild(b)}nav.scrollLeft=0}
@@ -1617,11 +1617,11 @@ function bInfo(i,b,c){
   if(d.serve){top.push([Math.round(d.serve*s*(on?1:0)),'покупателей','Сколько жителей рынок может обслужить с текущим штатом.'])}
   if(d.cap){top.push([Math.round(d.cap*s*(on?1:0)),'ед. в месяц','Пропускная способность этого порта.'])}
   const fin=r&&r.fin?r.fin[i]:null,firm=isFirm(t);
-  if(fin)top.push([money(fin.net),fin.net>=0?'кр/мес в казну':'кр/мес из казны','Итог счёта предприятия за прошлый месяц: выручка минус сырьё, зарплаты и содержание. Предприятие государственное: прибыль идёт в казну, убыток казна покрывает.']);
+  if(fin)top.push([fmt(Math.abs(fin.net)),fin.net>=0?'кр/мес в казну':'кр/мес из казны','Итог счёта предприятия за прошлый месяц: выручка минус сырьё, зарплаты и содержание. Предприятие государственное: прибыль идёт в казну, убыток казна покрывает.']);
   else if(d.up)top.push([`−${d.up}`,'кр/мес казне','Содержание здания из бюджета.']);
   if(top.length)H.push(big(top.slice(0,6)));
   // workers and factors
-  if(d.jobs&&t!=='hall'){const w=wdist(i),W=r?r.W:S.wage;H.push('<h5>Работники</h5>'+kv([['Путь от жилья',w>=999?pill('нет пути','bad'):`${w} кл. по дорогам`],['Зарплаты',`${fmt(d.jobs*s*W)} кр/мес · ${firm?'платит предприятие':'платит казна'}`],['Ставка на рабочего',`${W.toFixed(1)} кр/мес`]]))}
+  if(d.jobs&&t!=='hall'){const w=wdist(i),W=r?r.W:S.wage;H.push('<h5>Работники</h5>'+kv([['Путь от жилья',w>=999?pill('нет пути','bad'):`${w} кл. по дорогам`],['Зарплаты',`${fmt(d.jobs*s*W)} кр/мес · ${firm?'платит предприятие':'платит казна'}`],[`<span data-tip="Одна ставка на всю страну. Смотрите «Экономика» → «Зарплата и кошельки».">Ставка на рабочего ⓘ</span>`,`${W.toFixed(1)} кр/мес`]]))}
   if(x&&x.P){const P=x.P,f=[];
     f.push(fbar('Укомплектованность',P.staff,'Доля занятых рабочих мест.'));
     if(d.pow<0)f.push(fbar('Электричество',P.power,`Вне зоны энергии выработка падает до ${PCT(PROD.noPower)}%, при общей нехватке энергии — пропорционально.`));
@@ -1635,9 +1635,9 @@ function bInfo(i,b,c){
     H.push('<h5>Сырьё за месяц</h5>'+kv(rows)+(r.lim&&r.lim[t]?`<p>Не хватает: ${RES[r.lim[t]].n.toLowerCase()}. ${t==='cannery'?'Заводу достаётся только еда сверх запаса для жителей.':'Добывайте больше или разрешите ввоз.'}</p>`:''))}
   // economics of production
   if(fin){const k0=d.out?Object.keys(d.out)[0]:null,best=k0&&r.best[k0],pay=fin.net>0?B[t].cost/fin.net/12:0;
-    H.push('<h5>Счёт предприятия за месяц</h5>'+kv([['Выручка',money(fin.rev)+' кр'],...(fin.inp>.5?[['Сырьё',money(-fin.inp)+' кр']]:[]),['Зарплаты',money(-fin.wage)+' кр'],
+    H.push('<h5>Счёт предприятия за месяц</h5>'+kv([['Выручка',money(fin.rev)+' кр'],...(fin.inp>.5?[['Сырьё',money(-fin.inp)+' кр']]:[]),['Зарплаты',(fin.wage>.5?money(-fin.wage):'0')+' кр'],
       ...(fin.mgr>.5?[['Управляющие из особняков',money(-fin.mgr)+' кр']]:[]),['Содержание',money(-fin.up)+' кр'],[fin.net>=0?'Итог: в казну':'Итог: из казны',`<b class="${fin.net>=0?'up':'dn'}">${money(fin.net)} кр</b>`],
-      ['Окупаемость',pay?`${COMMA(pay.toFixed(1))} ${plural(Math.round(pay),'год','года','лет')} при таком итоге`:pill('в убытке','bad')],
+      [`<span data-tip="Цена постройки, делённая на итог за год. Меняется вместе с ценами, торговлей и отношениями с соседями.">Окупаемость ⓘ</span>`,pay?`${COMMA(pay.toFixed(1))} ${plural(Math.round(pay),'год','года','лет')} при таком итоге`:pill('в убытке','bad')],
       ...(k0?[['Цена внутри · за рубежом',`${S.dom[k0].toFixed(1)} · ${best?best.p.toFixed(1)+' '+nm(best.nid):'—'}`]]:[])])+
       `<p>${t==='shop'?`Выручка рынка — наценка ${PCT(SHOPK.margin)}% на товары, ткани и кофе.`:'Выручку ресурса делят все, кто выпустил его в этом месяце. Лишнее, что не купили жители, заводы и соседи, лежит на складе и денег не приносит.'}</p>`)}
   // port
@@ -1840,9 +1840,9 @@ function econHTML(){
     <div class="bcol">${BL.out.map(x=>bl(x[0],money(-x[1]),'',x[2])).join('')}${bl('Расходы',money(-BL.out.reduce((a,x)=>a+x[1],0)),'tot')}${bl('Итог месяца',`<b class="${r.net>=0?'up':'dn'}">${money(r.net)} кр</b>`,'tot')}${Math.abs(r.auto)>=.5?bl('Вне бюджета: решения министров',money(r.auto),'','Стройка, помощь и займы, которые министры сделали сами. В итог месяца не входят.'):''}</div></div>`:'<p class="log">Отчёт появится через месяц.</p>'}</div>
   <div class="sec"><h3>Зарплата и кошельки</h3>${r?(()=>{const fs=Object.values(r.fin),lose=fs.filter(f=>f.net<0).length;return kv([
       [`<span data-tip="Одна ставка на страну. Тянется к ${PCT(WAGE.share)}% стоимости, которую рабочий предприятия создаёт за месяц, выше при нехватке рабочих и ниже при безработице. Школы добавляют до ${PCT(ECO.schoolWage)}%.">Зарплата рабочего ⓘ</span>`,`${r.W.toFixed(1)} кр/мес`],
-      ['Рабочий предприятия создаёт',r.vaW?`${r.vaW.toFixed(1)} кр/мес`:'—'],['Ставка тянется к',r.wageTgt?`${r.wageTgt.toFixed(1)} кр/мес`:'—'],
+      [`<span data-tip="Выручка предприятий минус сырьё в расчёте на одного рабочего за прошлый месяц.">Рабочий предприятия создаёт ⓘ</span>`,r.vaW?`${r.vaW.toFixed(1)} кр/мес`:'—'],[`<span data-tip="Цель для зарплаты. Ставка каждый месяц понемногу движется к ней, вверх или вниз.">Ставка тянется к ⓘ</span>`,r.wageTgt?`${r.wageTgt.toFixed(1)} кр/мес`:'—'],
       [`<span data-tip="Сюда приходят зарплаты, деньги за стройку и ремонт. Отсюда жители платят за еду, товары и привозное. Если кошелёк пуст, жители покупают меньше.">Сбережения жителей ⓘ</span>`,`${fmt(S.hh)} кр`],
-      ['Покупки жителей за месяц',`${fmt(r.hhBuy)} кр`],['Госпредприятий в убытке',`${lose} из ${fs.length}`]])})():'<p class="log">Появится через месяц.</p>'}
+      [`<span data-tip="Сколько жители потратили из кошелька на еду, товары и привозное.">Покупки жителей за месяц ⓘ</span>`,`${fmt(r.hhBuy)} кр`],[`<span data-tip="Убыток бывает, когда лишнее некуда продать, нет энергии, сырья или рабочих. Откройте карточку предприятия, там его счёт.">Госпредприятий в убытке ⓘ</span>`,`${lose} из ${fs.length}`]])})():'<p class="log">Появится через месяц.</p>'}
     <p class="log" style="font-size:12.5px">Все предприятия государственные. У каждого свой счёт: выручка, сырьё, зарплаты, содержание. Итог месяца уходит в казну, убыток казна покрывает. Счёт виден в карточке здания.</p></div>
   <div class="sec"><h3>Ресурсы, цены и торговля</h3><div class="tw"><table class="tbl" style="min-width:760px"><thead><tr><th>Ресурс</th><th>Склад</th><th>Добыто</th><th>Потрачено</th><th>Цена внутри</th><th>Лучшая за рубежом</th><th>Вывоз</th><th>Ввоз</th><th>Порт</th></tr></thead><tbody>${RK.map(row).join('')}</tbody></table></div>
   <p class="log" style="font-size:12.5px">Склады вмещают ${fmt(c.cap)} ед. каждого ресурса. ${c.ports?`Порты пропускают ${c.ports} ед. в месяц, загрузка ${Math.round((r?r.portUse:0)*100)}%. Экспорт идёт туда, где выше цена за вычетом чужой пошлины.`:'Без порта торговли нет.'} Внутренняя цена падает, когда товара больше, чем нужно стране.</p></div>

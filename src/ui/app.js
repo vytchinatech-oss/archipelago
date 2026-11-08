@@ -55,7 +55,7 @@ function buildCats(){const el=$('#cats');el.innerHTML='';
   buildTools()}
 function buildTools(){const nav=$('#tools');nav.innerHTML='';
   for(const t of catTools(CAT)){const b=document.createElement('button');b.type='button';b.className='tool';b.dataset.t=t;
-    const cost=t==='road'?'5+':t==='bull'?'5':t==='inspect'?'':fmt(B[t].cost);
+    const cost=t==='road'?fmt(ROADK.land)+'+':t==='bull'?fmt(ROADK.demolish):t==='inspect'?'':fmt(B[t].cost);
     b.innerHTML=`<canvas width="96" height="80"></canvas><span class="n">${TNAME[t]||B[t].n}</span><span class="c">${cost?cost+' кр':'&nbsp;'}</span>`;
     b.setAttribute('aria-pressed',t===TOOL);if(B[t]&&B[t].need&&S.pop<B[t].need)b.dataset.locked='';b.dataset.tip=toolTip(t);
     drawIcon(b.querySelector('canvas'),t);b.onclick=()=>setTool(t);nav.appendChild(b)}nav.scrollLeft=0}
