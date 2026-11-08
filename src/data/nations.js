@@ -11,21 +11,23 @@ const NATDEF=[
    trait:'Богатая торговая монархия. Скупает золото и кофе, охотно даёт займы, но считает каждую монету.'},
 ];
 /* Сообщения соседей и обращения к ним. Промежутки — в месяцах. */
-const DIPL={evGap:12,evChance:.25,actGap:12,noRepeat:3,aggrDrift:.2};
+/* decay: торговля за последний год считается скользящей суммой. minTrade: сколько кр в год считается заметной торговлей. poor: казна, ниже которой страна на мели. hardYears: на сколько месяцев убытка хватает казны, чтобы страна ещё не просила денег. */
+const DIPL={evGap:12,evChance:.25,actGap:12,noRepeat:3,aggrDrift:.2,decay:11/12,minTrade:300,poor:5000,hardMonths:12};
 /* Числа сообщений. rel: [отношения при согласии, при отказе]. */
 const EVN={
   order:{mul:1.4,min:30,rel:[4,-2]},
   bargain:{mul:.6,amt:40,rel:[2,0]},
   relief:{amt:30,rel:[10,-3]},
-  summit:{cost:600,rel:[7,-1]},
-  dumping:{cost:800,rel:[5,-5]},
+  summit:{cost:600,gap:60,rel:[7,-1]},
+  dumping:{share:.15,min:200,max:1500,rel:[5,-5]},
   border:{mil:4,rel:[6,-7]},
   debt:{share:.25,min:300,rel:[8,-3]},
   mediate:{rel:[6,-2],other:-6},
+  envoy:{cost:200,until:60,rel:[5,-2]},
 };
 const CRISES={
-  drought:{n:'засуха',start:'засуха, урожай погиб',end:'засуха закончилась',h:-10,sup:{food:.3,cotton:.3,coffee:.4},dem:{food:1.8}},
-  strike:{n:'забастовка',start:'забастовка на заводах и шахтах',end:'забастовка окончена',h:-8,sup:{goods:.2,iron:.4,coal:.4,cloth:.3}},
+  drought:{n:'засуха',start:'засуха, урожай погиб',end:'засуха закончилась',h:-10,relief:{k:'food',why:'Засуха погубила урожай, людям нечего есть.'},sup:{food:.3,cotton:.3,coffee:.4},dem:{food:1.8}},
+  strike:{n:'забастовка',start:'забастовка на заводах и шахтах',end:'забастовка окончена',h:-8,relief:{k:'goods',why:'Забастовка остановила заводы, в лавках пусто.'},sup:{goods:.2,iron:.4,coal:.4,cloth:.3}},
   boom:{n:'экономический бум',start:'экономический бум, спрос растёт',end:'бум выдохся',h:6,dem:{'*':1.6}},
   unrest:{n:'беспорядки',start:'беспорядки, люди бегут из страны',end:'беспорядки утихли',h:-18,ref:1},
 };

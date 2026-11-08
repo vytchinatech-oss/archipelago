@@ -1,6 +1,6 @@
 /* Рынки стран, кризисы, события-запросы, дипломатия и займы. */
 function initNations(){return NATDEF.map(d=>({id:d.id,rel:d.rel,pop:d.pop,happy:d.happy,money:d.money,tar:d.tar,deal:0,emb:0,cr:null,
-  pv:Object.fromEntries(RK.map(k=>[k,1])),dl:{},sl:{},tarUntil:0,aid:0,actAt:-99}))}
+  pv:Object.fromEntries(RK.map(k=>[k,1])),dl:{},sl:{},tarUntil:0,aid:0,actAt:-99,xy:{},my:{}}))}
 const ND=n=>NATDEF.find(d=>d.id===n.id);
 const natById=id=>S.nat.find(n=>n.id===id);
 function relLabel(r){return r>=50?['Союзник','']:r>=15?['Дружба','']:r>=-15?['Нейтралитет','mid']:r>=-50?['Напряжённость','bad']:['Вражда','bad']}
@@ -11,15 +11,26 @@ function natTariff(n){return n.deal?0:(n.tarUntil>S.month?Math.max(n.tar,.35):n.
 function refreshMarkets(){for(const n of S.nat){const d=ND(n);
   for(const k of RK){n.dl[k]=Math.round((d.dem[k]||8)*crMul(n,k,'dem')*(n.pop/d.pop));n.sl[k]=Math.round((d.sup[k]||0)*crMul(n,k,'sup'))}}}
 function canTrade(n){return !n.emb}
+/* Месячный итог казны соседа. */
+function natBal(n){return n.pop*(n.happy-42)/60-(n.cr?n.pop*.05:0)}
+/* Торговля за последний год: скользящая сумма по ресурсам. */
+function tradeYear(y,cur){for(const k of new Set([...Object.keys(y),...Object.keys(cur||{})])){y[k]=(y[k]||0)*DIPL.decay+(cur&&cur[k]||0);if(y[k]<1)delete y[k]}}
+const sumV=o=>Object.values(o).reduce((a,v)=>a+v,0);
+/* Главные ресурсы в торговле, словами: «железо и уголь». */
+function topNames(o,ks){const t=(ks||Object.keys(o)).filter(k=>o[k]>=1).sort((a,b)=>o[b]-o[a]).slice(0,2).map(k=>RES[k].n.toLowerCase());return t.join(' и ')}
+const natHard=n=>{const b=natBal(n);return n.money<DIPL.poor||(b<0&&n.money<-b*DIPL.hardMonths)};
+const hasPort=()=>S.bld.some(b=>b&&b.t==='port');
+const crisisNeg=n=>n.cr&&CRISES[n.cr.t].h<0?CRISES[n.cr.t].n:'';
 function natTick(r){
   const L=t=>S.log.unshift({m:S.month,t});
   for(const n of S.nat){const d=ND(n);
+    tradeYear(n.xy,r.xn[n.id]);tradeYear(n.my,r.mn[n.id]);
     if(n.cr){if(--n.cr.m<=0){L(`${d.n}: ${CRISES[n.cr.t].end}.`);n.cr=null}}
     else if(Math.random()<.03*(S.diff?DIFF[S.diff].cr:1)){const ks=Object.keys(CRISES),t=ks[Math.floor(Math.random()*ks.length)];n.cr={t,m:4+Math.floor(Math.random()*5)};L(`${d.n}: ${CRISES[t].start}.`)}
     const c=n.cr?CRISES[n.cr.t]:null;
     n.happy+=((d.hb+(c?c.h:0)+(n.money<0?-8:0))-n.happy)*.25+(Math.random()-.5)*2;
     n.pop=Math.max(500,Math.round(n.pop*(1+(n.happy-50)/2500)));
-    n.money+=n.pop*(n.happy-42)/60-(c?n.pop*.05:0);
+    n.money+=natBal(n);
     for(const k of RK)n.pv[k]=Math.max(.8,Math.min(1.25,n.pv[k]+(1-n.pv[k])*.1+(Math.random()-.5)*.08));
     n.rel+=(d.brel-n.rel)*.02+(n.deal?.4:0)-(n.emb?1.5:0)+.15*M('dip')-(d.aggr&&!n.deal?DIPL.aggrDrift:0);
     n.rel=Math.max(-100,Math.min(100,n.rel));
@@ -29,66 +40,75 @@ function natTick(r){
   if(S.ev&&S.month>=S.ev.exp){evAnswer(false,true)}
   if(!S.ev&&S.month>3&&S.month-S.evAt>=DIPL.evGap&&Math.random()<DIPL.evChance)makeEvent();
 }
+/* Каждое сообщение появляется только при настоящей причине и несёт в себе цифры этой причины. */
 function makeEvent(){
-  const opts=[];
+  const opts=[],MT=DIPL.minTrade,port=hasPort(),rep=S.rep,cap=rep?rep.cen.cap:300,allX={};
+  for(const n of S.nat)for(const k in n.xy)allX[k]=(allX[k]||0)+n.xy[k];
   for(const n of S.nat){const d=ND(n);if(n.emb)continue;
-    if((n.cr||n.money<15000)&&n.rel>-30)opts.push({t:'loan',nid:n.id,amt:Math.round((1500+Math.random()*3500)/500)*500,rate:.08});
-    if(n.rel>=20&&!n.deal)opts.push({t:'deal',nid:n.id});
-    if(d.aggr&&!n.deal&&S.tax.imp>.05&&n.tarUntil<=S.month)opts.push({t:'tariff',nid:n.id});
-    if(n.cr&&CRISES[n.cr.t].ref)opts.push({t:'ref',nid:n.id,amt:20+Math.floor(Math.random()*40)});
-    const cap=S.rep?S.rep.cen.cap:300;
-    if(n.rel>-50)for(const k of Object.keys(d.dem)){const amt=Math.floor(Math.min(S.stock[k],60)/5)*5,price=Math.round(natBuy(n,k)*EVN.order.mul);if(amt>=EVN.order.min&&n.money>amt*price)opts.push({t:'order',nid:n.id,k,amt,price})}
-    if(n.rel>-30)for(const k of Object.keys(d.sup)){const amt=EVN.bargain.amt,price=Math.max(1,Math.round(natSell(n,k)*EVN.bargain.mul));if(S.stock[k]+amt<=cap&&S.money>=amt*price*2)opts.push({t:'bargain',nid:n.id,k,amt,price})}
-    if(n.cr&&!CRISES[n.cr.t].ref&&CRISES[n.cr.t].h<0&&n.rel>-30&&S.stock.food>=EVN.relief.amt*2)opts.push({t:'relief',nid:n.id,amt:EVN.relief.amt,cn:CRISES[n.cr.t].n});
-    if(n.rel>-40&&S.money>=EVN.summit.cost*2)opts.push({t:'summit',nid:n.id});
-    if(d.aggr&&!n.deal)opts.push({t:'dumping',nid:n.id});
-    if(n.rel<-10)opts.push({t:'border',nid:n.id});
-    const l=S.lent.find(x=>x.nid===n.id);if(l&&l.left>=EVN.debt.min&&(n.cr||n.money<15000))opts.push({t:'debt',nid:n.id,amt:Math.round(l.left*EVN.debt.share)});
-    if(n.rel>=0){const o=S.nat.find(x=>x.id!==n.id&&!!ND(x).aggr!==!!d.aggr);if(o)opts.push({t:'mediate',nid:n.id,oid:o.id})}
+    const add=(t,o)=>opts.push(Object.assign({t,nid:n.id,r:1},o)),xv=sumV(n.xy),mv=sumV(n.my),bal=natBal(n),cn=crisisNeg(n),C=n.cr?CRISES[n.cr.t]:null;
+    if(natHard(n)&&n.rel>-30)add('loan',{amt:Math.max(1500,Math.min(5000,Math.round(Math.abs(Math.min(bal,0))*4/500)*500)),rate:.08,cn,bal:Math.round(bal),cash:Math.round(n.money)});
+    if(n.rel>=20&&!n.deal&&xv+mv>=MT)add('deal',{xv,mv,paid:Math.round(xv*natTariff(n)/(1-natTariff(n)))});
+    if(d.aggr&&!n.deal&&S.tax.imp>.05&&n.tarUntil<=S.month&&mv>=MT&&xv>=MT)add('tariff',{xv,mv,duty:Math.round(mv*S.tax.imp),pct:Math.round(S.tax.imp*100),mw:topNames(n.my),xw:topNames(n.xy)});
+    if(C&&C.ref&&S.happy>n.happy)add('ref',{amt:20+Math.floor(Math.random()*40),cn});
+    if(port&&n.rel>-50)for(const k of Object.keys(d.dem)){const amt=Math.floor(Math.min(S.stock[k],60)/5)*5,price=Math.round(natBuy(n,k)*EVN.order.mul);
+      if(amt>=EVN.order.min&&n.money>amt*price)add('order',{k,amt,price,why:crMul(n,k,'dem')>1?`Причина: ${C.n}, спрос подскочил.`:n.xy[k]?`Они уже берут это у вас, но им не хватает.`:`Своего у них нет, а на рынке дефицит.`})}
+    if(port&&n.rel>-30)for(const k of Object.keys(d.sup)){const amt=EVN.bargain.amt,price=Math.max(1,Math.round(natSell(n,k)*EVN.bargain.mul)),use=rep?rep.cons[k]||0:0,low=use>0&&S.stock[k]<use*3;
+      if(crMul(n,k,'sup')>=1&&(n.my[k]||low)&&S.stock[k]+amt<=cap&&S.money>=amt*price*2)add('bargain',{k,amt,price,why:n.my[k]?'Вы и так закупаете это у них, а сейчас их склады переполнены.':'У вас запас на исходе, у них избыток.'})}
+    if(C&&C.relief&&n.rel>-30&&S.stock[C.relief.k]>=EVN.relief.amt*2)add('relief',{k:C.relief.k,amt:EVN.relief.amt,why:C.relief.why});
+    if(n.rel>-40&&n.rel<25&&!n.deal&&S.money>=EVN.summit.cost*2&&S.month-(n.sumAt??-99)>=EVN.summit.gap)add('summit',{rel0:Math.round(n.rel)});
+    const rivals=Object.keys(n.xy).filter(k=>d.sup[k]),rv=rivals.reduce((a,k)=>a+n.xy[k],0);
+    if((d.aggr||n.rel<0)&&!n.deal&&rv>=MT)add('dumping',{xv:rv,what:topNames(n.xy,rivals),cost:Math.max(EVN.dumping.min,Math.min(EVN.dumping.max,Math.round(rv*EVN.dumping.share/50)*50))});
+    if(n.rel<-10&&port&&sumV(allX)>=MT)add('border',{what:topNames(allX)});
+    const l=S.lent.find(x=>x.nid===n.id);if(l&&l.left>=EVN.debt.min&&natHard(n))add('debt',{amt:Math.round(l.left*EVN.debt.share),left:l.left,cn,cash:Math.round(n.money)});
+    if(n.rel>=15){const o=S.nat.find(x=>x.id!==n.id&&!!ND(x).aggr!==!!d.aggr&&sumV(x.xy)+sumV(x.my)>=MT);if(o)add('mediate',{oid:o.id,ov:sumV(o.xy)+sumV(o.my)})}
+    if(!n.met&&S.month<=EVN.envoy.until)add('envoy',{});
   }
   /* Сначала выбираем вид сообщения, потом страну: так частые виды не вытесняют редкие. Недавние виды не повторяем. */
   const all=[...new Set(opts.map(o=>o.t))],H=S.evHist;
-  let ts=all.filter(t=>!H.includes(t));if(!ts.length)ts=all.filter(t=>t!==H[H.length-1]);if(!ts.length)return;
+  /* Если нового сказать нечего, лучше промолчать, чем повториться: самый старый вид снова станет доступен. */
+  const ts=all.filter(t=>!H.includes(t));if(!ts.length){H.shift();return}
   const t=ts[Math.floor(Math.random()*ts.length)],same=opts.filter(o=>o.t===t),fresh=same.filter(o=>o.nid!==S.evNid),pool=fresh.length?fresh:same;
-  const e=pool[Math.floor(Math.random()*pool.length)];e.exp=S.month+6;S.ev=e;
+  const e=pool[Math.floor(Math.random()*pool.length)];e.exp=S.month+6;S.ev=e;if(e.t==='envoy')natById(e.nid).met=1;if(e.t==='summit')natById(e.nid).sumAt=S.month;
   S.evAt=S.month;S.evNid=e.nid;H.push(t);while(H.length>DIPL.noRepeat)H.shift();
 }
 /* Чего не хватает, чтобы согласиться; пустая строка — хватает всего. */
 function evLack(e){const X=EVN[e.t],sum=e.amt*e.price;
   if(e.t==='loan'&&S.money<e.amt)return'Не хватает денег';
   if(e.t==='bargain'&&S.money<sum)return'Не хватает денег';
-  if((e.t==='summit'||e.t==='dumping')&&S.money<X.cost)return'Не хватает денег';
+  if((e.t==='summit'||e.t==='dumping'||e.t==='envoy')&&S.money<(e.cost||X.cost))return'Не хватает денег';
   if(e.t==='order'&&S.stock[e.k]<e.amt)return`На складах нет столько: ${RES[e.k].n.toLowerCase()}`;
-  if(e.t==='relief'&&S.stock.food<e.amt)return'На складах нет столько еды';
+  if(e.t==='relief'&&S.stock[e.k]<e.amt)return`На складах нет столько: ${RES[e.k].n.toLowerCase()}`;
   if(e.t==='debt'&&!S.lent.some(l=>l.nid===e.nid))return'Этот долг уже погашен';
   return''}
 /* Совет министра дипломатии: соглашаться или нет. */
 function evWise(e,risk,c){const n=natById(e.nid),X=EVN[e.t],m=risk?1.5:3,k=m*2-1;
-  if(e.t==='deal')return true;
+  if(e.t==='deal'||e.t==='envoy')return true;
   if(e.t==='loan')return S.money>e.amt*m;
   if(e.t==='tariff'||e.t==='border')return !risk;
   if(e.t==='ref')return c.home-S.pop>e.amt*(risk?.3:1);
   if(e.t==='order')return S.stock[e.k]>=e.amt*1.5;
   if(e.t==='bargain')return S.money>e.amt*e.price*m;
-  if(e.t==='relief')return S.stock.food>e.amt*3;
-  if(e.t==='summit'||e.t==='dumping')return S.money>X.cost*k;
+  if(e.t==='relief')return S.stock[e.k]>e.amt*3;
+  if(e.t==='summit'||e.t==='dumping')return S.money>(e.cost||X.cost)*k;
   if(e.t==='debt')return S.money>5000;
   if(e.t==='mediate')return n.rel-natById(e.oid).rel>20;
   return false}
-function evText(e){const d=ND(natById(e.nid));
-  if(e.t==='loan')return[`${d.n} просит заём`,`${d.full} просит ${fmt(e.amt)} кр на 12 месяцев под ${Math.round(e.rate*100)}%. Отказ испортит отношения.`,'Дать заём','Отказать'];
-  if(e.t==='deal')return[`${d.n} предлагает договор`,`Торговый договор: взаимные пошлины обнуляются, их товары дешевле на 8%, отношения растут каждый месяц.`,'Подписать','Отклонить'];
-  const res=e.k?RES[e.k].n.toLowerCase():'',sum=e.amt*e.price;
-  if(e.t==='order')return[`Срочный заказ из ${d.gen}`,`${d.full} покупает партию: ${res}, ${e.amt} ед. по ${e.price} кр. Всего ${fmt(sum)} кр сразу и без пошлин.`,'Продать','Отказать'];
-  if(e.t==='bargain')return[`Скидка от ${d.gen}`,`${d.full} распродаёт запасы: ${res}, ${e.amt} ед. по ${e.price} кр. Всего ${fmt(sum)} кр.`,'Купить','Не нужно'];
-  if(e.t==='relief')return[`${d.n} просит помощи`,`В стране ${e.cn}. Просят прислать ${e.amt} ед. еды безвозмездно.`,'Отправить','Отказать'];
-  if(e.t==='summit')return[d.fest[0],`${d.fest[1]} Поездка обойдётся в ${fmt(EVN.summit.cost)} кр.`,'Послать делегацию','Не поедем'];
-  if(e.t==='dumping')return[`${d.n} обвиняет вас в демпинге`,`${d.full} заявляет, что ваши товары разоряют его заводы, и требует ${fmt(EVN.dumping.cost)} кр отступных.`,'Заплатить','Отвергнуть'];
-  if(e.t==='border')return['Инцидент в проливе',`Патруль ${d.gen} задержал ваше торговое судно, и теперь ${d.n} требует извинений. Военным уступка не понравится.`,'Извиниться','Отказать'];
-  if(e.t==='debt')return[`${d.n} просит простить долг`,`Страна не справляется с выплатами и просит списать ${fmt(e.amt)} кр из своего долга.`,'Простить','Напомнить о долге'];
-  if(e.t==='mediate')return[`${d.n} ищет поддержки`,`Спор с ${ND(natById(e.oid)).ins} о рыбных промыслах зашёл далеко. ${d.n} просит встать на его сторону.`,'Поддержать','Остаться в стороне'];
-  if(e.t==='tariff')return[`Ультиматум ${d.gen}`,`${d.full} требует снизить вашу импортную пошлину до 5%. Иначе на год поднимет пошлину на ваши товары до 35%.`,'Уступить','Отказать'];
-  return[`Беженцы из ${d.gen}`,`${e.amt} человек просят убежища. Это рабочие руки, но им нужно жильё.`,'Принять','Отказать'];
+/* «вы продали им на 1 200 кр и купили на 800 кр» — без нулевых половин. */
+const tradeWords=(xv,mv)=>[xv>=1?`продали им на ${fmt(xv)} кр`:'',mv>=1?`купили у них на ${fmt(mv)} кр`:''].filter(Boolean).join(' и ');
+function evText(e){const n=natById(e.nid),d=ND(n),res=e.k?RES[e.k].n.toLowerCase():'',sum=e.amt*e.price;
+  if(e.t==='loan')return[`${d.n} просит заём`,`${e.cn?`В стране ${e.cn}.`:e.bal<0?'Расходы страны выше доходов.':'Казна опустела после крупных закупок.'} Денег осталось ${fmt(e.cash)} кр${e.bal<0?`, каждый месяц минус ${fmt(-e.bal)} кр`:''}. ${d.full} просит ${fmt(e.amt)} кр на 12 месяцев под ${Math.round(e.rate*100)}%. Отказ испортит отношения.`,'Дать заём','Отказать'];
+  if(e.t==='deal')return[`${d.n} предлагает договор`,`За год вы ${tradeWords(e.xv,e.mv)}.${e.paid>0?` Их пошлина обошлась вашим купцам в ${fmt(e.paid)} кр.`:''} Договор обнуляет взаимные пошлины, их товары станут дешевле на 8%.`,'Подписать','Отклонить'];
+  if(e.t==='order')return[`Срочный заказ из ${d.gen}`,`${e.why} ${d.full} покупает партию: ${res}, ${e.amt} ед. по ${e.price} кр. Всего ${fmt(sum)} кр сразу и без пошлин.`,'Продать','Отказать'];
+  if(e.t==='bargain')return[`Скидка от ${d.gen}`,`${e.why} ${d.full} предлагает: ${res}, ${e.amt} ед. по ${e.price} кр. Всего ${fmt(sum)} кр.`,'Купить','Не нужно'];
+  if(e.t==='relief')return[`${d.n} просит помощи`,`${e.why} Просят прислать безвозмездно: ${res}, ${e.amt} ед.`,'Отправить','Отказать'];
+  if(e.t==='summit')return[d.fest[0],`${d.fest[1]} Там решаются торговые дела: для договора нужны отношения от 25, сейчас ${e.rel0}. Поездка обойдётся в ${fmt(EVN.summit.cost)} кр.`,'Послать делегацию','Не поедем'];
+  if(e.t==='dumping')return[`${d.n} обвиняет вас в демпинге`,`За год к ним ушло на ${fmt(e.xv)} кр вашего товара: ${e.what}. Это то, что они производят сами, и местные заводы теряют покупателей. ${d.full} требует ${fmt(e.cost)} кр отступных.`,'Заплатить','Отвергнуть'];
+  if(e.t==='border')return['Инцидент в проливе',`Отношения натянуты, и патруль ${d.gen} задержал ваше судно с грузом: ${e.what}. ${d.n} требует извинений за нарушение вод. Военным уступка не понравится.`,'Извиниться','Отказать'];
+  if(e.t==='debt')return[`${d.n} просит простить долг`,`${e.cn?`В стране ${e.cn}, в`:'В'} казне ${fmt(e.cash)} кр, а вам должны ещё ${fmt(e.left)} кр. Просят списать ${fmt(e.amt)} кр.`,'Простить','Напомнить о долге'];
+  if(e.t==='mediate'){const o=ND(natById(e.oid));return[`${d.n} ищет поддержки`,`Спор с ${o.ins} о торговых путях зашёл далеко. Вы торгуете с ${o.ins} на ${fmt(e.ov)} кр в год, поэтому к вашему слову прислушаются. ${d.n} просит встать на его сторону.`,'Поддержать','Остаться в стороне']}
+  if(e.t==='envoy')return[`Посол из ${d.gen}`,`${d.full} признаёт вашу молодую страну и предлагает обменяться послами. Посольство обойдётся в ${fmt(EVN.envoy.cost)} кр.`,'Обменяться','Не сейчас'];
+  if(e.t==='tariff')return[`Ультиматум ${d.gen}`,`За год вы купили у них на ${fmt(e.mv)} кр (${e.mw}) и взяли пошлину ${e.pct}%, это ${fmt(e.duty)} кр. ${d.n} требует снизить её до 5%. Иначе на год поднимет пошлину на ваш вывоз до 35%, а к ним уходит на ${fmt(e.xv)} кр (${e.xw}).`,'Уступить','Отказать'];
+  return[`Беженцы из ${d.gen}`,`В стране ${e.cn}, люди бегут туда, где спокойнее. ${e.amt} человек просят убежища. Это рабочие руки, но им нужно жильё.`,'Принять','Отказать'];
 }
 function evAnswer(yes,silent){
   const e=S.ev;if(!e)return;const n=natById(e.nid),d=ND(n),L=t=>S.log.unshift({m:S.month,t});S.ev=null;
@@ -102,9 +122,10 @@ function evAnswer(yes,silent){
     if(ok){
       if(e.t==='order'){S.stock[e.k]-=e.amt;S.money+=sum;n.money-=sum;L(`${d.n}: партия продана за ${fmt(sum)} кр.`)}
       else if(e.t==='bargain'){S.money-=sum;n.money+=sum;S.stock[e.k]+=e.amt;L(`${d.n}: партия куплена за ${fmt(sum)} кр.`)}
-      else if(e.t==='relief'){S.stock.food-=e.amt;L(`${d.n}: отправлено ${e.amt} ед. еды.`)}
+      else if(e.t==='relief'){S.stock[e.k]-=e.amt;L(`${d.n}: отправлена помощь, ${RES[e.k].n.toLowerCase()} ${e.amt} ед.`)}
       else if(e.t==='summit'){S.money-=X.cost;L(`${d.fest[0]}: делегация принята.`)}
-      else if(e.t==='dumping'){S.money-=X.cost;n.money+=X.cost;L(`${d.n}: отступные выплачены.`)}
+      else if(e.t==='dumping'){S.money-=e.cost;n.money+=e.cost;L(`${d.n}: отступные выплачены.`)}
+      else if(e.t==='envoy'){S.money-=X.cost;L(`${d.n}: обменялись послами.`)}
       else if(e.t==='border'){if(S.fac&&S.fac.mil)S.fac.mil.sat=Math.max(0,S.fac.mil.sat-X.mil);L(`${d.n}: вы принесли извинения.`)}
       else if(e.t==='debt'){const l=S.lent.find(x=>x.nid===n.id);l.left=Math.max(1,l.left-e.amt);L(`${d.n}: списано ${fmt(e.amt)} кр долга.`)}
       else if(e.t==='mediate'){const o=natById(e.oid);o.rel=Math.max(-100,Math.min(100,o.rel+X.other));L(`Вы поддержали ${d.n} в споре с ${ND(o).ins}.`)}

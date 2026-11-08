@@ -72,7 +72,9 @@ function natFans(id,th=.25){const fan=[],foe=[];for(const f in FAC){const v=S.fa
 /* старые сохранения v3 → v4: две новые фракции и отношения к соседям */
 function migrateSave(o){if(o.v===3){o.fac.mil={sat:50};o.fac.int={sat:50};o.seats.mil=0;o.seats.int=4;o.fatt=fattInit(o);o.v=4}
   /* поля редких сообщений и обращений раз в год: версия та же, просто дополняем */
-  if(o.evAt===undefined){o.evAt=-99;o.evHist=[];o.evNid=null;o.nat.forEach(n=>{n.actAt=-99})}return o}
+  if(o.evAt===undefined){o.evAt=-99;o.evHist=[];o.evNid=null;o.nat.forEach(n=>{n.actAt=-99})}
+  /* торговля за год для обоснованных сообщений; сообщение старого вида без причины снимаем */
+  o.nat.forEach(n=>{n.xy=n.xy||{};n.my=n.my||{}});if(o.ev&&!o.ev.r)o.ev=null;return o}
 /* indicators and politics, called after the month is computed */
 function govTick(r,c){
   const D=DIFF[S.diff],T=S.tax,L=t=>S.log.unshift({m:S.month,t});

@@ -133,22 +133,48 @@ test('обучение: налоговый шаг ждёт изменения н
   assert.equal(r.a, false); assert.equal(r.b, true);
 });
 
+const TRADE = `var trade=()=>{for(const n of S.nat){n.xy={goods:700,food:700,coal:500,iron:500,coffee:400};n.my={coal:700,iron:700,goods:500,food:500}}};`;
+
 test('соседи пишут не чаще раза в год и не повторяются подряд', () => {
-  const r = load()(`setup();for(const k of RK)S.stock[k]=120;dip('lend','sol',5000);const seen=[];let at=S.evAt;
-    for(let m=0;m<600;m++){for(const k of RK)S.stock[k]=120;S.money=1e6;tick();computeCov();if(S.evAt!==at){at=S.evAt;seen.push([S.month,S.ev.t])}if(S.ev)evAnswer(m%2===0,true)}
+  const r = load()(`${TRADE}setup();grid();portUp();dip('lend','sol',5000);const seen=[];let at=S.evAt;
+    for(let m=0;m<600;m++){for(const k of RK)S.stock[k]=120;S.money=1e6;S.happy=80;S.nat.forEach((n,j)=>{n.rel=[50,5,-20][(m+j)%3];n.happy=m%5?60:20});S.lent[0]&&(S.lent[0].left=2000);trade();S.tax.imp=.2;S.over=null;tick();computeCov();if(S.evAt!==at){at=S.evAt;seen.push([S.month,S.ev.t])}if(S.ev)evAnswer(m%2===0,true)}
     let gap=1e9,rep=0;for(let i=1;i<seen.length;i++){gap=Math.min(gap,seen[i][0]-seen[i-1][0]);if(seen[i][1]===seen[i-1][1])rep++}
     ({n:seen.length,gap,rep,kinds:new Set(seen.map(x=>x[1])).size})`);
   assert.ok(r.n > 15, JSON.stringify(r)); assert.ok(r.gap >= 12, JSON.stringify(r)); assert.equal(r.rep, 0); assert.ok(r.kinds >= 8, JSON.stringify(r));
 });
 
 test('все виды сообщений читаются и применяются без сбоев', () => {
-  const r = load()(`setup();for(const k of RK)S.stock[k]=120;dip('lend','sol',5000);const bad=[],kinds={};
-    for(let i=0;i<4000;i++){const m=i%6;S.nat.forEach((n,j)=>{n.rel=[60,30,5,-20,-35,-5][(m+j)%6];n.deal=0;n.cr=i%3?{t:Object.keys(CRISES)[i%4],m:3}:null;n.money=i%2?5000:90000});S.lent[0].left=2000;
-      S.ev=null;S.evHist=[];S.tax.imp=.2;makeEvent();const e=S.ev;if(!e)continue;kinds[e.t]=1;const x=evText(e);if(x.length!==4||x.join().includes('undefined')||x.join().includes('NaN'))bad.push(e.t);
+  const r = load()(`${TRADE}setup();grid();portUp();for(const k of RK)S.stock[k]=120;dip('lend','sol',5000);const bad=[],kinds={};S.month=10;S.happy=90;
+    for(let i=0;i<6000;i++){const m=i%6;S.nat.forEach((n,j)=>{n.rel=[60,30,5,-20,-35,-5][(m+j)%6];n.deal=0;n.met=0;n.cr=i%3?{t:Object.keys(CRISES)[i%4],m:3}:null;n.money=i%2?3000:90000;n.happy=i%4?60:20});trade();S.lent[0].left=2000;
+      S.ev=null;S.evHist=[];S.tax.imp=.2;makeEvent();const e=S.ev;if(!e)continue;kinds[e.t]=1;const x=evText(e);if(x.length!==4||/undefined|NaN/.test(x.join()))bad.push(e.t+':'+x[1]);
       evAnswer(i%2===0);S.money=1e6;for(const k of RK)S.stock[k]=120;if(!S.nat.every(n=>isFinite(n.rel)&&n.rel>=-100&&n.rel<=100))bad.push('rel '+e.t)}
-    ({bad:bad.join(),kinds:Object.keys(kinds).sort().join()})`);
+    ({bad:bad.slice(0,3).join(' | '),kinds:Object.keys(kinds).sort().join()})`);
   assert.equal(r.bad, '');
-  assert.equal(r.kinds, ['border','bargain','deal','debt','dumping','loan','mediate','order','ref','relief','summit','tariff'].sort().join());
+  assert.equal(r.kinds, ['border','bargain','deal','debt','dumping','envoy','loan','mediate','order','ref','relief','summit','tariff'].sort().join());
+});
+
+const COUNT = `var kinds=(N=400)=>{const c={};for(let i=0;i<N;i++){S.ev=null;S.evHist=[];makeEvent();if(S.ev)c[S.ev.t]=1}return Object.keys(c).sort().join()};`;
+
+test('сообщения приходят только с причиной', () => {
+  const r = load()(`${COUNT}setup();S.month=100;S.tax.imp=.2;const none=kinds();
+    const k=natById('kar');k.my={coal:800};const onlyBuy=kinds();k.xy={food:800};const both=kinds();
+    k.xy={coffee:800};const notTheirs=kinds();k.xy={coal:800};const theirs=kinds();
+    S.nat.forEach(n=>{n.xy={};n.my={}});const a=natById('ava');a.cr={t:'unrest',m:3};a.happy=20;a.money=150000;a.rel=30;const richLoan=kinds();
+    a.money=2000;const poorLoan=kinds();({none,onlyBuy,both,notTheirs,theirs,richLoan,poorLoan})`);
+  assert.doesNotMatch(r.none, /tariff|deal|dumping|loan/, r.none);
+  assert.doesNotMatch(r.onlyBuy, /tariff/, r.onlyBuy); assert.match(r.both, /tariff/, r.both);
+  assert.doesNotMatch(r.notTheirs, /dumping/, r.notTheirs); assert.match(r.theirs, /dumping/, r.theirs);
+  assert.doesNotMatch(r.richLoan, /loan/, r.richLoan); assert.match(r.poorLoan, /loan/, r.poorLoan);
+});
+
+test('ультиматум называет реальную торговлю', () => {
+  const t = load()(`setup();S.month=100;S.tax.imp=.2;const k=natById('kar');k.rel=-5;k.my={coal:1000,iron:500};k.xy={food:800};let e;for(let i=0;i<500&&!(e&&e.t==='tariff');i++){S.ev=null;S.evHist=[];makeEvent();e=S.ev}evText(e)[1]`);
+  assert.match(t, /1\D500 кр/); assert.match(t, /уголь и железо/); assert.match(t, /20%/); assert.match(t, /300 кр/); assert.match(t, /еда/);
+});
+
+test('торговля копится за год и затухает', () => {
+  const r = load()(`setup();const n=natById('sol');for(let i=0;i<60;i++)tradeYear(n.xy,{food:100});const full=n.xy.food;for(let i=0;i<120;i++)tradeYear(n.xy,{});({full,left:n.xy.food||0})`);
+  assert.ok(r.full > 1100 && r.full <= 1200, JSON.stringify(r)); assert.ok(r.left < 1200 * .001 + 1);
 });
 
 test('согласие без денег или товара равно отказу', () => {
@@ -170,7 +196,7 @@ test('министр не ломается, когда страна на пер�
 });
 
 test('старое сохранение без новых полей загружается', () => {
-  const r = load()(`setup();const o=JSON.parse(saveStr());delete o.evAt;delete o.evHist;delete o.evNid;o.nat.forEach(n=>delete n.actAt);
-    S=loadStr(JSON.stringify(o));computeConn();computeCov();tick();({at:S.evAt,h:Array.isArray(S.evHist),w:dipWait(S.nat[0])})`);
-  assert.equal(r.at, -99); assert.ok(r.h); assert.equal(r.w, 0);
+  const r = load()(`setup();const o=JSON.parse(saveStr());delete o.evAt;delete o.evHist;delete o.evNid;o.nat.forEach(n=>{delete n.actAt;delete n.xy;delete n.my});o.ev={t:'tariff',nid:'kar',exp:99};
+    S=loadStr(JSON.stringify(o));computeConn();computeCov();tick();({at:S.evAt,h:Array.isArray(S.evHist),w:dipWait(S.nat[0]),ev:S.ev&&S.ev.r,xy:typeof S.nat[0].xy})`);
+  assert.equal(r.at, -99); assert.ok(r.h); assert.equal(r.w, 0); assert.ok(!r.ev); assert.equal(r.xy, 'object');
 });
