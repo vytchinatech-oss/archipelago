@@ -15,14 +15,14 @@ const NATDEF=[
 const DIPL={evGap:12,evChance:.25,actGap:12,noRepeat:3,aggrDrift:.2,decay:11/12,minTrade:300,poor:5000,hardMonths:12};
 /* Числа сообщений. rel: [отношения при согласии, при отказе]. */
 const EVN={
-  order:{mul:1.4,min:30,rel:[4,-2]},
-  bargain:{mul:.6,amt:40,rel:[2,0]},
-  relief:{amt:30,rel:[10,-3]},
-  summit:{cost:600,gap:60,rel:[7,-1]},
+  order:{mul:1.4,min:30,rel:[4,-2],from:-50,cap:60,round:5,wise:1.5},
+  bargain:{mul:.6,amt:40,rel:[2,0],from:-30,lowMonths:3,cashK:2},
+  relief:{amt:30,rel:[10,-3],from:-30,keep:2,wise:3},
+  summit:{cost:600,gap:60,rel:[7,-1],from:-40,to:RELK.friend,cashK:2},
   dumping:{share:.15,min:200,max:1500,rel:[5,-5]},
-  border:{mil:4,rel:[6,-7]},
-  debt:{share:.25,min:300,rel:[8,-3]},
-  mediate:{rel:[6,-2],other:-6},
+  border:{mil:4,rel:[6,-7],below:-10},
+  debt:{share:.25,min:300,rel:[8,-3],wise:5000},
+  mediate:{rel:[6,-2],other:-6,from:15,wise:20},
   envoy:{cost:200,until:60,rel:[5,-2]},
 };
 const CRISES={

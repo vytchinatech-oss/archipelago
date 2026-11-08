@@ -7,6 +7,7 @@
 |---|---|---|
 | CORE | `core/constants.js` | Размер карты 44×44, тайлы, типы рельефа, месяцы |
 | CORE | `core/util.js` | Генератор случайных чисел, шум, `fmt`, `plural` |
+| DATA | `data/rules.js` | Шкалы и все коэффициенты правил (`SCALE`, `RATE`, `RELK`, `ECO`, `MOODK`, `AUTO` и др.), цели. Подключается первым из DATA |
 | DATA | `data/resources.js` | 10 ресурсов, базовые цены, залежи |
 | DATA | `data/buildings.js` | Все здания (`B`), категории, радиусы ореолов (`RAD`) |
 | DATA | `data/maps.js` | Три карты и названия областей |

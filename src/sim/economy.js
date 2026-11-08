@@ -10,9 +10,9 @@ function computeConn(){
   NET=net;CONN=con;
 }
 function forestNear(i){let c=0;const x=i%N,y=i/N|0;
-  for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const X=x+dx,Y=y+dy;if(X<0||Y<0||X>=N||Y>=N)continue;const j=Y*N+X;if(S.type[j]===FOREST&&!S.bld[j]&&!S.road[j])c++}
-  return Math.min(1,c/7)}
-function waterNear(i){const x=i%N,y=i/N|0;for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const X=x+dx,Y=y+dy;if(X<0||Y<0||X>=N||Y>=N)continue;if(S.type[Y*N+X]<=SHAL)return true}return false}
+  for(let dy=-PROD.nearR;dy<=PROD.nearR;dy++)for(let dx=-PROD.nearR;dx<=PROD.nearR;dx++){const X=x+dx,Y=y+dy;if(X<0||Y<0||X>=N||Y>=N)continue;const j=Y*N+X;if(S.type[j]===FOREST&&!S.bld[j]&&!S.road[j])c++}
+  return Math.min(1,c/PROD.forestFull)}
+function waterNear(i){const x=i%N,y=i/N|0;for(let dy=-PROD.nearR;dy<=PROD.nearR;dy++)for(let dx=-PROD.nearR;dx<=PROD.nearR;dx++){const X=x+dx,Y=y+dy;if(X<0||Y<0||X>=N||Y>=N)continue;if(S.type[Y*N+X]<=SHAL)return true}return false}
 let PW=new Uint8Array(N*N),COV={},WDIST=new Uint16Array(N*N);
 function disk(i,R,arr){const x=i%N,y=i/N|0;for(let dy=-R;dy<=R;dy++)for(let dx=-R;dx<=R;dx++){if(dx*dx+dy*dy>R*R+R)continue;const X=x+dx,Y=y+dy;if(X<0||Y<0||X>=N||Y>=N)continue;arr[Y*N+X]=1}}
 function computeCov(){
@@ -28,9 +28,9 @@ function computeCov(){
 }
 function wdist(i){let m=999;for(const j of nb4(i))if(WDIST[j]<m)m=WDIST[j];return Math.min(999,m+1)}
 const live=i=>{const d=B[S.bld[i].t];return !(d.pow<0)||PW[i]};
-const dfac=d=>Math.max(.3,Math.min(1,1-(d-6)*.025));
+const dfac=d=>Math.max(PROD.commuteMin,Math.min(1,1-(d-PROD.commuteFree)*PROD.commuteStep));
 const PRI=t=>{const d=B[t];if(t==='hall')return 0;if(d.out&&d.out.food)return 1;if(d.cat==='pow')return 2;if(d.cat==='svc'||d.cat==='com'||d.cat==='mil')return 3;if(d.cat==='ind')return 5;return 4};
-const homeF=i=>(PW[i]?1:.5)*(COV.shop[i]?1:.6);
+const homeF=i=>(PW[i]?1:HOME.noPower)*(COV.shop[i]?1:HOME.noShop);
 function census(){
   const c={coalSup:0,off:0,home:0,homeFull:0,poor:0,unpow:0,cv:{shop:0,park:0,school:0,clinic:0,police:0},jobs:0,sup:0,use:0,serve:0,parks:0,ports:0,stores:0,prodN:0,rich:0,huts:0,coalPl:0,cnt:{},dis:0,list:[]};
   for(let i=0;i<N*N;i++){const b=S.bld[i];if(!b)continue;const d=B[b.t];c.cnt[b.t]=(c.cnt[b.t]||0)+1;
@@ -40,105 +40,109 @@ function census(){
     if(d.jobs)c.jobs+=d.jobs;if(d.pow<0){if(PW[i])c.use-=d.pow;else c.unpow++}if(d.fuel)c.coalPl++;
     if(d.park)c.parks++;if(d.out)c.prodN++;c.list.push(i)}
   c.home=Math.round(c.home);for(const k in c.cv)c.cv[k]=c.home?Math.min(1,c.cv[k]/c.home):0;
-  c.richPop=c.home?Math.min(S.pop,c.home)*c.rich/c.home:0;c.work=Math.floor((S.pop-c.richPop)*.62);c.emp=Math.min(c.work,c.jobs);c.staff=c.jobs?c.emp/c.jobs:0;
+  c.richPop=c.home?Math.min(S.pop,c.home)*c.rich/c.home:0;c.work=Math.floor((S.pop-c.richPop)*POPK.workShare);c.emp=Math.min(c.work,c.jobs);c.staff=c.jobs?c.emp/c.jobs:0;
   const jl=c.list.filter(i=>B[S.bld[i].t].jobs).map(i=>[i,PRI(S.bld[i].t),wdist(i)]).sort((a,b)=>a[1]-b[1]||a[2]-b[2]);
   let left=c.emp;c.st={};for(const[i]of jl){const j=B[S.bld[i].t].jobs,a=Math.min(j,left);left-=a;c.st[i]=a/j}
   for(const i of c.list){const t=S.bld[i].t,d=B[t],s=d.jobs?c.st[i]:1,on=d.pow<0?PW[i]:1;
-    if(d.pow>0){const p=t==='hall'?d.pow:d.pow*s*(1+.04*M('en'));c.sup+=p;if(d.fuel)c.coalSup+=p}
-    if(on){if(d.serve)c.serve+=d.serve*s;if(d.cap)c.ports+=d.cap*s;if(d.stor&&s>=.5)c.stores++}else if(d.serve||d.cap||d.stor)c.off++}
-  const fT=facM('trd');c.serve*=fT;if(c.ports)c.ports=Math.round((c.ports+c.stores*25)*fT);
+    if(d.pow>0){const p=t==='hall'?d.pow:d.pow*s*(1+MINK.enPow*M('en'));c.sup+=p;if(d.fuel)c.coalSup+=p}
+    if(on){if(d.serve)c.serve+=d.serve*s;if(d.cap)c.ports+=d.cap*s;if(d.stor&&s>=PROD.storeStaff)c.stores++}else if(d.serve||d.cap||d.stor)c.off++}
+  const fT=facM('trd');c.serve*=fT;if(c.ports)c.ports=Math.round((c.ports+c.stores*ECO.portPerStore)*fT);
   c.pr=c.use>0?Math.min(1,c.sup/c.use):1;
-  c.log=1;c.cap=300+300*c.stores;
+  c.log=1;c.cap=ECO.storeBase+B.store.stor*c.stores;
   return c;
 }
 const addNK=(o,id,k,v)=>{const x=o[id]||(o[id]={});x[k]=(x[k]||0)+v};
-function upkeep(){let u=0;for(let i=0;i<N*N;i++){const b=S.bld[i];if(b)u+=B[b.t].up;if(S.road[i])u+=S.road[i]===2?1:.25}return u}
+/* Строки бюджета за месяц. Отчёт показывает ровно их, их сумма равна r.net (стандарт СТ2). */
+function budgetLines(r){return{
+  inc:[['Подоходный налог',r.inc],['Налог на бизнес',r.biz],['Импортные пошлины',r.dImp],['Экспортные пошлины',r.dExp],['Возврат ваших займов',r.loanIn]],
+  out:[['Содержание зданий и дорог',r.up],['Выплаты по займам',r.loanOut],['Проценты по долгу казны',r.int],['Зарплаты министров',r.sal],['Неучтённые расходы',r.theft,'Кто-то из министров ворует. Кто именно, станет ясно при скандале.'],['Гвардия',r.guard]].filter((x,i)=>i<3||x[1]>0)}}
+function upkeep(){let u=0;for(let i=0;i<N*N;i++){const b=S.bld[i];if(b)u+=B[b.t].up;if(S.road[i])u+=S.road[i]===2?ROADK.upBridge:ROADK.upRoad}return u}
 
 function tick(){
   const c=census(),T=S.tax,st=S.stock,z=()=>Object.fromEntries(RK.map(k=>[k,0]));
-  const r={bs:{},impH:0,impB:0,inc:0,biz:0,dImp:0,dExp:0,up:0,int:0,loanIn:0,loanOut:0,prod:z(),cons:z(),exp:z(),imp:z(),need:z(),expV:0,impV:0,
+  const r={bs:{},impH:0,impB:0,inc:0,biz:0,dImp:0,dExp:0,up:0,int:0,loanIn:0,loanOut:0,sal:0,theft:0,guard:0,auto:0,prod:z(),cons:z(),exp:z(),imp:z(),need:z(),expV:0,impV:0,
     best:{},dest:{},xn:{},mn:{},sat:{},short:{food:0,inputs:0},run:{},ev:[],mig:{}};
   if(!S.nat[0].dl.food)refreshMarkets();
-  c.ports=Math.round(c.ports*(1+.05*M('trd')));let cap=c.ports;const port=cap>0;
+  c.ports=Math.round(c.ports*(1+MINK.trdPort*M('trd')));let cap=c.ports;const port=cap>0;
   const buy=(k,q,who)=>{q=Math.ceil(q);if(!port||!S.trade[k].i||q<=0)return;
     const ns=S.nat.filter(n=>canTrade(n)&&n.sl[k]>0).sort((a,b)=>natSell(a,k)-natSell(b,k));
     for(const n of ns){if(q<=0||cap<=0)break;const x=Math.min(q,cap,n.sl[k]);const p=natSell(n,k),v=x*p;
       const du=n.deal?0:T.imp;n.sl[k]-=x;cap-=x;q-=x;st[k]+=x;r.imp[k]+=x;r.impV+=v;r.dImp+=v*du;n.money+=v;if(who==='h')r.impH+=v*(1+du);else r.impB+=v;r.dest[n.id]=(r.dest[n.id]||0)+v;addNK(r.mn,n.id,k,v)}};
   // fuel
-  const fuelNeed=c.coalPl*4*(1-.05*M('en'));if(st.coal<fuelNeed)buy('coal',fuelNeed-st.coal);
+  const fuelNeed=c.coalPl*B.power.fuel.coal*(1-MINK.enCoal*M('en'));if(st.coal<fuelNeed)buy('coal',fuelNeed-st.coal);
   const fr=c.coalPl?Math.min(1,st.coal/fuelNeed):1;st.coal-=fuelNeed*fr;r.cons.coal+=fuelNeed*fr;r.need.coal+=fuelNeed;r.fuel=fr;
   c.sup=Math.max(0,c.sup-c.coalSup*(1-fr));c.pr=c.use>0?Math.max(0,Math.min(1,c.sup/c.use)):1;
   // primary production
-  const bizPen=Math.max(0,T.biz-.15)*1.6,eff=Math.max(0,1-bizPen);r.eff=eff;r.bizPen=bizPen;
+  const bizPen=Math.max(0,T.biz-TAXK.bizFree)*TAXK.bizPen,eff=Math.max(0,1-bizPen);r.eff=eff;r.bizPen=bizPen;
   const agg={};
-  const small=c.prodN<=4;let lgSum=0;
-  for(const i of c.list){const b=S.bld[i],d=B[b.t];if(!d.out)continue;const lg=small||COV.store[i]?1:.75;lgSum+=lg;
-    const P={staff:c.st[i]||0,power:d.pow<0?(PW[i]?c.pr:.35):1,commute:dfac(wdist(i)),log:lg,tax:eff,fac:facM(sphereOf(b.t))};
+  const small=c.prodN<=PROD.smallCity;let lgSum=0;
+  for(const i of c.list){const b=S.bld[i],d=B[b.t];if(!d.out)continue;const lg=small||COV.store[i]?1:PROD.noStore;lgSum+=lg;
+    const P={staff:c.st[i]||0,power:d.pow<0?(PW[i]?c.pr:PROD.noPower):1,commute:dfac(wdist(i)),log:lg,tax:eff,fac:facM(sphereOf(b.t))};
     const e=P.staff*P.power*P.commute*P.log*P.tax*P.fac;
-    if(d.in){P.minister=1+.03*M('ind');agg[b.t]=(agg[b.t]||0)+e*P.minister;r.bs[i]={P,e:e*P.minister};continue}
-    if(d.fert)P.fert=fert(i);if(b.t==='saw')P.forest=.35+.65*forestNear(i);if(d.dep&&S.type[i]===MOUNT)P.mount=1.3;if(b.t==='cotton'&&regOf(i).warm)P.warm=1.3;
-    if(d.out.food||d.out.coffee||d.out.cotton)P.minister=1+.03*M('agr');else P.minister=1+.03*M('ind');
+    if(d.in){P.minister=1+MINK.ind*M('ind');agg[b.t]=(agg[b.t]||0)+e*P.minister;r.bs[i]={P,e:e*P.minister};continue}
+    if(d.fert)P.fert=fert(i);if(b.t==='saw')P.forest=PROD.forestBase+PROD.forestAdd*forestNear(i);if(d.dep&&S.type[i]===MOUNT)P.mount=PROD.mount;if(b.t==='cotton'&&regOf(i).warm)P.warm=PROD.warm;
+    if(d.out.food||d.out.coffee||d.out.cotton)P.minister=1+MINK.agr*M('agr');else P.minister=1+MINK.ind*M('ind');
     let m=e*(P.fert||1)*(P.forest||1)*(P.mount||1)*(P.warm||1)*P.minister;const out={};
     for(const k in d.out){out[k]=d.out[k]*m;r.prod[k]+=out[k]}r.bs[i]={P,out}}
   c.log=c.prodN?lgSum/c.prodN:1;
   for(const k of RK)st[k]+=r.prod[k];
   const served=Math.min(S.pop*c.cv.shop,c.serve),richPop=c.richPop;
-  const nF=S.pop*.12;
+  const nF=S.pop*NEED.food;
   // industry
   for(const t of['factory','textile','cannery']){const a=agg[t];if(!a)continue;const d=B[t];
     for(const k in d.in){const need=d.in[k]*a;r.need[k]+=need;if(k!=='food'&&st[k]<need)buy(k,need-st[k])}
-    let run=1,lim=null;for(const k in d.in){const av=st[k]-(k==='food'?nF*1.5:0),q=Math.max(0,av)/(d.in[k]*a);if(q<run){run=q;lim=k}}r.lim=r.lim||{};r.lim[t]=run<.99?lim:null;run=Math.max(0,Math.min(1,run));
+    let run=1,lim=null;for(const k in d.in){const av=st[k]-(k==='food'?nF*NEED.canReserve:0),q=Math.max(0,av)/(d.in[k]*a);if(q<run){run=q;lim=k}}r.lim=r.lim||{};r.lim[t]=run<PROD.limRun?lim:null;run=Math.max(0,Math.min(1,run));
     for(const k in d.in){const u=d.in[k]*a*run;st[k]-=u;r.cons[k]+=u}for(const k in d.out){const o=d.out[k]*a*run;st[k]+=o;r.prod[k]+=o}
     r.run[t]=run;
     for(const i in r.bs){const x=r.bs[i];if(x.e===undefined||S.bld[i].t!==t)continue;x.run=run;x.out={};x.inp={};x.need={};
       for(const k in d.out)x.out[k]=d.out[k]*x.e*run;for(const k in d.in){x.inp[k]=d.in[k]*x.e*run;x.need[k]=d.in[k]*x.e}}
-    if(t!=='cannery'&&run<.95)r.short.inputs=Math.max(r.short.inputs,1-run)}
+    if(t!=='cannery'&&run<PROD.shortRun)r.short.inputs=Math.max(r.short.inputs,1-run)}
   // consumers
-  const need={food:nF,goods:served*.05,cloth:served*.03,coffee:served*.004+richPop*c.cv.shop*.06};
+  const need={food:nF,goods:served*NEED.goods,cloth:served*NEED.cloth,coffee:served*NEED.coffee+richPop*c.cv.shop*NEED.coffeeRich};
   for(const k in need){const q=need[k];r.need[k]+=q;if(st[k]<q)buy(k,q-st[k],'h');const e=Math.min(st[k],q);st[k]-=e;r.cons[k]+=e;r.sat[k]=q>0?e/q:1}
   r.short.food=1-r.sat.food;
   // exports: best price first
-  const xf=Math.max(0,1-T.exp*1.6),reserve=k=>r.need[k]*2;
+  const xf=Math.max(0,1-T.exp*TAXK.expCut),reserve=k=>r.need[k]*TRADEK.reserveMonths;
   const order=RK.slice().sort((a,b)=>RES[b].base-RES[a].base);
   for(const k of order){
     const ns=S.nat.filter(canTrade).sort((a,b)=>natBuy(b,k)*(1-natTariff(b))-natBuy(a,k)*(1-natTariff(a)));
     if(ns.length)r.best[k]={nid:ns[0].id,p:natBuy(ns[0],k)*(1-natTariff(ns[0]))};
     if(!port||!S.trade[k].e)continue;
     let sur=st[k]-reserve(k);
-    for(const n of ns){if(sur<1||cap<1)break;const p=natBuy(n,k)*(1+.015*M('trd')),q=Math.floor(Math.min(sur,cap,n.dl[k],Math.max(0,n.money+20000)/p)*xf);if(q<1)continue;
+    for(const n of ns){if(sur<1||cap<1)break;const p=natBuy(n,k)*(1+MINK.trdPrice*M('trd')),q=Math.floor(Math.min(sur,cap,n.dl[k],Math.max(0,n.money+TRADEK.debtFloor)/p)*xf);if(q<1)continue;
       const v=q*p*(1-natTariff(n));n.dl[k]-=q;cap-=q;sur-=q;st[k]-=q;r.exp[k]+=q;r.expV+=v;r.dExp+=v*T.exp;
-      n.money-=q*p;n.rel=Math.min(100,n.rel+q*.005);r.dest[n.id]=(r.dest[n.id]||0)+v;addNK(r.xn,n.id,k,v)}}
+      n.money-=q*p;n.rel=Math.min(100,n.rel+q*TRADEK.relPerUnit);r.dest[n.id]=(r.dest[n.id]||0)+v;addNK(r.xn,n.id,k,v)}}
   for(const k of RK){st[k]=Math.max(0,st[k]);if(st[k]>c.cap){st[k]=c.cap;if(!(S.month%6))r.ev.push(`Склады переполнены: ${RES[k].n.toLowerCase()} портится. Стройте склады или продавайте через порт.`)}}
   r.portUse=c.ports?1-cap/c.ports:0;
   // domestic prices
-  for(const k of RK){const sup=Math.max(0,r.prod[k]+r.imp[k]+st[k]*.2),dem=Math.max(0,r.need[k]);
-    const target=dem<.5?RES[k].base*.7:RES[k].base*Math.max(.5,Math.min(2,Math.pow((dem+2)/(sup+2),.6)));S.dom[k]+=(target-S.dom[k])*.4}
+  for(const k of RK){const sup=Math.max(0,r.prod[k]+r.imp[k]+st[k]*PRICEK.stockShare),dem=Math.max(0,r.need[k]);
+    const target=dem<PRICEK.noDemand?RES[k].base*PRICEK.noDemandPrice:RES[k].base*Math.max(PRICEK.min,Math.min(PRICEK.max,Math.pow((dem+PRICEK.pad)/(sup+PRICEK.pad),PRICEK.pow)));S.dom[k]+=(target-S.dom[k])*PRICEK.speed}
   // budget
   const sold=RK.reduce((a,k)=>a+r.cons[k]*S.dom[k],0)+r.expV;
-  r.inc=(c.emp*15*(1+.3*c.cv.school)+richPop*60)*T.inc;r.biz=Math.max(0,sold-r.impB)*T.biz*(1+.02*M('fin'));r.inc*=1+.02*M('fin');r.wages=c.emp*15*(1+.3*c.cv.school)+richPop*60;r.up=upkeep();r.int=S.money<0?-S.money*.02:0;
-  for(const L of S.loans){const p=Math.min(L.left,L.pay);L.left-=p;r.loanOut+=p;natById(L.nid).money+=p}S.loans=S.loans.filter(L=>L.left>.5);
-  for(const L of S.lent){const n=natById(L.nid);if(n.money<0&&Math.random()<.5){r.ev.push(`${ND(n).n} задерживает выплату по вашему займу.`);continue}const p=Math.min(L.left,L.pay);L.left-=p;n.money-=p;r.loanIn+=p}
-  S.lent=S.lent.filter(L=>L.left>.5);
+  r.wages=c.emp*ECO.wage*(1+ECO.schoolWage*c.cv.school)+richPop*ECO.richIncome;r.inc=r.wages*T.inc;r.biz=Math.max(0,sold-r.impB)*T.biz*(1+MINK.fin*M('fin'));r.inc*=1+MINK.fin*M('fin');r.up=upkeep();r.int=S.money<0?-S.money*ECO.interest:0;
+  for(const L of S.loans){const p=Math.min(L.left,L.pay);L.left-=p;r.loanOut+=p;natById(L.nid).money+=p}S.loans=S.loans.filter(L=>L.left>ECO.loanDust);
+  for(const L of S.lent){const n=natById(L.nid);if(n.money<0&&Math.random()<ECO.lateChance){r.ev.push(`${ND(n).n} задерживает выплату по вашему займу.`);continue}const p=Math.min(L.left,L.pay);L.left-=p;n.money-=p;r.loanIn+=p}
+  S.lent=S.lent.filter(L=>L.left>ECO.loanDust);
   r.net=r.inc+r.biz+r.dImp+r.dExp+r.loanIn-r.up-r.int-r.loanOut;S.money+=r.net;
   // mood
   const unemp=c.work>0?(c.work-c.emp)/c.work:0;
   const sh=S.pop>0?served/S.pop:0;
-  const F=[['Базовое настроение',50],['Товары на рынках',10*sh*r.sat.goods],['Одежда',6*sh*r.sat.cloth],['Кофе',4*r.sat.coffee*(served>0?1:0)],
-    ['Парки рядом',12*c.cv.park],['Школы',7*c.cv.school*facM('int')],['Больницы',8*c.cv.clinic*facM('int')],['Социальная политика',1.2*M('soc')],['Преступность',S.pop>120?-10*(1-c.cv.police)*(1-.15*M('mvd')):0],['Безработица',-unemp*45],['Подоходный налог',-(T.inc-.1)*150],['Нехватка еды',-r.short.food*40],
-    ['Цены на еду',r.short.food>.05?0:-Math.max(0,S.dom.food/RES.food.base-1)*10],['Траты на импорт',-Math.min(15,40*r.impH/Math.max(50,r.wages))],['Перебои с энергией',-(1-c.pr)*25],
-    ['Теснота в бараках',c.home?-12*c.huts/c.home:0]];
-  const tgt=Math.max(0,Math.min(100,F.reduce((a,f)=>a+f[1],0)));S.happy+=(tgt-S.happy)*.35;r.F=F;r.tgt=tgt;r.unemp=unemp;
+  const F=[['Базовое настроение',MOODK.base],['Товары на рынках',MOODK.goods*sh*r.sat.goods],['Одежда',MOODK.cloth*sh*r.sat.cloth],['Кофе',MOODK.coffee*r.sat.coffee*(served>0?1:0)],
+    ['Парки рядом',MOODK.park*c.cv.park],['Школы',MOODK.school*c.cv.school*facM('int')],['Больницы',MOODK.clinic*c.cv.clinic*facM('int')],['Социальная политика',MINK.soc*M('soc')],['Преступность',S.pop>B.police.need?-MOODK.crime*(1-c.cv.police)*(1-MINK.mvdCrime*M('mvd')):0],['Безработица',-unemp*MOODK.unemp],['Подоходный налог',-(T.inc-TAXK.incFree)*MOODK.incTax],['Нехватка еды',-r.short.food*MOODK.hunger],
+    ['Цены на еду',r.short.food>MOODK.foodShort?0:-Math.max(0,S.dom.food/RES.food.base-1)*MOODK.foodPrice],['Траты на импорт',-Math.min(MOODK.importMax,MOODK.importK*r.impH/Math.max(MOODK.importMinWage,r.wages))],['Перебои с энергией',-(1-c.pr)*MOODK.blackout],
+    ['Теснота в бараках',c.home?-MOODK.huts*c.huts/c.home:0]];
+  const tgt=Math.max(0,Math.min(100,F.reduce((a,f)=>a+f[1],0)));S.happy+=(tgt-S.happy)*MOODK.speed;r.F=F;r.tgt=tgt;r.unemp=unemp;
   // population and migration
   let room=c.home-S.pop;const open=c.jobs-c.emp;let dp=0;
-  if(room>0&&S.happy>=40)dp=Math.min(room,3+open*.6+S.pop*.05)*(.3+.6*(S.happy-40)/60);
-  if(S.happy<35)dp-=S.pop*.05*(35-S.happy)/35;
-  if(r.short.food>.25)dp-=S.pop*.06*r.short.food;
-  if(room<0)dp+=room*.4;
+  if(room>0&&S.happy>=POPK.growFrom)dp=Math.min(room,POPK.growBase+open*POPK.growJobs+S.pop*POPK.growPop)*(POPK.growMin+POPK.growRange*(S.happy-POPK.growFrom)/POPK.growSpan);
+  if(S.happy<POPK.leaveBelow)dp-=S.pop*POPK.leaveShare*(POPK.leaveBelow-S.happy)/POPK.leaveBelow;
+  if(r.short.food>POPK.famine)dp-=S.pop*POPK.famineShare*r.short.food;
+  if(room<0)dp+=room*POPK.overcrowd;
   S.pop=Math.max(0,Math.floor(S.pop+dp+Math.random()));if(dp>0)S.pop=Math.min(S.pop,Math.max(c.home,0));
   r.dp=dp;room=c.home-S.pop;
-  for(const n of S.nat){if(n.emb)continue;const diff=S.happy-n.happy,okIn=S.mig==='open'||(S.mig==='allies'&&n.rel>=40);
-    let m=0;if(okIn&&diff>5&&room>0){m=Math.floor(Math.min(room,n.pop*.0012*diff/10*(n.cr&&CRISES[n.cr.t].ref?3:1)));room-=m}
-    else if(diff<-10&&S.pop>30)m=-Math.floor(S.pop*.004*(-diff/10)+Math.random());
+  for(const n of S.nat){if(n.emb)continue;const diff=S.happy-n.happy,okIn=S.mig==='open'||(S.mig==='allies'&&n.rel>=RELK.friend);
+    let m=0;if(okIn&&diff>MIGK.inDiff&&room>0){m=Math.floor(Math.min(room,n.pop*MIGK.inRate*diff/MIGK.per*(n.cr&&CRISES[n.cr.t].ref?MIGK.crisisMul:1)));room-=m}
+    else if(diff<-MIGK.outDiff&&S.pop>MIGK.outMinPop)m=-Math.floor(S.pop*MIGK.outRate*(-diff/MIGK.per)+Math.random());
     if(m){S.pop+=m;n.pop-=m;r.mig[n.id]=m}}
   S.pop=Math.max(0,S.pop);
   S.month++;
@@ -148,8 +152,8 @@ function tick(){
   const migIn=Object.entries(r.mig).filter(e=>e[1]>0),migOut=Object.entries(r.mig).filter(e=>e[1]<0);
   if(migIn.length)L('Приехали: '+migIn.map(([id,m])=>`${m} из ${nm(id)}`).join(', ')+'.');
   if(migOut.length)L('Уехали за границу: '+migOut.map(([id,m])=>`${-m} в ${nm(id)}`).join(', ')+'.');
-  if(r.short.food>.15)L('Жителям не хватает еды.');
-  if(c.coalPl&&fr<.9)L('ТЭС не хватает угля, энергии меньше.');
+  if(r.short.food>ADV.foodLog)L('Жителям не хватает еды.');
+  if(c.coalPl&&fr<ADV.fuel)L('ТЭС не хватает угля, энергии меньше.');
   r.ev.forEach(L);
   natTick(r);
   if(S.gov)govTick(r,c);
@@ -157,17 +161,6 @@ function tick(){
   r.cen=c;S.rep=r;return r;
 }
 
-const GOALS=[
-  {t:'Поселите 60 жителей',ok:()=>S.pop>=60,rw:300},
-  {t:'Дайте работу 40 жителям',ok:c=>c.emp>=40,rw:400},
-  {t:'Постройте порт и продайте груз за границу',ok:(c,r)=>r&&r.expV>0,rw:600},
-  {t:'Выпустите товары, ткани или консервы',ok:(c,r)=>r&&(r.prod.goods+r.prod.cloth+r.prod.cans)>0,rw:600},
-  {t:'Купите вторую область',ok:()=>S.regions.filter(g=>g.own).length>=2,rw:500},
-  {t:'Подпишите торговый договор',ok:()=>S.nat.some(n=>n.deal),rw:800},
-  {t:'Население 300',ok:()=>S.pop>=300,rw:1000},
-  {t:'Профицит бюджета 400 кр за месяц',ok:(c,r)=>r&&r.net>=400,rw:1000},
-  {t:'Население 1000',ok:()=>S.pop>=1000,rw:3000},
-];
 function checkGoals(c,r){const out=[];while(S.goal<GOALS.length&&GOALS[S.goal].ok(c,r)){const G=GOALS[S.goal];S.money+=G.rw;out.push(G);S.goal++;S.log.unshift({m:S.month,t:`Цель выполнена: ${G.t}. Награда ${fmt(G.rw)} кр.`})}return out}
 
 function whyTerr(tool,t){
@@ -184,10 +177,10 @@ function canBuild(tool,i){
   const t=S.type[i],rg=regOf(i);
   if(!rg.own)return{ok:0,why:`Область «${rg.n}» не куплена`,buy:1};
   if(tool==='bull'){const b=S.bld[i];if(b&&b.t==='hall')return{ok:0,why:'Ратушу снести нельзя'};
-    if(!b&&!S.road[i])return{ok:0,why:'Здесь нечего сносить'};return{ok:S.money>=5,cost:5,why:S.money<5?'Не хватает денег':''}}
+    if(!b&&!S.road[i])return{ok:0,why:'Здесь нечего сносить'};return{ok:S.money>=ROADK.demolish,cost:ROADK.demolish,why:S.money<ROADK.demolish?'Не хватает денег':''}}
   if(S.bld[i])return{ok:0,why:'Клетка занята'};
   if(tool==='road'){if(S.road[i])return{ok:0,why:'Дорога уже есть'};if(t===MOUNT)return{ok:0,why:'Через горы дорогу не проложить'};
-    const cost=t===DEEP?120:t===SHAL?40:t===FOREST?15:5;return{ok:S.money>=cost,cost,why:S.money<cost?'Не хватает денег':''}}
+    const cost=t===DEEP?ROADK.deep:t===SHAL?ROADK.shal:t===FOREST?ROADK.forest:ROADK.land;return{ok:S.money>=cost,cost,why:S.money<cost?'Не хватает денег':''}}
   const d=B[tool];if(S.road[i])return{ok:0,why:'Здесь дорога. Снесите её сначала'};
   if(!d.on.includes(t))return{ok:0,why:whyTerr(tool,t)};
   if(d.need&&S.pop<d.need)return{ok:0,why:`Откроется при населении ${d.need}`};
@@ -195,7 +188,7 @@ function canBuild(tool,i){
   if(d.warm&&!rg.warm)return{ok:0,why:`${d.n} растёт только в тёплых областях`};
   if(d.water&&!waterNear(i))return{ok:0,why:'Нужна вода не дальше 2 клеток'};
   if(d.coast&&!nb4(i).some(j=>S.type[j]<=SHAL&&!S.road[j]))return{ok:0,why:`${d.n} должен стоять у воды`};
-  const cost=d.cost+(t===FOREST?15:0);return{ok:S.money>=cost,cost,why:S.money<cost?'Не хватает денег':''};
+  const cost=d.cost+(t===FOREST?ROADK.forestClear:0);return{ok:S.money>=cost,cost,why:S.money<cost?'Не хватает денег':''};
 }
 function place(tool,i){
   const q=canBuild(tool,i);if(!q.ok)return q;S.money-=q.cost;
@@ -210,24 +203,24 @@ function buyRegion(k){const g=S.regions[k];if(g.own||S.money<g.price)return fals
 function advisor(c){
   const r=S.rep;
   if(S.ev)return'';
-  if(S.money<0)return'Казна в минусе. Поднимите налоги, снесите лишнее или возьмите заём: долг растёт на 2% в месяц.';
+  if(S.money<0)return'Казна в минусе. Поднимите налоги, снесите лишнее или возьмите заём: долг растёт на '+PCT(ECO.interest)+'% в месяц.';
   if(c.dis>0)return`${c.dis} ${plural(c.dis,'здание','здания','зданий')} без дороги к ратуше. Они не работают.`;
-  if(r&&c.coalPl&&r.fuel<.9)return'ТЭС не хватает угля. Нужна угольная шахта или импорт через порт.';
+  if(r&&c.coalPl&&r.fuel<ADV.fuel)return'ТЭС не хватает угля. Нужна угольная шахта или импорт через порт.';
   if(c.pr<1)return'Не хватает энергии. Постройте ветряк или угольную ТЭС.';
-  if(r&&r.short.food>.1)return'Еды не хватает. Нужны поля, рыбаки или импорт через порт.';
+  if(r&&r.short.food>ADV.food)return'Еды не хватает. Нужны поля, рыбаки или импорт через порт.';
   const un=c.work?(c.work-c.emp)/c.work:0;
-  if(c.jobs>c.work*1.25&&c.jobs-c.work>15)return`Рабочих мест ${c.jobs}, рабочих ${c.work}. Сначала заняты фермы, энергия и службы, затем добыча, заводы простаивают. Нужно больше жилья.`;
-  if(un>.15)return`Безработица ${Math.round(un*100)}%. Нужны фермы, шахты и заводы.`;
-  if(c.jobs-c.emp>8&&c.home-S.pop<4)return'Есть свободные рабочие места, но негде жить. Стройте жильё.';
-  if(r&&c.serve<S.pop*.7&&S.pop>40)return'Жителям не хватает рынков. Рынок обслуживает 120 человек.';
+  if(c.jobs>c.work*ADV.jobsOver&&c.jobs-c.work>ADV.jobsGap)return`Рабочих мест ${c.jobs}, рабочих ${c.work}. Сначала заняты фермы, энергия и службы, затем добыча, заводы простаивают. Нужно больше жилья.`;
+  if(un>ADV.unemp)return`Безработица ${Math.round(un*100)}%. Нужны фермы, шахты и заводы.`;
+  if(c.jobs-c.emp>ADV.jobsFree&&c.home-S.pop<ADV.roomLow)return'Есть свободные рабочие места, но негде жить. Стройте жильё.';
+  if(r&&c.serve<S.pop*ADV.serve&&S.pop>ADV.servePop)return`Жителям не хватает рынков. Рынок обслуживает ${B.shop.serve} человек.`;
   if(c.unpow)return`${c.unpow} ${plural(c.unpow,'здание','здания','зданий')} вне зоны электричества. Ставьте подстанции или ветряки рядом.`;
   if(c.off)return`${c.off} ${plural(c.off,'служба','службы','служб')} без электричества не работает: рынки, склады и порт должны стоять в зоне энергии.`;
-  if(c.poor>2)return`${c.poor} домов заселены не полностью: им нужны электричество и рынок в ореоле.`;
-  if(S.pop>120&&c.cv.police<.6)return'Растёт преступность: поставьте полицию рядом с жильём.';
-  if(c.log<.95)return`Логистика ${Math.round(c.log*100)}%: поставьте склад рядом с предприятиями.`;
-  if(r&&r.short.inputs>.2)return'Заводам не хватает сырья. Добывайте или закупайте через порт.';
-  if(r&&r.sat.goods<.7&&c.serve>0)return'На рынках мало товаров. Нужен завод или импорт.';
-  if(r&&r.bizPen>0)return'Налог на бизнес выше 15% снижает выработку предприятий.';
-  if(r&&r.sal&&r.sal+r.theft>(r.inc+r.biz+r.dImp+r.dExp)*.35)return`Кабинет министров обходится в ${Math.round((r.sal+r.theft)/Math.max(1,r.inc+r.biz+r.dImp+r.dExp)*100)}% доходов казны. Для такого города это дорого.`;
+  if(c.poor>ADV.poor)return`${c.poor} домов заселены не полностью: им нужны электричество и рынок в ореоле.`;
+  if(S.pop>B.police.need&&c.cv.police<ADV.police)return'Растёт преступность: поставьте полицию рядом с жильём.';
+  if(c.log<ADV.log)return`Логистика ${Math.round(c.log*100)}%: поставьте склад рядом с предприятиями.`;
+  if(r&&r.short.inputs>ADV.inputs)return'Заводам не хватает сырья. Добывайте или закупайте через порт.';
+  if(r&&r.sat.goods<ADV.goods&&c.serve>0)return'На рынках мало товаров. Нужен завод или импорт.';
+  if(r&&r.bizPen>0)return`Налог на бизнес выше ${PCT(TAXK.bizFree)}% снижает выработку предприятий.`;
+  if(r&&r.sal&&r.sal+r.theft>(r.inc+r.biz+r.dImp+r.dExp)*ADV.cabinet)return`Кабинет министров обходится в ${Math.round((r.sal+r.theft)/Math.max(1,r.inc+r.biz+r.dImp+r.dExp)*100)}% доходов казны. Для такого города это дорого.`;
   return'';
 }

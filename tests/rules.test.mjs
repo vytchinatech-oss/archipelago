@@ -1,6 +1,7 @@
 // Правила игры: каждое правило — отдельный сценарий.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { load } from './harness.mjs';
 
 test('рынок вне зоны электричества не обслуживает дома', () => {
@@ -199,4 +200,78 @@ test('старое сохранение без новых полей загру�
   const r = load()(`setup();const o=JSON.parse(saveStr());delete o.evAt;delete o.evHist;delete o.evNid;o.nat.forEach(n=>{delete n.actAt;delete n.xy;delete n.my});o.ev={t:'tariff',nid:'kar',exp:99};
     S=loadStr(JSON.stringify(o));computeConn();computeCov();tick();({at:S.evAt,h:Array.isArray(S.evHist),w:dipWait(S.nat[0]),ev:S.ev&&S.ev.r,xy:typeof S.nat[0].xy})`);
   assert.equal(r.at, -99); assert.ok(r.h); assert.equal(r.w, 0); assert.ok(!r.ev); assert.equal(r.xy, 'object');
+});
+
+// ---------- Стандарты правил: Н12, Н15–Н19 ----------
+const plain = v => JSON.parse(JSON.stringify(v));
+
+test('Н12: строки бюджета складываются в итог, деньги сходятся с казной', () => {
+  const r = load()(`setup(0,'mon');grid();for(let k=0;k<4;k++)near('house',S.hall);near('farm',S.hall);S.pop=30;
+    for(const p of['fin','soc','en']){hire(p,S.cand[p][0].id);S.min[p].hon=false}S.min.soc.auto=1;S.guard=1;
+    let bad=[],saw={sal:0,theft:0,guard:0};
+    for(let m=0;m<24&&!S.over;m++){const m0=S.money,x=tick();computeCov();const L=budgetLines(x),sum=L.inc.reduce((a,l)=>a+l[1],0)-L.out.reduce((a,l)=>a+l[1],0);
+      if(Math.abs(sum-x.net)>1e-6)bad.push('строки '+sum+' итог '+x.net);if(Math.abs(S.money-m0-x.net-x.auto)>1e-6)bad.push('казна');for(const k in saw)saw[k]=Math.max(saw[k],x[k]);if(m===0&&!L.out.some(l=>l[0]==='Гвардия'))bad.push('нет гвардии')}
+    ({bad:bad.slice(0,3).join(),saw})`);
+  assert.equal(r.bad, ''); assert.ok(r.saw.sal > 0); assert.ok(r.saw.theft > 0); assert.equal(r.saw.guard, 80);
+});
+
+test('Н15: названия отношений и пороги из единой шкалы', () => {
+  const r = load()(`setup();const L=v=>relLabel(v)[0];const n=natById('sol');n.money=1e6;
+    const can=v=>{n.rel=v;n.actAt=-99;n.deal=0;const a=dip('deal','sol');const ok=n.deal===1;n.deal=0;return ok};
+    const borrow=v=>{n.rel=v;n.actAt=-99;const c=S.loans.length;dip('borrow','sol',1000);return S.loans.length>c};
+    const offer=v=>{S.month=100;n.rel=v;n.deal=0;n.xy={food:900};n.my={food:900};let got=0;for(let i=0;i<300;i++){S.ev=null;S.evHist=[];makeEvent();if(S.ev&&S.ev.t==='deal'&&S.ev.nid==='sol')got=1}return got};
+    ({l:[L(50),L(49),L(25),L(24),L(-15),L(-16),L(-50),L(-51)],deal:[can(24),can(25)],borrow:[borrow(-51),borrow(-50)],offer:[offer(24),offer(25)]})`);
+  assert.deepEqual(plain(r.l), ['Союзник', 'Дружба', 'Дружба', 'Нейтралитет', 'Нейтралитет', 'Напряжённость', 'Напряжённость', 'Вражда']);
+  assert.deepEqual(plain(r.deal), [false, true]); assert.deepEqual(plain(r.borrow), [false, true]); assert.deepEqual(plain(r.offer), [0, 1]);
+});
+
+test('Н15: граница «только друзьям» открыта от 25', () => {
+  const r = load()(`const go=v=>{setup();grid();for(let k=0;k<8;k++)near('house',S.hall);near('wind',S.hall);computeCov();S.pop=5;S.happy=95;S.mig='allies';for(const n of S.nat){n.rel=v;n.happy=40;n.cr=null}return Object.values(tick().mig).reduce((a,b)=>a+Math.max(0,b),0)};({a:go(24),b:go(25)})`);
+  assert.equal(r.a, 0); assert.ok(r.b > 0);
+});
+
+test('Н15: договор и заём дают один эффект через кнопку и через сообщение', () => {
+  const r = load()(`setup();const n=natById('sol');const reset=()=>{n.rel=30;n.deal=0;n.actAt=-99;S.lent=[]};
+    reset();dip('deal','sol');const d1=n.rel;reset();S.ev={t:'deal',nid:'sol',exp:99,r:1};evAnswer(true);const d2=n.rel;
+    reset();dip('lend','sol',2000);const l1=n.rel,p1=JSON.stringify(S.lent);reset();S.ev={t:'loan',nid:'sol',amt:2000,rate:DIPA.lendRate,exp:99,r:1};evAnswer(true);({d1,d2,l1,l2:n.rel,p1,p2:JSON.stringify(S.lent)})`);
+  assert.equal(r.d1, 35); assert.equal(r.d2, 35); assert.equal(r.l1, 36); assert.equal(r.l2, 36); assert.equal(r.p1, r.p2);
+});
+
+test('Н16: гвардия исчезает вместе с монархией и не появляется при других строях', () => {
+  const r = load()(`setup(0,'mon');S.guard=1;S.army=90;S.appr=90;S.money=1e6;const msg=reform('demo');const a=S.guard;const t=toggleGuard();
+    const o=JSON.parse(saveStr());o.guard=1;const old=loadStr(JSON.stringify(o)).guard;
+    setup(0,'mon');const on=toggleGuard();({msg,a,t,old,on,g:S.guard})`);
+  assert.equal(r.a, 0); assert.match(r.t, /монархии/); assert.equal(r.old, 0); assert.equal(r.on, 'Гвардия набрана'); assert.equal(r.g, 1);
+});
+
+test('Н17: автопилот не трогает выключатели вывоза и ввоза', () => {
+  const r = load()(`setup();grid();near('power',S.hall);near('factory',S.hall);for(let k=0;k<5;k++)near('house',S.hall);S.pop=40;S.stock.food=0;S.stock.coal=0;
+    for(const p in POSTS){hire(p,S.cand[p][0].id);S.min[p].auto=1;S.min[p].hon=true;S.min[p].loy=true}
+    for(const k of RK)S.trade[k]={e:0,i:0};for(let m=0;m<6&&!S.over;m++){tick();computeCov()}RK.filter(k=>S.trade[k].e||S.trade[k].i).join()`);
+  assert.equal(r, '');
+});
+
+test('Н17: пойманного вора снимают с поста, описания не обещают лишнего', () => {
+  const r = load()(`setup();hire('ind',S.cand.ind[0].id);S.min.ind.hon=false;S.min.ind.loy=true;const a0=S.appr;Math.random=()=>0;tick();({left:!!S.min.ind,caught:S.log.some(l=>/снят с поста/.test(l.t)),a:POSTS.mvd.a,agr:POSTS.agr.a})`);
+  assert.equal(r.left, false); assert.ok(r.caught); assert.doesNotMatch(r.a, /гасит/); assert.doesNotMatch(r.agr, /включает/);
+});
+
+test('Н18: в логике нет дробных коэффициентов', () => {
+  const r = load()(`1`);
+  const src = ['economy', 'nations', 'politics'].map(f => readFileSync(new URL(`../src/sim/${f}.js`, import.meta.url), 'utf8')).join('\n');
+  const found = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*/g, '').replace(/Math\.random\(\)-\.5/g, '').match(/(?<![\w.'"`])\d*\.\d+/g) || [];
+  assert.equal(r, 1); assert.deepEqual(found, []);
+});
+
+test('Н19: наценка лежит на области с золотом', () => {
+  const r = load()(`const bad=[];for(const mi of[0,1,2]){const W=genWorld(mi);W.regions.forEach((g,k)=>{const base=Math.round((REGK.base+g.land*REGK.perTile)/REGK.round)*REGK.round,want=g.min==='gold'?Math.round(base*REGK.goldMul/REGK.round)*REGK.round:base;if(g.price!==want)bad.push(mi+':'+k+' '+g.min+' '+g.price+'/'+want)})}bad.join()`);
+  assert.equal(r, '');
+});
+
+test('шкалы: протесты растут только при кризисе настроения, жители уезжают ниже 40', () => {
+  const r = load()(`const un=h=>{setup();grid();for(let k=0;k<6;k++)near('house',S.hall);S.stock.food=500;S.pop=20;S.money=5000;S.fac.peo.sat=50;S.appr=50;S.unrest=20;S.happy=h;const f=S.happy;Object.defineProperty(S,'happy',{get:()=>f,set(){},configurable:true,enumerable:true});tick();return S.unrest-20};
+    ({at26:un(26),at24:un(24),kinds:[SCALE.crisis,SCALE.bad,SCALE.good,SCALE.top],leave:POPK.leaveBelow,grow:POPK.growFrom,coup:ARMY.coupBelow,parl:[GOVK.parlLo,GOVK.parlLo+GOVK.parlSpan],speed:[MOODK.speed,APPR.speed,GOVK.satSpeed,ARMY.speed]})`);
+  assert.ok(r.at26 < 0, JSON.stringify(r)); assert.ok(r.at24 > r.at26, JSON.stringify(r));
+  assert.deepEqual(plain(r.kinds), [25, 40, 60, 75]); assert.equal(r.leave, 40); assert.equal(r.grow, 40); assert.equal(r.coup, 40);
+  assert.deepEqual(plain(r.parl), [25, 75]); assert.deepEqual(plain(r.speed), [.3, .3, .3, .3]);
 });

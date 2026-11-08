@@ -28,11 +28,11 @@ function bInfo(i,b,c){
   if(d.jobs&&t!=='hall'){const w=wdist(i);H.push('<h5>Работники</h5>'+kv([['Путь от жилья',w>=999?pill('нет пути','bad'):`${w} кл. по дорогам`],['Зарплаты',`${fmt(Math.round(d.jobs*s)*15)} кр/мес`]]))}
   if(x&&x.P){const P=x.P,f=[];
     f.push(fbar('Укомплектованность',P.staff,'Доля занятых рабочих мест.'));
-    if(d.pow<0)f.push(fbar('Электричество',P.power,'Вне зоны энергии выработка падает до 35%, при общей нехватке энергии — пропорционально.'));
-    f.push(fbar('Дорога до работы',P.commute,'До 6 клеток от жилья без потерь, дальше −2,5% за клетку.'));
-    if(c.prodN>4)f.push(fbar('Склад рядом',P.log,'Без склада в ореоле предприятие работает на 75%.'));
-    if(P.tax<1)f.push(fbar('Налог на бизнес',P.tax,'Налог выше 15% снижает выработку.'));
-    if(P.fac!==undefined&&P.fac!==1)f.push(fbar('Настрой фракции',P.fac,'Злая фракция саботирует свою отрасль (−10%), довольная работает с рвением (+5%).'));if(P.fert)f.push(fbar('Плодородие',P.fert));if(P.forest)f.push(fbar('Лес вокруг',P.forest,'Лесопилке нужен нетронутый лес в 2 клетках.'));
+    if(d.pow<0)f.push(fbar('Электричество',P.power,`Вне зоны энергии выработка падает до ${PCT(PROD.noPower)}%, при общей нехватке энергии — пропорционально.`));
+    f.push(fbar('Дорога до работы',P.commute,`До ${PROD.commuteFree} клеток от жилья без потерь, дальше −${PCT(PROD.commuteStep)}% за клетку.`));
+    if(c.prodN>PROD.smallCity)f.push(fbar('Склад рядом',P.log,`Без склада в ореоле предприятие работает на ${PCT(PROD.noStore)}%.`));
+    if(P.tax<1)f.push(fbar('Налог на бизнес',P.tax,`Налог выше ${PCT(TAXK.bizFree)}% снижает выработку.`));
+    if(P.fac!==undefined&&P.fac!==1)f.push(fbar('Настрой фракции',P.fac,`Злая фракция саботирует свою отрасль (−${PCT(1-FACK.loM)}%), довольная работает с рвением (+${PCT(FACK.hiM-1)}%).`));if(P.fert)f.push(fbar('Плодородие',P.fert));if(P.forest)f.push(fbar('Лес вокруг',P.forest,`Лесопилке нужен нетронутый лес в ${PROD.nearR} клетках.`));
     if(P.mount)f.push(fbar('Горы',P.mount,'В горах залежи богаче.'));if(P.warm)f.push(fbar('Тёплый климат',P.warm));
     H.push('<h5>Что влияет на выработку</h5>'+f.join(''))}
   // industry inputs
@@ -63,7 +63,7 @@ function bInfo(i,b,c){
     H.push('<h5>Обслуживание</h5>'+kv([['Домов в ореоле',`${homes} · ${fmt(res)} жителей`],['Покрытие города',pct(c.cv[cvk])],...(on?[]:[['Состояние',pill('не работает без энергии','bad')]])]))}
   // housing
   if(d.home){const hf=homeF(i),sv=['shop','park','school','clinic','police'].map(k=>`${COV[k][i]?'✓':'✗'} ${RADN[k]}`).join(', ');
-    H.push('<h5>Условия жизни</h5>'+kv([['Электричество',PW[i]?pill('есть'):pill('нет, заселение 50%','bad')],['Рынок рядом',COV.shop[i]?pill('есть'):pill('нет, заселение 60%','bad')],['Службы',sv],
+    H.push('<h5>Условия жизни</h5>'+kv([['Электричество',PW[i]?pill('есть'):pill(`нет, заселение ${PCT(HOME.noPower)}%`,'bad')],['Рынок рядом',COV.shop[i]?pill('есть'):pill(`нет, заселение ${PCT(HOME.noShop)}%`,'bad')],['Службы',sv],
       ['Налог с жителей',`~${fmt(Math.round(d.home*hf)*(d.rich?60:15*.62)*S.tax.inc)} кр/мес`]]))}
   // hall
   if(t==='hall')H.push('<h5>Город</h5>'+kv([['Жители / места',`${fmt(S.pop)} / ${fmt(c.home)}`],['Занято / мест',`${fmt(c.emp)} / ${fmt(c.jobs)}`],['Зданий',c.list.length],['Без дороги',c.dis]]));

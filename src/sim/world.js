@@ -29,11 +29,13 @@ function genWorld(mi){
   const names=shuffle(REGION_NAMES.slice(),R);
   const regions=seeds.map((q,k)=>({n:names[k],land:0,grass:0,cx:0,cy:0,own:0,price:0}));
   for(const i of land){const g=regions[reg[i]];g.land++;if(type[i]===GRASS)g.grass++;g.cx+=i%N;g.cy+=i/N|0}
-  regions.forEach(g=>{const l=Math.max(1,g.land);g.cx/=l;g.cy/=l;g.price=Math.round((200+g.land*12)/50)*50});
+  regions.forEach(g=>{const l=Math.max(1,g.land);g.cx/=l;g.cy/=l;g.price=Math.round((REGK.base+g.land*REGK.perTile)/REGK.round)*REGK.round});
   let st=0;regions.forEach((g,k)=>{if(g.grass>regions[st].grass)st=k});regions[st].own=1;
   const mins=shuffle(['coal','iron','gold','coal','iron','coal','iron'],R);
-  regions.forEach((g,k)=>{g.min=mins[k];g.warm=g.cy>N*.5?1:0;g.fert=+(.75+R()*.45).toFixed(2);if(g.min==='gold')g.price=Math.round(g.price*1.3/50)*50});
+  regions.forEach((g,k)=>{g.min=mins[k];g.warm=g.cy>N*.5?1:0;g.fert=+(REGK.fertMin+R()*REGK.fertRand).toFixed(2)});
+  /* Сначала золото уезжает со стартовой области, потом наценка: она лежит там, где золото на самом деле. */
   if(regions[st].min==='gold'){const o=regions.findIndex(g=>g.min!=='gold');[regions[st].min,regions[o].min]=[regions[o].min,regions[st].min]}
+  regions.forEach(g=>{if(g.min==='gold')g.price=Math.round(g.price*REGK.goldMul/REGK.round)*REGK.round});
   regions[st].fert=Math.max(regions[st].fert,1);
   if(!regions.some(g=>g.warm)){regions.reduce((a,g)=>g.cy>a.cy?g:a).warm=1}
   const ok=j=>j>=0&&j<N*N&&type[j]>=SAND&&type[j]<=HILL;
@@ -52,8 +54,8 @@ function newGame(mi){
   const W=genWorld(mi),z=v=>Object.fromEntries(RK.map(k=>[k,v]));
   const s={v:2,mi,type:W.type,elev:W.elev,reg:W.reg,regions:W.regions,hall:W.hall,
     bld:Array(N*N).fill(null),road:new Uint8Array(N*N),
-    money:4000,pop:18,happy:62,month:0,tax:{inc:.10,biz:.12,imp:.10,exp:.05},
-    stock:Object.assign(z(0),{food:80,wood:30,coal:20,goods:20}),dom:Object.fromEntries(RK.map(k=>[k,RES[k].base])),
+    money:START.money,pop:START.pop,happy:START.happy,month:0,tax:Object.assign({},START.tax),
+    stock:Object.assign(z(0),START.stock),dom:Object.fromEntries(RK.map(k=>[k,RES[k].base])),
     trade:Object.fromEntries(RK.map(k=>[k,{e:1,i:1}])),goal:0,log:[],rep:null,
     nat:initNations(),loans:[],lent:[],mig:'open',ev:null,evAt:-99,evHist:[],evNid:null,tut:null};
   const h=W.hall,clr=j=>{if(s.type[j]===FOREST)s.type[j]=GRASS};
@@ -64,7 +66,7 @@ function newGame(mi){
   return s;
 }
 const regOf=i=>S.regions[S.reg[i]];
-const fert=i=>regOf(i).fert*(.85+.3*h2(i,4,4));
+const fert=i=>regOf(i).fert*(REGK.tileMin+REGK.tileRand*h2(i,4,4));
 const depAt=i=>(S.type[i]===HILL||S.type[i]===MOUNT)?regOf(i).min:null;
 function saveStr(){return JSON.stringify(Object.assign({},S,{type:Array.from(S.type),elev:Array.from(S.elev),reg:Array.from(S.reg),road:Array.from(S.road),rep:null}))}
 function loadStr(str){const o=JSON.parse(str);o.type=Uint8Array.from(o.type);o.elev=Uint8Array.from(o.elev);o.reg=Int8Array.from(o.reg);o.road=Uint8Array.from(o.road);return migrateSave(o)}

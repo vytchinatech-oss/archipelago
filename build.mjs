@@ -9,7 +9,7 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 
 // Ядро и данные: константы и таблицы баланса.
 export const CORE = ['core/constants.js', 'core/util.js'];
-export const DATA = ['data/resources.js', 'data/buildings.js', 'data/maps.js', 'data/nations.js', 'data/government.js', 'data/tutorial.js'];
+export const DATA = ['data/rules.js', 'data/resources.js', 'data/buildings.js', 'data/maps.js', 'data/nations.js', 'data/government.js', 'data/tutorial.js'];
 // Симуляция: чистая логика без DOM. Её грузят тесты.
 export const SIM = ['sim/world.js', 'sim/nations.js', 'sim/economy.js', 'sim/politics.js', 'sim/tutorial.js'];
 // Отрисовка и интерфейс: работают только в браузере.

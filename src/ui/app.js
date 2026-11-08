@@ -43,8 +43,8 @@ const CTIP={base:'Осмотр клеток, дороги, мосты и сно�
   mine:'Лес и полезные ископаемые. Шахты ставятся только на свои залежи в холмах.',ind:'Переработка сырья в дорогие товары для жителей и экспорта.',pow:'Электричество для зданий в ореоле.',
   svc:'Городские службы с ореолами: рынки, парки, школы, больницы, полиция.',com:'Склады и порт: хранение, логистика и внешняя торговля.',mil:'Казармы: солдаты, фракция военных и опора трона.'};
 function toolTip(t){if(t==='inspect')return'Коснитесь клетки или здания: покажет, что там, как работает и что мешает.';
-  if(t==='road')return'Дорога 5 кр, в лесу 15, мост по мелководью 40, по глубине 120. Два касания: начало и конец. Здания работают, только если дорога ведёт к ратуше.';
-  if(t==='bull')return'Снести здание или дорогу за 5 кр. Деньги за постройку не возвращаются.';
+  if(t==='road')return`Дорога ${ROADK.land} кр, в лесу ${ROADK.forest}, мост по мелководью ${ROADK.shal}, по глубине ${ROADK.deep}. Два касания: начало и конец. Здания работают, только если дорога ведёт к ратуше.`;
+  if(t==='bull')return`Снести здание или дорогу за ${ROADK.demolish} кр. Деньги за постройку не возвращаются.`;
   const d=B[t],p=[d.d,`Стоит ${fmt(d.cost)} кр, содержание ${d.up} кр/мес.`];
   if(d.jobs)p.push(`Рабочих мест: ${d.jobs}.`);if(d.pow<0)p.push(`Потребляет ${-d.pow} энергии.`);if(RAD[t])p.push(`Ореол ${RAD[t]} клеток.`);if(d.need)p.push(`Открывается при населении ${d.need}.`);
   return p.join(' ')}
@@ -63,7 +63,7 @@ function setTool(t){
   if(B[t]&&B[t].need&&S.pop<B[t].need){toast(`${B[t].n} откроется при населении ${B[t].need}`);return}
   TOOL=t;ROADA=-1;document.querySelectorAll('.tool').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t));
   if(t==='inspect'||t==='bull'){if(t==='bull')infoText('Снос','Коснитесь здания или дороги, чтобы снести.');return}
-  if(t==='road'){infoText('Дорога','Коснитесь начала и конца дороги. Мост по мелководью 40 кр. По дорогам рабочие едут к предприятиям: чем дальше, тем ниже выработка.');return}
+  if(t==='road'){infoText('Дорога',`Коснитесь начала и конца дороги. Мост по мелководью ${ROADK.shal} кр. По дорогам рабочие едут к предприятиям: чем дальше, тем ниже выработка.`);return}
   const d=B[t],ly=layerOf(t);if(ly)setLayer(ly);
   infoText(d.n,d.d+(RAD[t]?` Ореол: ${RAD[t]} клеток.`:'')+(d.jobs&&!RAD[t]?' Рабочие приезжают по дорогам: до 6 клеток от жилья без потерь.':''));
 }
@@ -101,10 +101,10 @@ function info(i){
 function evTip(e,y){const t=e.t,X=EVN[t],R=v=>`Отношения ${v>0?'+':'−'}${Math.abs(v)}.`;
   if(X){const rel=R(X.rel[y?0:1]),no=X.rel[1]?rel:'Ничего не изменится.';if(!y)return t==='mediate'?'Никто не обидится всерьёз. '+rel:'Всё останется как есть. '+no;
     return({order:`Получите ${fmt(e.amt*e.price)} кр, партия уйдёт со склада. `,bargain:`Заплатите ${fmt(e.amt*e.price)} кр, партия придёт на склад. `,relief:`${e.amt} ед. уйдут со склада. `,summit:`Расход ${fmt(X.cost)} кр. `,dumping:`Расход ${fmt(e.cost)} кр. `,envoy:`Расход ${fmt(X.cost)} кр. `,border:`Довольство военных −${X.mil}. `,debt:`Вернут на ${fmt(e.amt)} кр меньше. `,mediate:`Отношения со второй страной ${X.other}. `})[t]+rel}
-  if(t==='loan')return y?`Отдадите ${fmt(e.amt)} кр, вернут ${fmt(e.amt*(1+e.rate))} кр за 12 месяцев. Отношения +10.`:'Деньги останутся у вас. Отношения −5.';
-  if(t==='deal')return y?'Пошлины между вами обнуляются, их товары дешевле на 8%, отношения растут каждый месяц.':'Ничего не изменится, предложение может повториться.';
-  if(t==='tariff')return y?'Ваша импортная пошлина станет 5%: меньше доход казны, зато мир и отношения +6.':'Год их пошлина на ваши товары будет 35%, отношения −10.';
-  return y?`Население +${e.amt}, отношения +6. Беженцам нужно жильё, иначе они начнут уезжать.`:'Отношения −4.'}
+  if(t==='loan')return y?`Отдадите ${fmt(e.amt)} кр, вернут ${fmt(e.amt*(1+e.rate))} кр за ${DIPA.lendMonths} месяцев. Отношения +${DIPA.lendRel}.`:`Деньги останутся у вас. Отношения −${-EVX.loan.no}.`;
+  if(t==='deal')return y?`Пошлины между вами обнуляются, их товары дешевле на ${PCT(1-NATK.sellDeal)}%, отношения +${DIPA.dealRel} сразу и растут каждый месяц.`:'Ничего не изменится, предложение может повториться.';
+  if(t==='tariff')return y?`Ваша импортная пошлина станет ${PCT(EVX.tariff.to)}%: меньше доход казны, зато мир и отношения +${EVX.tariff.yes}.`:`Год их пошлина на ваши товары будет ${PCT(EVX.tariff.hike)}%, отношения −${-EVX.tariff.no}.`;
+  return y?`Население +${e.amt}, отношения +${EVX.ref.yes}. Беженцам нужно жильё, иначе они начнут уезжать.`:`Отношения −${-EVX.ref.no}.`}
 function showEvent(){const el=$('#event');if(!S.ev){el.hidden=true;return}
   const[h,p,y,n]=evText(S.ev),d=ND(natById(S.ev.nid));
   el.hidden=false;el.innerHTML=`<div class="card-h"><span class="flag" style="background:${d.col}"></span><h4>${h}</h4></div><p>${p} Срок ответа: ${MONTHS[S.ev.exp%12].toLowerCase()}.</p><div class="btns"><button class="btn" type="button" id="ev-y" data-tip="${evTip(S.ev,1)}">${y}</button><button class="btn ghost" type="button" id="ev-n" data-tip="${evTip(S.ev,0)}">${n}</button></div>`;
