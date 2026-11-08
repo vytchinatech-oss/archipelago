@@ -1,0 +1,75 @@
+<title>Архипелаг</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Unbounded:wght@600;800&display=swap">
+<style>
+/*STYLES*/
+</style>
+
+<section id="menu">
+  <div class="menu-wrap">
+    <div class="brand">
+      <span class="eyebrow">Пилот · градостроительный симулятор</span>
+      <h1>Архипелаг</h1>
+      <p class="lede">Основайте город на островах. Прокладывайте дороги от ратуши, давайте людям жильё и работу, стройте порт и торгуйте с миром. Казна живёт на налоги и таможенные пошлины.</p>
+    </div>
+    <h2 class="step-h">Выберите карту</h2>
+    <div class="maps" id="maps"></div>
+    <div class="opts">
+      <div class="opt"><h2 class="step-h">Форма правления</h2><div class="seg" id="o-gov" role="radiogroup" aria-label="Форма правления"></div><p class="opt-d" id="o-gov-d"></p></div>
+      <div class="opt"><h2 class="step-h">Сложность</h2><div class="seg" id="o-diff" role="radiogroup" aria-label="Сложность"></div><p class="opt-d" id="o-diff-d"></p></div>
+    </div>
+    <div class="cta-row">
+      <button class="btn" id="b-start" type="button">Основать город</button>
+      <button class="btn ghost" id="b-cont" type="button" hidden>Продолжить</button>
+    </div>
+    <div class="howto">
+      <div><b>Области</b>Карта разделена на области. Стройте только в купленных, остальные открываются за деньги.</div>
+      <div><b>Дороги</b>Здание работает, только если дорога соединяет его с ратушей. По мелководью можно строить мосты.</div>
+      <div><b>Экономика</b>Фермы, лесопилки и шахты дают сырьё, завод делает товары, рынки снабжают жителей.</div>
+      <div><b>Торговля</b>Порт продаёт излишки и закупает нехватку. Пошлины пополняют казну, но импорт дорожает.</div>
+      <div><b>Управление</b>Карту двигают стрелки, WASD или перетаскивание мышью и пальцем. Масштаб: колесо, щипок, клавиши + и −. Подсказки: наведите курсор или удерживайте палец.</div>
+    </div>
+  </div>
+</section>
+
+<section id="game" hidden>
+  <canvas id="view" aria-label="Карта острова"></canvas>
+  <header class="hud">
+    <div class="bar">
+      <div class="money" data-tip="Казна и итог прошлого месяца: доходы минус расходы. В минусе нельзя строить, долг растёт на 2% в месяц." tabindex="0"><span class="v" id="money">0 кр</span><span class="d" id="delta">—</span></div>
+      <span class="date" id="date">Январь, год 1</span>
+      <div class="ctrl">
+        <button class="ibtn" type="button" data-spd="0" aria-label="Пауза" data-tip="Пауза. Время стоит, но строить можно. Клавиша пробел.">II</button>
+        <button class="ibtn" type="button" data-spd="1" aria-pressed="true" aria-label="Обычная скорость" data-tip="Обычная скорость: месяц за 4 секунды.">1×</button>
+        <button class="ibtn" type="button" data-spd="3" aria-label="Быстро" data-tip="Втрое быстрее: месяц примерно за секунду.">3×</button>
+        <button class="ibtn txt" type="button" id="b-econ" data-tip="Налоги и пошлины, бюджет, склад, внутренние и экспортные цены, настроение и журнал.">Экономика</button>
+        <button class="ibtn txt" type="button" id="b-gov" data-tip="Власть: строй, выборы и опросы, протесты, парламент и сословия, министры и реформа.">Власть</button>
+        <button class="ibtn txt" type="button" id="b-world" data-tip="Соседние страны: отношения, торговля, договоры, займы, эмбарго и миграция.">Мир</button>
+        <button class="ibtn txt" type="button" id="b-layer" data-tip="Показать на карте зоны обслуживания: энергию, рынки, парки, школы и путь рабочих до предприятий." aria-haspopup="listbox" aria-expanded="false">Слой: нет ▾</button>
+        <button class="ibtn txt" type="button" id="b-menu" data-tip="Выйти к выбору карты. Город сохранится, его можно продолжить.">Карты</button>
+      </div>
+      <div class="stats" id="stats"></div>
+    </div>
+    <div class="lmenu" id="lmenu" role="listbox" aria-label="Слой карты" hidden></div>
+    <div class="chips">
+      <div class="chip" id="goal" tabindex="0" data-tip="Текущая цель. За выполнение казна получает награду, после неё откроется следующая."></div>
+      <div class="chip" id="polit" tabindex="0" hidden></div>
+      <div class="chip warn" id="advice" hidden></div>
+    </div>
+  </header>
+  <div class="dock">
+    <div class="card ev" id="event" hidden></div>
+    <div class="card" id="info" hidden></div>
+    <div class="cats" id="cats" role="tablist" aria-label="Категории"></div>
+    <nav class="tools" id="tools" aria-label="Строительство"></nav>
+  </div>
+  <div class="sheet" id="sheet" hidden></div>
+  <div class="toast" id="toast" role="status"></div>
+  <div class="over" id="over" hidden></div>
+  <div class="tip" id="tip" role="tooltip" hidden></div>
+</section>
+<script>
+/*SCRIPTS*/
+</script>
