@@ -37,7 +37,8 @@ function worldHTML(){
     const my=S.loans.filter(l=>l.nid===n.id).reduce((a,l)=>a+l.left,0),their=S.lent.filter(l=>l.nid===n.id).reduce((a,l)=>a+l.left,0);
     return`<div class="nat"><div class="nat-h"><span class="flag" style="background:${d.col}"></span><h4>${d.full}</h4>${pill(n.emb?'Эмбарго':lab,n.emb?'bad':cls)}</div>
     <div class="relbar" aria-label="Отношения ${Math.round(n.rel)}"><i style="left:${(n.rel+100)/2}%"></i></div>
-    <p>${d.trait}${n.cr?` <b style="color:var(--bad)">Сейчас: ${CRISES[n.cr.t].n}, ещё ${n.cr.m} мес.</b>`:''}</p>
+    <p>${d.trait}${n.cr?` <b style="color:var(--bad)">Сейчас: ${CRISES[n.cr.t].n}, ещё ${n.cr.m} мес.</b>`:''}</p>${(()=>{const q=natFans(n.id),nm=f=>(S.gov==='mon'?FAC[f].m:FAC[f].n).toLowerCase();
+      return q.fan.length||q.foe.length?`<p data-tip="Фракции следят за отношениями: ссора с любимой страной их злит, дружба с нелюбимой — тоже.">${q.fan.length?'За дружбу: '+q.fan.map(nm).join(', ')+'. ':''}${q.foe.length?'Против: '+q.foe.map(nm).join(', ')+'.':''}</p>`:''})()}
     <div class="mini"><div><span>Отношения</span><span>${Math.round(n.rel)}</span></div><div><span>Население</span><span>${fmt(n.pop)}</span></div>
       <div><span>Настроение</span><span>${Math.round(n.happy)}%</span></div><div><span>Казна</span><span>${fmt(n.money)}</span></div>
       <div><span>Пошлина на вас</span><span>${Math.round(tar*100)}%</span></div><div><span>Торговля в мес.</span><span>${fmt(r&&r.dest[n.id]||0)}</span></div>

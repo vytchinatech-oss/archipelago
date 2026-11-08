@@ -29,7 +29,7 @@ function computeCov(){
 function wdist(i){let m=999;for(const j of nb4(i))if(WDIST[j]<m)m=WDIST[j];return Math.min(999,m+1)}
 const live=i=>{const d=B[S.bld[i].t];return !(d.pow<0)||PW[i]};
 const dfac=d=>Math.max(.3,Math.min(1,1-(d-6)*.025));
-const PRI=t=>{const d=B[t];if(t==='hall')return 0;if(d.out&&d.out.food)return 1;if(d.cat==='pow')return 2;if(d.cat==='svc'||d.cat==='com')return 3;if(d.cat==='ind')return 5;return 4};
+const PRI=t=>{const d=B[t];if(t==='hall')return 0;if(d.out&&d.out.food)return 1;if(d.cat==='pow')return 2;if(d.cat==='svc'||d.cat==='com'||d.cat==='mil')return 3;if(d.cat==='ind')return 5;return 4};
 const homeF=i=>(PW[i]?1:.5)*(COV.shop[i]?1:.6);
 function census(){
   const c={coalSup:0,off:0,home:0,homeFull:0,poor:0,unpow:0,cv:{shop:0,park:0,school:0,clinic:0,police:0},jobs:0,sup:0,use:0,serve:0,parks:0,ports:0,stores:0,prodN:0,rich:0,huts:0,coalPl:0,cnt:{},dis:0,list:[]};
@@ -46,23 +46,24 @@ function census(){
   for(const i of c.list){const t=S.bld[i].t,d=B[t],s=d.jobs?c.st[i]:1,on=d.pow<0?PW[i]:1;
     if(d.pow>0){const p=t==='hall'?d.pow:d.pow*s*(1+.04*M('en'));c.sup+=p;if(d.fuel)c.coalSup+=p}
     if(on){if(d.serve)c.serve+=d.serve*s;if(d.cap)c.ports+=d.cap*s;if(d.stor&&s>=.5)c.stores++}else if(d.serve||d.cap||d.stor)c.off++}
-  if(c.ports)c.ports=Math.round(c.ports+c.stores*25);
+  const fT=facM('trd');c.serve*=fT;if(c.ports)c.ports=Math.round((c.ports+c.stores*25)*fT);
   c.pr=c.use>0?Math.min(1,c.sup/c.use):1;
   c.log=1;c.cap=300+300*c.stores;
   return c;
 }
+const addNK=(o,id,k,v)=>{const x=o[id]||(o[id]={});x[k]=(x[k]||0)+v};
 function upkeep(){let u=0;for(let i=0;i<N*N;i++){const b=S.bld[i];if(b)u+=B[b.t].up;if(S.road[i])u+=S.road[i]===2?1:.25}return u}
 
 function tick(){
   const c=census(),T=S.tax,st=S.stock,z=()=>Object.fromEntries(RK.map(k=>[k,0]));
   const r={bs:{},impH:0,impB:0,inc:0,biz:0,dImp:0,dExp:0,up:0,int:0,loanIn:0,loanOut:0,prod:z(),cons:z(),exp:z(),imp:z(),need:z(),expV:0,impV:0,
-    best:{},dest:{},sat:{},short:{food:0,inputs:0},run:{},ev:[],mig:{}};
+    best:{},dest:{},xn:{},mn:{},sat:{},short:{food:0,inputs:0},run:{},ev:[],mig:{}};
   if(!S.nat[0].dl.food)refreshMarkets();
   c.ports=Math.round(c.ports*(1+.05*M('trd')));let cap=c.ports;const port=cap>0;
   const buy=(k,q,who)=>{q=Math.ceil(q);if(!port||!S.trade[k].i||q<=0)return;
     const ns=S.nat.filter(n=>canTrade(n)&&n.sl[k]>0).sort((a,b)=>natSell(a,k)-natSell(b,k));
     for(const n of ns){if(q<=0||cap<=0)break;const x=Math.min(q,cap,n.sl[k]);const p=natSell(n,k),v=x*p;
-      const du=n.deal?0:T.imp;n.sl[k]-=x;cap-=x;q-=x;st[k]+=x;r.imp[k]+=x;r.impV+=v;r.dImp+=v*du;n.money+=v;if(who==='h')r.impH+=v*(1+du);else r.impB+=v;r.dest[n.id]=(r.dest[n.id]||0)+v}};
+      const du=n.deal?0:T.imp;n.sl[k]-=x;cap-=x;q-=x;st[k]+=x;r.imp[k]+=x;r.impV+=v;r.dImp+=v*du;n.money+=v;if(who==='h')r.impH+=v*(1+du);else r.impB+=v;r.dest[n.id]=(r.dest[n.id]||0)+v;addNK(r.mn,n.id,k,v)}};
   // fuel
   const fuelNeed=c.coalPl*4*(1-.05*M('en'));if(st.coal<fuelNeed)buy('coal',fuelNeed-st.coal);
   const fr=c.coalPl?Math.min(1,st.coal/fuelNeed):1;st.coal-=fuelNeed*fr;r.cons.coal+=fuelNeed*fr;r.need.coal+=fuelNeed;r.fuel=fr;
@@ -72,8 +73,8 @@ function tick(){
   const agg={};
   const small=c.prodN<=4;let lgSum=0;
   for(const i of c.list){const b=S.bld[i],d=B[b.t];if(!d.out)continue;const lg=small||COV.store[i]?1:.75;lgSum+=lg;
-    const P={staff:c.st[i]||0,power:d.pow<0?(PW[i]?c.pr:.35):1,commute:dfac(wdist(i)),log:lg,tax:eff};
-    const e=P.staff*P.power*P.commute*P.log*P.tax;
+    const P={staff:c.st[i]||0,power:d.pow<0?(PW[i]?c.pr:.35):1,commute:dfac(wdist(i)),log:lg,tax:eff,fac:facM(sphereOf(b.t))};
+    const e=P.staff*P.power*P.commute*P.log*P.tax*P.fac;
     if(d.in){P.minister=1+.03*M('ind');agg[b.t]=(agg[b.t]||0)+e*P.minister;r.bs[i]={P,e:e*P.minister};continue}
     if(d.fert)P.fert=fert(i);if(b.t==='saw')P.forest=.35+.65*forestNear(i);if(d.dep&&S.type[i]===MOUNT)P.mount=1.3;if(b.t==='cotton'&&regOf(i).warm)P.warm=1.3;
     if(d.out.food||d.out.coffee||d.out.cotton)P.minister=1+.03*M('agr');else P.minister=1+.03*M('ind');
@@ -106,7 +107,7 @@ function tick(){
     let sur=st[k]-reserve(k);
     for(const n of ns){if(sur<1||cap<1)break;const p=natBuy(n,k)*(1+.015*M('trd')),q=Math.floor(Math.min(sur,cap,n.dl[k],Math.max(0,n.money+20000)/p)*xf);if(q<1)continue;
       const v=q*p*(1-natTariff(n));n.dl[k]-=q;cap-=q;sur-=q;st[k]-=q;r.exp[k]+=q;r.expV+=v;r.dExp+=v*T.exp;
-      n.money-=q*p;n.rel=Math.min(100,n.rel+q*.005);r.dest[n.id]=(r.dest[n.id]||0)+v}}
+      n.money-=q*p;n.rel=Math.min(100,n.rel+q*.005);r.dest[n.id]=(r.dest[n.id]||0)+v;addNK(r.xn,n.id,k,v)}}
   for(const k of RK){st[k]=Math.max(0,st[k]);if(st[k]>c.cap){st[k]=c.cap;if(!(S.month%6))r.ev.push(`Склады переполнены: ${RES[k].n.toLowerCase()} портится. Стройте склады или продавайте через порт.`)}}
   r.portUse=c.ports?1-cap/c.ports:0;
   // domestic prices
@@ -123,7 +124,7 @@ function tick(){
   const unemp=c.work>0?(c.work-c.emp)/c.work:0;
   const sh=S.pop>0?served/S.pop:0;
   const F=[['Базовое настроение',50],['Товары на рынках',10*sh*r.sat.goods],['Одежда',6*sh*r.sat.cloth],['Кофе',4*r.sat.coffee*(served>0?1:0)],
-    ['Парки рядом',12*c.cv.park],['Школы',7*c.cv.school],['Больницы',8*c.cv.clinic],['Социальная политика',1.2*M('soc')],['Преступность',S.pop>120?-10*(1-c.cv.police)*(1-.15*M('mvd')):0],['Безработица',-unemp*45],['Подоходный налог',-(T.inc-.1)*150],['Нехватка еды',-r.short.food*40],
+    ['Парки рядом',12*c.cv.park],['Школы',7*c.cv.school*facM('int')],['Больницы',8*c.cv.clinic*facM('int')],['Социальная политика',1.2*M('soc')],['Преступность',S.pop>120?-10*(1-c.cv.police)*(1-.15*M('mvd')):0],['Безработица',-unemp*45],['Подоходный налог',-(T.inc-.1)*150],['Нехватка еды',-r.short.food*40],
     ['Цены на еду',r.short.food>.05?0:-Math.max(0,S.dom.food/RES.food.base-1)*10],['Траты на импорт',-Math.min(15,40*r.impH/Math.max(50,r.wages))],['Перебои с энергией',-(1-c.pr)*25],
     ['Теснота в бараках',c.home?-12*c.huts/c.home:0]];
   const tgt=Math.max(0,Math.min(100,F.reduce((a,f)=>a+f[1],0)));S.happy+=(tgt-S.happy)*.35;r.F=F;r.tgt=tgt;r.unemp=unemp;

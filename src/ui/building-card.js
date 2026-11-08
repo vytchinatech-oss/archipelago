@@ -32,7 +32,7 @@ function bInfo(i,b,c){
     f.push(fbar('Дорога до работы',P.commute,'До 6 клеток от жилья без потерь, дальше −2,5% за клетку.'));
     if(c.prodN>4)f.push(fbar('Склад рядом',P.log,'Без склада в ореоле предприятие работает на 75%.'));
     if(P.tax<1)f.push(fbar('Налог на бизнес',P.tax,'Налог выше 15% снижает выработку.'));
-    if(P.fert)f.push(fbar('Плодородие',P.fert));if(P.forest)f.push(fbar('Лес вокруг',P.forest,'Лесопилке нужен нетронутый лес в 2 клетках.'));
+    if(P.fac!==undefined&&P.fac!==1)f.push(fbar('Настрой фракции',P.fac,'Злая фракция саботирует свою отрасль (−10%), довольная работает с рвением (+5%).'));if(P.fert)f.push(fbar('Плодородие',P.fert));if(P.forest)f.push(fbar('Лес вокруг',P.forest,'Лесопилке нужен нетронутый лес в 2 клетках.'));
     if(P.mount)f.push(fbar('Горы',P.mount,'В горах залежи богаче.'));if(P.warm)f.push(fbar('Тёплый климат',P.warm));
     H.push('<h5>Что влияет на выработку</h5>'+f.join(''))}
   // industry inputs

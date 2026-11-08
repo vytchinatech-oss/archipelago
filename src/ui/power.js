@@ -26,7 +26,7 @@ function refreshGov(c){
   const ap=$('#s-appr');ap.textContent=Math.round(S.appr)+'%';ap.style.color=S.appr>=DIFF[S.diff].th+5?'var(--good)':S.appr>=DIFF[S.diff].th?'var(--paper)':'var(--bad)';
   const pc=$('#polit');pc.hidden=false;const left=S.nextEl-S.month;
   if(S.unrest>=40){pc.className='chip warn';pc.textContent=`Протесты ${Math.round(S.unrest)}%: на 100% вас свергнут`;pc.dataset.tip='Протесты растут, когда настроение ниже 30%, не хватает еды или казна пуста. Министр внутренних дел замедляет рост.'}
-  else if(S.gov==='mon'){pc.className='chip'+(S.coup>.02?' warn':'');pc.textContent=`Армия ${Math.round(S.army)} · угроза переворота ${(S.coup*100).toFixed(1)}% в мес.`;pc.dataset.tip='Лояльность армии растёт от полной казны, гвардии и подарков знати. Ниже 45 появляется риск переворота.'}
+  else if(S.gov==='mon'){pc.className='chip'+(S.coup>.02?' warn':'');pc.textContent=`Армия ${Math.round(S.army)} · угроза переворота ${(S.coup*100).toFixed(1)}% в мес.`;pc.dataset.tip='Лояльность армии тянется к довольству военных (казармы, казна, гвардия). Ниже 45 — риск переворота; злые торговцы, промышленники и аграрии его повышают.'}
   else{const v=S.gov==='demo'?S.appr:S.parl,th=DIFF[S.diff].th;pc.className='chip'+(left<=24&&v<th?' warn':'');
     pc.innerHTML=left<=24?`Выборы через ${yrs(left)} · опрос <b>${Math.round(v)}%</b>, нужно ${th}%`:`Выборы через ${yrs(left)}`;pc.dataset.tip=S.gov==='demo'?'Голосует народ: результат равен рейтингу одобрения.':'Голосует парламент: фракции поддерживают вас, если довольны своей сферой.'}
   if(S.over&&$('#over').hidden)showOver();
@@ -58,14 +58,14 @@ function statHTML(k){const r=S.rep,c=r?r.cen:census(),h=S.hist[S.hist.length-1]|
       ['Дома заселены не полностью',c.poor?pill(c.poor,'bad'):pill('нет')],['Естественный рост за месяц',r?(r.dp>=0?'+':'')+r.dp.toFixed(1):'—'],['Миграция',mig.map(([id,m])=>`${nm(id)} ${m>0?'+':''}${m}`).join(', ')||'нет'],['Граница',{open:'открыта',allies:'только союзникам',closed:'закрыта'}[S.mig]]])+
       '<p class="log" style="font-size:12.5px">Люди приезжают, когда есть свободное жильё и настроение от 40%. Дом без электричества заселён на 50%, без рынка на 60%.</p>'}
   if(k==='job'){t='Работа';const G=[['Ратуша',0],['Еда',1],['Энергия',2],['Службы и логистика',3],['Добыча',4],['Заводы',5]],agg=G.map(()=>[0,0]);
-    for(const i of c.list){const d=B[S.bld[i].t];if(!d.jobs)continue;const p=PRI(S.bld[i].t);agg[p][0]+=d.jobs;agg[p][1]+=d.jobs*(c.st[i]||0)}
+    for(const i of c.list){if(!S.bld[i])continue;const d=B[S.bld[i].t];if(!d.jobs)continue;const p=PRI(S.bld[i].t);agg[p][0]+=d.jobs;agg[p][1]+=d.jobs*(c.st[i]||0)}
     b=chart([{v:H_('unemp').map(v=>v*100),col:'#ff7d68',n:'Безработица, %',area:1}],{label:'Безработица',f:v=>v.toFixed(0)+'%',min:0})+
       kv([['Занято / мест',`${fmt(c.emp)} / ${fmt(c.jobs)}`],['Безработица',pct(r?r.unemp:0)]])+'<h3 style="margin:6px 0 0;font:600 12px var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Укомплектованность по очереди найма</h3>'+
       G.map(([n],p)=>agg[p][0]?fbar(`${p}. ${n} · ${fmt(agg[p][1])}/${fmt(agg[p][0])}`,agg[p][1]/agg[p][0]):'').join('')+'<p class="log" style="font-size:12.5px">Рабочие идут сначала в верхние группы, внутри группы — ближе к дому.</p>'}
   if(k==='mood'){t='Настроение';const maxF=r?Math.max(20,...r.F.map(f=>Math.abs(f[1]))):1;
     b=chart([{v:H_('happy'),col:'#f4b63f',n:'Настроение',area:1}],{label:'Настроение',f:v=>v.toFixed(0)+'%',min:0,max:100,th:30})+
       `<div class="mood">${r?r.F.filter(f=>Math.abs(f[1])>=.5).map(f=>{const w=Math.min(50,Math.abs(f[1])/maxF*50);return`<div class="mrow"><span>${f[0]}</span><span class="mbar"><i style="left:${f[1]>=0?50:50-w}%;width:${w}%;background:${f[1]>=0?'var(--good)':'var(--bad)'}"></i></span><span class="${f[1]>=0?'up':'dn'}">${f[1]>=0?'+':'−'}${Math.abs(f[1]).toFixed(0)}</span></div>`}).join(''):''}</div><p class="log" style="font-size:12.5px">Пунктир — 30%: ниже растут протесты.</p>`}
-  if(k==='pow'){t='Энергия';const src={};let dark=0;for(const i of c.list){const bb=S.bld[i],d=B[bb.t];if(d.pow>0)src[bb.t]=(src[bb.t]||0)+1;if(d.pow<0&&!PW[i])dark++}
+  if(k==='pow'){t='Энергия';const src={};let dark=0;for(const i of c.list){const bb=S.bld[i];if(!bb)continue;const d=B[bb.t];if(d.pow>0)src[bb.t]=(src[bb.t]||0)+1;if(d.pow<0&&!PW[i])dark++}
     b=kv([['Потребление / выработка',`${fmt(c.use)} / ${fmt(c.sup)}`],['Покрытие спроса',pct(c.pr)],...Object.entries(src).map(([t,n])=>[B[t].n,`${n} шт.`]),['Уголь для ТЭС',r&&c.coalPl?pct(r.fuel):'не нужен'],['Зданий без электричества',dark?pill(dark,'bad'):pill('нет')]])+
       '<p class="log" style="font-size:12.5px">Энергия доходит только до зданий в ореолах ратуши, ветряков, ТЭС и подстанций. Подстанция передаёт ток дальше, если сама стоит в зоне.</p>'}
   if(k==='gdp'){t='ВВП';const rows=r?RK.filter(k=>r.prod[k]>.05).map(k=>[`${rd(k)}${RES[k].n}`,`${fmt(r.prod[k]*S.dom[k])} кр`]):[];
@@ -83,12 +83,16 @@ function statHTML(k){const r=S.rep,c=r?r.cen:census(),h=S.hist[S.hist.length-1]|
   return`<div class="sheet-in">${sheetTop(t)}<div class="sec">${b}</div></div>`}
 function govHTML(){const D=DIFF[S.diff],left=S.nextEl-S.month,mon=S.gov==='mon';
   const meter=(v,col)=>`<div class="meter"><i style="width:${Math.max(0,Math.min(100,v))}%;background:${col}"></i></div>`;
-  const facW={agr:'Высокие цены на еду, низкий налог на бизнес, мало импорта еды.',ind:'Загруженные заводы, энергия, склады, налог на бизнес до 12%.',trd:'Экспорт, низкие пошлины, торговые договоры.',peo:'Хорошее настроение и работа для всех.'};
+  const facW=f=>FAC[f].w;
+  const natLine=f=>{const a=S.fatt&&S.fatt[f]||{},lk=[],dl=[];for(const n of S.nat){const v=a[n.id]||0;if(v>=.25)lk.push(ND(n).n);else if(v<=-.25)dl.push(ND(n).n)}
+    return(lk.length?`Любят: ${lk.join(', ')}. `:'')+(dl.length?`Не любят: ${dl.join(', ')}. `:'')};
+  const sabTxt=f=>{const v=S.fac[f].sat;return v<FACK.lo?`<b style="color:var(--bad)">Саботаж: ${FAC[f].sab.toLowerCase()} −10%.</b> `:v>FACK.hi?`<b style="color:var(--good)">Рвение: ${FAC[f].sab.toLowerCase()} +5%.</b> `:''};
+  const sabTip=f=>f==='peo'?'Ниже 25% народ подогревает протесты.':f==='mil'?'При монархии лояльность армии тянется к довольству военных.':`Ниже 25% — ${FAC[f].sab.toLowerCase()} работают на 10% хуже, выше 75% — на 5% лучше.`;
   let st=mon?kv([['Лояльность армии',`${Math.round(S.army)}`],['Угроза переворота',`${(S.coup*100).toFixed(1)}% в месяц`]])+meter(S.army,S.army>=50?'var(--good)':'var(--bad)')+
       `<div class="acts"><button class="ibtn txt" type="button" id="g-bribe" data-tip="2 000 кр знати: довольство всех сословий +12 (постепенно спадает), армия +3.">Подарки знати · 2 000</button><button class="ibtn txt" type="button" id="g-guard" aria-pressed="${!!S.guard}" data-tip="80 кр в месяц: лояльность армии постепенно растёт на 12.">${S.guard?'Распустить гвардию':'Содержать гвардию · 80/мес'}</button></div>`
     :kv([['Следующие выборы',`через ${yrs(left)}`],['Кто голосует',S.gov==='demo'?'народ, по рейтингу':'парламент, по фракциям'],[left<=24?'Опрос':'Сейчас бы получили',`${Math.round(S.gov==='demo'?S.appr:S.parl)}% при пороге ${D.th}%`]]);
   const seats=`<div class="seats" aria-label="Места в парламенте">${Object.keys(FAC).map(f=>`<i style="width:${S.seats[f]}%;background:${FAC[f].c}" data-tip="${FAC[f].n}: ${S.seats[f]} мест"></i>`).join('')}</div>`;
-  const facs=`<div class="facs">${Object.keys(FAC).map(f=>`<div class="fac" data-tip="Хотят: ${facW[f]}"><b><i style="background:${FAC[f].c}"></i>${mon?FAC[f].m:FAC[f].n} · ${S.seats[f]}</b>${meter(S.fac[f].sat,S.fac[f].sat>=50?'var(--good)':S.fac[f].sat>=30?'var(--sun)':'var(--bad)')}<span class="log" style="font-size:12px">Довольство ${Math.round(S.fac[f].sat)}%. ${facW[f]}</span></div>`).join('')}</div>`;
+  const facs=`<div class="facs">${Object.keys(FAC).map(f=>`<div class="fac" data-tip="Хотят: ${facW(f)} ${sabTip(f)}"><b><i style="background:${FAC[f].c}"></i>${mon?FAC[f].m:FAC[f].n} · ${S.seats[f]}</b>${meter(S.fac[f].sat,S.fac[f].sat>=50?'var(--good)':S.fac[f].sat>=30?'var(--sun)':'var(--bad)')}<span class="log" style="font-size:12px">Довольство ${Math.round(S.fac[f].sat)}%. ${sabTxt(f)}${natLine(f)}${f==='mil'&&!S.seats.mil?'Без казарм военных в парламенте нет.':''}</span></div>`).join('')}</div>`;
   const stars=n=>'★'.repeat(n)+'☆'.repeat(5-n);
   const tr=c=>`${pill(c.loy?'лоялен':'амбициозен',c.loy?'':'mid')}${pill(c.risk?'рисковый':'осторожный')}${c.caught?pill('вор','bad'):pill('честность ?','mid')}`;
   const posts=Object.keys(POSTS).map(p=>{const P=POSTS[p],m=S.min[p];
@@ -102,7 +106,7 @@ function govHTML(){const D=DIFF[S.diff],left=S.nextEl-S.month,mon=S.gov==='mon';
   return`<div class="sheet-in">${sheetTop('Власть')}
   <div class="sec"><h3>${GOVS[S.gov].n} · ${D.n.toLowerCase()} сложность</h3><p class="log">${GOVS[S.gov].d}</p>${st}
     <div data-tip="На 100% вас свергнут. Растут при настроении ниже 30%, голоде, пустой казне и низком рейтинге."><div class="kv"><div><span>Протесты</span><span>${Math.round(S.unrest)}%</span></div></div>${meter(S.unrest,S.unrest>=50?'var(--bad)':'var(--sun)')}</div></div>
-  <div class="sec"><h3>${mon?'Сословия':'Парламент'}${mon?'':` · поддержка ${Math.round(S.parl)}%`}</h3>${seats}${facs}<p class="log" style="font-size:12.5px">Места делятся по тому, где работают люди: больше ферм — больше аграриев. Фракция голосует за вас, если довольна своей сферой.</p></div>
+  <div class="sec"><h3>${mon?'Сословия':'Парламент'}${mon?'':` · поддержка ${Math.round(S.parl)}%`}</h3>${seats}${facs}<p class="log" style="font-size:12.5px">Места делятся по тому, где работают люди: больше ферм — больше аграриев, казармы дают военных, школы и больницы — интеллигенцию. Отношение к соседям складывается из торговли: ссора со страной, которую фракция любит, её злит.</p></div>
   <div class="sec"><h3>Кабинет министров</h3><p class="log" style="font-size:12.5px">Как в футбольном менеджере: доверьте сферу министру или ведите её сами. Честность кандидата видна только после скандала.</p><div class="mins">${posts}</div></div>
   <div class="sec"><h3>Реформа строя</h3><p class="log" style="font-size:12.5px">Стоит 3 000 кр, возможна раз в 5 лет. ${mon?'Нужны лояльность армии от 60 и рейтинг от 50.':'Нужна поддержка парламента от 60%.'} Солмар ценит республики, Авалис — монархию.</p>
     <div class="acts">${others.map(g=>`<button class="ibtn txt" type="button" data-reform="${g}" data-tip="${GOVS[g].d}">Сделать: ${GOVS[g].n.toLowerCase()}</button>`).join('')}</div></div></div>`}

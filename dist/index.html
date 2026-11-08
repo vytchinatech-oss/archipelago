@@ -308,7 +308,7 @@ const LANDB=[SAND,GRASS,FOREST,HILL];
 
 /* ===== data/buildings.js ===== */
 /* Все здания: стоимость, содержание, рабочие места, энергия, выработка, ореолы. Баланс меняется здесь. */
-const CATS=[['base','Дороги'],['home','Жильё'],['farm','Поля и еда'],['mine','Добыча'],['ind','Заводы'],['pow','Энергия'],['svc','Услуги'],['com','Логистика']];
+const CATS=[['base','Дороги'],['home','Жильё'],['farm','Поля и еда'],['mine','Добыча'],['ind','Заводы'],['pow','Энергия'],['svc','Услуги'],['com','Логистика'],['mil','Армия']];
 const B={
   hall:{n:'Ратуша',cat:'',cost:0,up:0,jobs:10,pow:12,d:'Сердце города. Каждое здание должно быть связано с ней дорогой.'},
   hut:{n:'Барак',cat:'home',cost:40,up:1,home:14,pow:-.5,on:LANDB,d:'Дёшево и тесно: 14 жителей. Если бараков много, настроение падает.'},
@@ -337,6 +337,7 @@ const B={
   police:{n:'Полиция',cat:'svc',cost:300,up:6,jobs:8,pow:-1,on:LANDB,need:120,d:'Без полиции в городе от 120 жителей растёт преступность.'},
   store:{n:'Склад',cat:'com',cost:260,up:4,jobs:6,pow:-1,stor:300,on:LANDB,d:'+300 места под каждый ресурс, +25 к пропускной способности порта. Предприятия в ореоле склада работают быстрее.'},
   port:{n:'Порт',cat:'com',cost:600,up:12,jobs:10,pow:-2,cap:60,on:[SAND,GRASS,FOREST],coast:1,d:'Торговля с другими странами, до 60 ед. в месяц. Ставится у воды.'},
+  barracks:{n:'Казарма',cat:'mil',cost:350,up:10,jobs:20,pow:-1,on:LANDB,need:60,d:'20 солдат. Опора фракции военных и лояльности армии, позже — сила в войне. Солдатам платят из казны.'},
   park:{n:'Парк',cat:'svc',cost:80,up:1,park:1,on:LANDB,d:'Поднимает настроение домов в пешей доступности.'},
 };
 const RAD={hall:5,power:10,wind:5,sub:7,shop:6,park:4,school:6,clinic:7,police:7,store:8};
@@ -360,13 +361,13 @@ const MAPS=[
 /* ===== data/nations.js ===== */
 /* Соседние страны и типы кризисов. */
 const NATDEF=[
-  {id:'sol',n:'Солмар',full:'Республика Солмар',col:'#e07a3f',rel:35,pop:4200,happy:60,money:30000,rate:.05,tar:.05,brel:30,hb:58,
+  {id:'sol',n:'Солмар',full:'Республика Солмар',col:'#e07a3f',rel:35,pop:4200,happy:60,money:30000,rate:.05,tar:.05,brel:30,hb:58,reg:'rep',
    sup:{food:140,cotton:70,coffee:25,wood:30},dem:{goods:45,iron:35,cloth:20,coal:25},
    trait:'Аграрная республика. Много еды и хлопка, не хватает товаров и железа. Дружелюбна, но бедна.'},
-  {id:'kar',n:'Кардон',full:'Железный союз Кардон',col:'#8a96a3',rel:-20,pop:9500,happy:47,money:60000,rate:.11,tar:.25,brel:-15,hb:46,aggr:1,
+  {id:'kar',n:'Кардон',full:'Железный союз Кардон',col:'#8a96a3',rel:-20,pop:9500,happy:47,money:60000,rate:.11,tar:.25,brel:-15,hb:46,aggr:1,reg:'auth',
    sup:{coal:130,iron:110,goods:60,wood:40},dem:{food:100,coffee:25,cans:35,cloth:25},
    trait:'Индустриальная держава. Уголь и железо в избытке, вечно не хватает еды. Высокие пошлины и жёсткая политика.'},
-  {id:'ava',n:'Авалис',full:'Королевство Авалис',col:'#c9a227',rel:10,pop:6000,happy:68,money:150000,rate:.07,tar:.12,brel:5,hb:66,
+  {id:'ava',n:'Авалис',full:'Королевство Авалис',col:'#c9a227',rel:10,pop:6000,happy:68,money:150000,rate:.07,tar:.12,brel:5,hb:66,reg:'mon',
    sup:{goods:40,cloth:40,cans:15},dem:{gold:20,coffee:45,cans:25,cotton:30},
    trait:'Богатая торговая монархия. Скупает золото и кофе, охотно даёт займы, но считает каждую монету.'},
 ];
@@ -384,7 +385,15 @@ const GOVS={
   parl:{n:'Парламентская республика',d:'Раз в 10 лет вас переизбирает парламент. Нужна поддержка фракций.'},
   mon:{n:'Абсолютная монархия',d:'Выборов нет. Опора — армия и сословия. При слабости грозит переворот.'}};
 const DIFF={easy:{n:'Лёгкая',th:40,cr:.7,un:.7},norm:{n:'Нормальная',th:50,cr:1,un:1},hard:{n:'Тяжёлая',th:50,cr:1.5,un:1.4}};
-const FAC={agr:{n:'Аграрии',m:'Землевладельцы',c:'#9ccf6a'},ind:{n:'Промышленники',m:'Заводчики',c:'#8a96a3'},trd:{n:'Торговцы',m:'Купечество',c:'#e0a83a'},peo:{n:'Народная партия',m:'Простой народ',c:'#e05a47'}};
+const FAC={
+  agr:{n:'Аграрии',m:'Землевладельцы',c:'#9ccf6a',w:'Дорогая еда, низкий налог на бизнес, мало ввоза еды. Любят страны, куда уходит наша еда и сырьё.',sab:'Поля, ранчо и рыбаки'},
+  ind:{n:'Промышленники',m:'Заводчики',c:'#8a96a3',w:'Загруженные заводы, энергия, склады, налог на бизнес до 12%. Не любят страны, чьи товары теснят наши.',sab:'Шахты, лесопилки и заводы'},
+  trd:{n:'Торговцы',m:'Купечество',c:'#e0a83a',w:'Экспорт, низкие пошлины, договоры. Любят всех, с кем торгуем.',sab:'Порт и рынки'},
+  peo:{n:'Народная партия',m:'Простой народ',c:'#e05a47',w:'Хорошее настроение и работа для всех. Ценят тех, кто кормит и одевает страну.',sab:'Злой народ раздувает протесты'},
+  mil:{n:'Военные',m:'Офицерство',c:'#6b7f4e',w:'Казармы на 3–5% населения, полная казна. Против договоров с враждебными странами.',sab:'Лояльность армии'},
+  int:{n:'Интеллигенция',m:'Учёное сословие',c:'#6aa8ff',w:'Школы, больницы, свобода. Ценят демократии, не любят монархию и диктатуры.',sab:'Школы и больницы'}};
+/* Баланс фракций: места, саботаж, вес отношения к соседям. */
+const FACK={floor:4,share:70,lo:25,loM:.9,hi:75,hiM:1.05,natW:10,smooth:.15,soldierPct:.04,coupAngry:.004,peoUnrest:2};
 const POSTS={
   fin:{n:'Финансов',b:'Собираемость налогов +2% за уровень навыка.',a:'Сам меняет подоходный налог и налог на бизнес, чтобы держать бюджет в плюсе.'},
   trd:{n:'Торговли',b:'Экспортные цены +1,5% и пропускная способность портов +5% за уровень.',a:'Сам ставит пошлины: осторожный защищает своих производителей, рисковый открывает рынок.'},
@@ -467,7 +476,7 @@ const regOf=i=>S.regions[S.reg[i]];
 const fert=i=>regOf(i).fert*(.85+.3*h2(i,4,4));
 const depAt=i=>(S.type[i]===HILL||S.type[i]===MOUNT)?regOf(i).min:null;
 function saveStr(){return JSON.stringify(Object.assign({},S,{type:Array.from(S.type),elev:Array.from(S.elev),reg:Array.from(S.reg),road:Array.from(S.road),rep:null}))}
-function loadStr(str){const o=JSON.parse(str);o.type=Uint8Array.from(o.type);o.elev=Uint8Array.from(o.elev);o.reg=Int8Array.from(o.reg);o.road=Uint8Array.from(o.road);return o}
+function loadStr(str){const o=JSON.parse(str);o.type=Uint8Array.from(o.type);o.elev=Uint8Array.from(o.elev);o.reg=Int8Array.from(o.reg);o.road=Uint8Array.from(o.road);return migrateSave(o)}
 
 /* ===== sim/nations.js ===== */
 /* Рынки стран, кризисы, события-запросы, дипломатия и займы. */
@@ -576,7 +585,7 @@ function computeCov(){
 function wdist(i){let m=999;for(const j of nb4(i))if(WDIST[j]<m)m=WDIST[j];return Math.min(999,m+1)}
 const live=i=>{const d=B[S.bld[i].t];return !(d.pow<0)||PW[i]};
 const dfac=d=>Math.max(.3,Math.min(1,1-(d-6)*.025));
-const PRI=t=>{const d=B[t];if(t==='hall')return 0;if(d.out&&d.out.food)return 1;if(d.cat==='pow')return 2;if(d.cat==='svc'||d.cat==='com')return 3;if(d.cat==='ind')return 5;return 4};
+const PRI=t=>{const d=B[t];if(t==='hall')return 0;if(d.out&&d.out.food)return 1;if(d.cat==='pow')return 2;if(d.cat==='svc'||d.cat==='com'||d.cat==='mil')return 3;if(d.cat==='ind')return 5;return 4};
 const homeF=i=>(PW[i]?1:.5)*(COV.shop[i]?1:.6);
 function census(){
   const c={coalSup:0,off:0,home:0,homeFull:0,poor:0,unpow:0,cv:{shop:0,park:0,school:0,clinic:0,police:0},jobs:0,sup:0,use:0,serve:0,parks:0,ports:0,stores:0,prodN:0,rich:0,huts:0,coalPl:0,cnt:{},dis:0,list:[]};
@@ -593,23 +602,24 @@ function census(){
   for(const i of c.list){const t=S.bld[i].t,d=B[t],s=d.jobs?c.st[i]:1,on=d.pow<0?PW[i]:1;
     if(d.pow>0){const p=t==='hall'?d.pow:d.pow*s*(1+.04*M('en'));c.sup+=p;if(d.fuel)c.coalSup+=p}
     if(on){if(d.serve)c.serve+=d.serve*s;if(d.cap)c.ports+=d.cap*s;if(d.stor&&s>=.5)c.stores++}else if(d.serve||d.cap||d.stor)c.off++}
-  if(c.ports)c.ports=Math.round(c.ports+c.stores*25);
+  const fT=facM('trd');c.serve*=fT;if(c.ports)c.ports=Math.round((c.ports+c.stores*25)*fT);
   c.pr=c.use>0?Math.min(1,c.sup/c.use):1;
   c.log=1;c.cap=300+300*c.stores;
   return c;
 }
+const addNK=(o,id,k,v)=>{const x=o[id]||(o[id]={});x[k]=(x[k]||0)+v};
 function upkeep(){let u=0;for(let i=0;i<N*N;i++){const b=S.bld[i];if(b)u+=B[b.t].up;if(S.road[i])u+=S.road[i]===2?1:.25}return u}
 
 function tick(){
   const c=census(),T=S.tax,st=S.stock,z=()=>Object.fromEntries(RK.map(k=>[k,0]));
   const r={bs:{},impH:0,impB:0,inc:0,biz:0,dImp:0,dExp:0,up:0,int:0,loanIn:0,loanOut:0,prod:z(),cons:z(),exp:z(),imp:z(),need:z(),expV:0,impV:0,
-    best:{},dest:{},sat:{},short:{food:0,inputs:0},run:{},ev:[],mig:{}};
+    best:{},dest:{},xn:{},mn:{},sat:{},short:{food:0,inputs:0},run:{},ev:[],mig:{}};
   if(!S.nat[0].dl.food)refreshMarkets();
   c.ports=Math.round(c.ports*(1+.05*M('trd')));let cap=c.ports;const port=cap>0;
   const buy=(k,q,who)=>{q=Math.ceil(q);if(!port||!S.trade[k].i||q<=0)return;
     const ns=S.nat.filter(n=>canTrade(n)&&n.sl[k]>0).sort((a,b)=>natSell(a,k)-natSell(b,k));
     for(const n of ns){if(q<=0||cap<=0)break;const x=Math.min(q,cap,n.sl[k]);const p=natSell(n,k),v=x*p;
-      const du=n.deal?0:T.imp;n.sl[k]-=x;cap-=x;q-=x;st[k]+=x;r.imp[k]+=x;r.impV+=v;r.dImp+=v*du;n.money+=v;if(who==='h')r.impH+=v*(1+du);else r.impB+=v;r.dest[n.id]=(r.dest[n.id]||0)+v}};
+      const du=n.deal?0:T.imp;n.sl[k]-=x;cap-=x;q-=x;st[k]+=x;r.imp[k]+=x;r.impV+=v;r.dImp+=v*du;n.money+=v;if(who==='h')r.impH+=v*(1+du);else r.impB+=v;r.dest[n.id]=(r.dest[n.id]||0)+v;addNK(r.mn,n.id,k,v)}};
   // fuel
   const fuelNeed=c.coalPl*4*(1-.05*M('en'));if(st.coal<fuelNeed)buy('coal',fuelNeed-st.coal);
   const fr=c.coalPl?Math.min(1,st.coal/fuelNeed):1;st.coal-=fuelNeed*fr;r.cons.coal+=fuelNeed*fr;r.need.coal+=fuelNeed;r.fuel=fr;
@@ -619,8 +629,8 @@ function tick(){
   const agg={};
   const small=c.prodN<=4;let lgSum=0;
   for(const i of c.list){const b=S.bld[i],d=B[b.t];if(!d.out)continue;const lg=small||COV.store[i]?1:.75;lgSum+=lg;
-    const P={staff:c.st[i]||0,power:d.pow<0?(PW[i]?c.pr:.35):1,commute:dfac(wdist(i)),log:lg,tax:eff};
-    const e=P.staff*P.power*P.commute*P.log*P.tax;
+    const P={staff:c.st[i]||0,power:d.pow<0?(PW[i]?c.pr:.35):1,commute:dfac(wdist(i)),log:lg,tax:eff,fac:facM(sphereOf(b.t))};
+    const e=P.staff*P.power*P.commute*P.log*P.tax*P.fac;
     if(d.in){P.minister=1+.03*M('ind');agg[b.t]=(agg[b.t]||0)+e*P.minister;r.bs[i]={P,e:e*P.minister};continue}
     if(d.fert)P.fert=fert(i);if(b.t==='saw')P.forest=.35+.65*forestNear(i);if(d.dep&&S.type[i]===MOUNT)P.mount=1.3;if(b.t==='cotton'&&regOf(i).warm)P.warm=1.3;
     if(d.out.food||d.out.coffee||d.out.cotton)P.minister=1+.03*M('agr');else P.minister=1+.03*M('ind');
@@ -653,7 +663,7 @@ function tick(){
     let sur=st[k]-reserve(k);
     for(const n of ns){if(sur<1||cap<1)break;const p=natBuy(n,k)*(1+.015*M('trd')),q=Math.floor(Math.min(sur,cap,n.dl[k],Math.max(0,n.money+20000)/p)*xf);if(q<1)continue;
       const v=q*p*(1-natTariff(n));n.dl[k]-=q;cap-=q;sur-=q;st[k]-=q;r.exp[k]+=q;r.expV+=v;r.dExp+=v*T.exp;
-      n.money-=q*p;n.rel=Math.min(100,n.rel+q*.005);r.dest[n.id]=(r.dest[n.id]||0)+v}}
+      n.money-=q*p;n.rel=Math.min(100,n.rel+q*.005);r.dest[n.id]=(r.dest[n.id]||0)+v;addNK(r.xn,n.id,k,v)}}
   for(const k of RK){st[k]=Math.max(0,st[k]);if(st[k]>c.cap){st[k]=c.cap;if(!(S.month%6))r.ev.push(`Склады переполнены: ${RES[k].n.toLowerCase()} портится. Стройте склады или продавайте через порт.`)}}
   r.portUse=c.ports?1-cap/c.ports:0;
   // domestic prices
@@ -670,7 +680,7 @@ function tick(){
   const unemp=c.work>0?(c.work-c.emp)/c.work:0;
   const sh=S.pop>0?served/S.pop:0;
   const F=[['Базовое настроение',50],['Товары на рынках',10*sh*r.sat.goods],['Одежда',6*sh*r.sat.cloth],['Кофе',4*r.sat.coffee*(served>0?1:0)],
-    ['Парки рядом',12*c.cv.park],['Школы',7*c.cv.school],['Больницы',8*c.cv.clinic],['Социальная политика',1.2*M('soc')],['Преступность',S.pop>120?-10*(1-c.cv.police)*(1-.15*M('mvd')):0],['Безработица',-unemp*45],['Подоходный налог',-(T.inc-.1)*150],['Нехватка еды',-r.short.food*40],
+    ['Парки рядом',12*c.cv.park],['Школы',7*c.cv.school*facM('int')],['Больницы',8*c.cv.clinic*facM('int')],['Социальная политика',1.2*M('soc')],['Преступность',S.pop>120?-10*(1-c.cv.police)*(1-.15*M('mvd')):0],['Безработица',-unemp*45],['Подоходный налог',-(T.inc-.1)*150],['Нехватка еды',-r.short.food*40],
     ['Цены на еду',r.short.food>.05?0:-Math.max(0,S.dom.food/RES.food.base-1)*10],['Траты на импорт',-Math.min(15,40*r.impH/Math.max(50,r.wages))],['Перебои с энергией',-(1-c.pr)*25],
     ['Теснота в бараках',c.home?-12*c.huts/c.home:0]];
   const tgt=Math.max(0,Math.min(100,F.reduce((a,f)=>a+f[1],0)));S.happy+=(tgt-S.happy)*.35;r.F=F;r.tgt=tgt;r.unemp=unemp;
@@ -783,8 +793,8 @@ function advisor(c){
 function mkCand(post){const R=Math.random;const sk=1+Math.floor(R()*5),f=FN[Math.floor(R()*FN.length)],l=LN[Math.floor(R()*LN.length)];
   const fem=/а$|я$/.test(f)&&f!=='Захар',ln=fem&&!/а$/.test(l)?l+'а':(!fem&&/а$/.test(l)?l.slice(0,-1):l);
   return{id:Math.random().toString(36).slice(2,8),name:`${f} ${ln}`,sk,hon:R()<.72,loy:R()<.65,risk:R()<.5,sal:5+sk*sk*2+(R()*4|0)}}
-function govInit(s,gov,diff){s.v=3;s.gov=gov;s.diff=diff;s.nextEl=120;s.unrest=0;s.appr=55;s.army=60;s.guard=0;s.bribe=0;s.hist=[];s.over=null;s.reformAt=0;
-  s.fac={agr:{sat:55},ind:{sat:55},trd:{sat:55},peo:{sat:60}};s.seats={agr:22,ind:18,trd:18,peo:42};
+function govInit(s,gov,diff){s.v=4;s.gov=gov;s.diff=diff;s.nextEl=120;s.unrest=0;s.appr=55;s.army=60;s.guard=0;s.bribe=0;s.hist=[];s.over=null;s.reformAt=0;
+  s.fac={agr:{sat:55},ind:{sat:55},trd:{sat:55},peo:{sat:60},mil:{sat:50},int:{sat:50}};s.seats={agr:22,ind:18,trd:14,peo:42,mil:0,int:4};s.fatt=fattInit(s);
   s.min={};s.cand={};for(const p in POSTS)s.cand[p]=[mkCand(p),mkCand(p),mkCand(p)];s.warned={}}
 const M=p=>S&&S.min&&S.min[p]?S.min[p].sk:0;
 function hire(p,id){const c=S.cand[p].find(x=>x.id===id);if(!c)return'Кандидат уже ушёл';if(S.min[p])fire(p,true);
@@ -826,6 +836,32 @@ function ministerTurn(p,c,r,doIt){
     if(S.pop>=60&&c.cv.school<.5)return act('school',homeT('school'),'Детям нужны школы.');if(S.pop>=80&&c.cv.clinic<.5)return act('clinic',homeT('clinic'),'Нужна больница.');return'Социальная сфера в порядке.'}
   if(p==='mvd'){if(S.pop>=120&&c.cv.police<.7)return act('police',i=>hasB(i,(d,j)=>d.home&&!COV.police[j]),'Растёт преступность.');if(S.unrest>40)return'Протесты растут: улучшайте жизнь людей, полиция их только сдерживает.';return'Порядок под контролем.'}
 }
+/* Фракции 2.0: сфера здания, саботаж, отношение к соседям из реальной торговли. */
+const TRADE_F=['agr','ind','trd','peo'],AGR_K=['food','coffee','cotton'],CONS_K=['food','goods','cloth','coffee'];
+function sphereOf(t){const d=B[t];if(d.out&&(d.out.food||d.out.coffee||d.out.cotton))return'agr';if(d.cat==='mine'||d.cat==='ind'||d.cat==='pow')return'ind';
+  if(d.cat==='mil')return'mil';if(t==='school'||t==='clinic')return'int';if(t==='shop'||t==='store'||t==='port')return'trd';return'peo'}
+function facM(f){if(!S||!S.fac||!S.fac[f])return 1;const v=S.fac[f].sat;return v<FACK.lo?FACK.loM:v>FACK.hi?FACK.hiM:1}
+function fattInit(s){const o={};for(const f in FAC){o[f]={};for(const n of s.nat)o[f][n.id]=0}return o}
+const clamp1=v=>Math.max(-1,Math.min(1,v));
+function facAttRaw(r){const out={},xn=r.xn||{},mn=r.mn||{},sum=(o,ks)=>o?ks.reduce((a,k)=>a+(o[k]||0),0):0,
+    ownK=ks=>ks.filter(k=>r.prod[k]>.5),SPH={agr:AGR_K,ind:RK.filter(k=>!AGR_K.includes(k))};
+  for(const f in FAC)out[f]={};
+  for(const f of['agr','ind']){const ks=SPH[f],kc=ownK(ks),tot=S.nat.reduce((a,n)=>a+sum(xn[n.id],ks)+sum(mn[n.id],kc),0)+60;
+    for(const n of S.nat)out[f][n.id]=clamp1((sum(xn[n.id],ks)-sum(mn[n.id],kc))/tot*2)}
+  const tv=n=>sum(xn[n.id],RK)+sum(mn[n.id],RK),tt=S.nat.reduce((a,n)=>a+tv(n),0)+60,cv=n=>sum(mn[n.id],CONS_K),ct=S.nat.reduce((a,n)=>a+cv(n),0)+60;
+  for(const n of S.nat){const d=ND(n);
+    out.trd[n.id]=clamp1(.2+tv(n)/tt*2);out.peo[n.id]=clamp1(cv(n)/ct*1.5);
+    out.mil[n.id]=clamp1((d.aggr?-.8:0)+(n.rel<-15?-.4:0)+(n.rel>=50?.3:0));
+    out.int[n.id]={rep:.6,mon:0,auth:-.6}[d.reg]||0}
+  return out}
+function facAttTick(r){if(!S.fatt)S.fatt=fattInit(S);const raw=facAttRaw(r);
+  for(const f in FAC){const a=S.fatt[f]||(S.fatt[f]={});for(const n of S.nat){if(n.emb&&TRADE_F.includes(f))continue;const v=a[n.id]||0;a[n.id]=v+(raw[f][n.id]-v)*FACK.smooth}}}
+const relTerm=n=>Math.max(-1.2,Math.min(1.2,clamp1(n.rel/50)+(n.deal?.4:0)-(n.emb?.8:0)));
+function natEff(f){const a=S.fatt&&S.fatt[f];if(!a)return 0;let s=0,w=0;for(const n of S.nat){const v=a[n.id]||0;s+=v*relTerm(n);w+=Math.abs(v)}return FACK.natW*s/Math.max(1,w)}
+/* кто из фракций любит и не любит страну: [[f,att],...] */
+function natFans(id,th=.25){const fan=[],foe=[];for(const f in FAC){const v=S.fatt&&S.fatt[f]?S.fatt[f][id]||0:0;if(f==='mil'&&!S.seats.mil)continue;if(v>=th)fan.push(f);else if(v<=-th)foe.push(f)}return{fan,foe}}
+/* старые сохранения v3 → v4: две новые фракции и отношения к соседям */
+function migrateSave(o){if(o.v===3){o.fac.mil={sat:50};o.fac.int={sat:50};o.seats.mil=0;o.seats.int=4;o.fatt=fattInit(o);o.v=4}return o}
 /* indicators and politics, called after the month is computed */
 function govTick(r,c){
   const D=DIFF[S.diff],T=S.tax,L=t=>S.log.unshift({m:S.month,t});
@@ -842,15 +878,19 @@ function govTick(r,c){
   const cpi=100*Object.keys(W).reduce((a,k)=>a+W[k]*S.dom[k]/RES[k].base,0);
   const debt=debtTotal()+Math.max(0,-S.money),h=S.hist,y=h.length>=12?h[h.length-12]:h[0];
   const infl=h.length>=12?cpi/y.cpi-1:0,g12=h.length>=12?h.slice(-12).reduce((a,x)=>a+x.gdp,0):gdp*12,growth=y&&y.gdp>0?gdp/y.gdp-1:0;
-  // factions
-  const jobsBy={agr:0,ind:0,trd:0};for(const i of c.list){const d=B[S.bld[i].t];if(!d.jobs||S.bld[i].t==='hall')continue;const w=d.jobs*(c.st[i]||0);
-    if(d.out&&(d.out.food||d.out.coffee||d.out.cotton))jobsBy.agr+=w;else if(d.cat==='mine'||d.cat==='ind'||d.cat==='pow')jobsBy.ind+=w;else jobsBy.trd+=w}
-  const tj=jobsBy.agr+jobsBy.ind+jobsBy.trd||1;for(const f of['agr','ind','trd'])S.seats[f]=Math.round(10+45*jobsBy[f]/tj);S.seats.peo=100-S.seats.agr-S.seats.ind-S.seats.trd;
+  // factions 2.0: seats by employment, satisfaction by sphere + attitude to neighbours
+  const jobsBy={agr:0,ind:0,trd:c.richPop*2,mil:0,int:0};for(const i of c.list){const d=B[S.bld[i].t];if(!d.jobs)continue;const f=sphereOf(S.bld[i].t);if(f in jobsBy)jobsBy[f]+=d.jobs*(c.st[i]||0)}
+  const WF=Math.max(1,c.work+c.richPop*2,Object.values(jobsBy).reduce((a,b)=>a+b,0));let tot=0;
+  for(const f in jobsBy){S.seats[f]=Math.round((f==='mil'?0:FACK.floor)+FACK.share*jobsBy[f]/WF);tot+=S.seats[f]}S.seats.peo=100-tot;
+  facAttTick(r);const ne=f=>natEff(f);
   const runs=Object.values(r.run),avgRun=runs.length?runs.reduce((a,b)=>a+b,0)/runs.length:.8,deals=S.nat.filter(n=>n.deal).length,impF=r.need.food?r.imp.food/r.need.food:0;
-  const tgt={agr:58+(S.dom.food/RES.food.base-1)*25-(T.biz-.12)*120-impF*30+M('agr')*3,
-    ind:55+(avgRun-.8)*40-(1-c.pr)*40-(T.biz-.12)*150-(1-c.log)*40+M('ind')*3,
-    trd:50+Math.min(20,r.expV/40)-(T.imp-.1)*100-(T.exp-.05)*150+deals*5+M('trd')*3,
-    peo:S.happy*.9+(1-r.unemp)*10};
+  const sold=jobsBy.mil/Math.max(1,S.pop);r.soldiers=Math.round(jobsBy.mil);
+  const tgt={agr:58+(S.dom.food/RES.food.base-1)*25-(T.biz-.12)*120-impF*30+M('agr')*3+ne('agr'),
+    ind:55+(avgRun-.8)*40-(1-c.pr)*40-(T.biz-.12)*150-(1-c.log)*40+M('ind')*3+ne('ind'),
+    trd:50+Math.min(20,r.expV/40)-(T.imp-.1)*100-(T.exp-.05)*150+deals*5+M('trd')*3+ne('trd'),
+    peo:S.happy*.9+(1-r.unemp)*10+ne('peo'),
+    mil:42+Math.min(25,sold/FACK.soldierPct*20)+(S.money<0?-10:5)+S.guard*8+ne('mil'),
+    int:40+15*c.cv.school+12*c.cv.clinic+({demo:8,parl:5,mon:-10}[S.gov]||0)+M('soc')*2+ne('int')};
   for(const f in tgt){const s=S.fac[f];s.sat+=(Math.max(0,Math.min(100,tgt[f]+S.bribe))-s.sat)*.3}
   S.bribe*=.85;
   const parl=Object.keys(FAC).reduce((a,f)=>a+S.seats[f]*Math.max(0,Math.min(1,(S.fac[f].sat-30)/40)),0);
@@ -858,11 +898,11 @@ function govTick(r,c){
   const ap=S.happy*.55+(1-r.unemp)*15+Math.max(-10,Math.min(10,growth*50))-(infl>.08?Math.min(15,(infl-.08)*100):0)-(S.money<0?10:0)-(g12>0&&debt/g12>.6?10:0)+10+M('soc')*.5;
   S.appr+=(Math.max(0,Math.min(100,ap))-S.appr)*.3;
   // unrest
-  let du=(S.happy<30?(30-S.happy)*.6:-3)+(S.money<-2000?3:0)+(r.short.food>.3?5:0)+(S.appr<30?2:0);du*=du>0?D.un*(1-.1*M('mvd')):1;
+  let du=(S.happy<30?(30-S.happy)*.6:-3)+(S.fac.peo.sat<FACK.lo?FACK.peoUnrest:0)+(S.money<-2000?3:0)+(r.short.food>.3?5:0)+(S.appr<30?2:0);du*=du>0?D.un*(1-.1*M('mvd')):1;
   S.unrest=Math.max(0,Math.min(100,S.unrest+du));
-  if(S.gov==='mon'){S.army+=((55+S.guard*12+(S.money>0?5:-15)+(S.happy-50)*.3+(S.appr-50)*.2)-S.army)*.25;
+  if(S.gov==='mon'){S.army+=((30+S.fac.mil.sat*.4+S.guard*12+(S.money>0?5:-15)+(S.happy-50)*.3+(S.appr-50)*.2)-S.army)*.25;
     if(S.guard)S.money-=80,r.net-=80}
-  const coup=S.gov==='mon'?Math.max(0,(45-S.army)/100*.12+(S.unrest/100)*.04+Object.values(S.min).filter(m=>!m.loy).length*(S.appr<40?.01:0)):0;
+  const coup=S.gov==='mon'?Math.max(0,(45-S.army)/100*.12+(S.unrest/100)*.04+Object.values(S.min).filter(m=>!m.loy).length*(S.appr<40?.01:0)+['agr','ind','trd'].filter(f=>S.fac[f].sat<FACK.lo).length*FACK.coupAngry):0;
   S.coup=coup;S.parl=parl;
   h.push({m:S.month,gdp,cpi,infl,debt,pop:S.pop,happy:S.happy,unemp:r.unemp,money:S.money,appr:S.appr,trade:r.expV-r.impV,net:r.net,parl,unrest:S.unrest});if(h.length>240)h.shift();
   Object.assign(r,{gdp,cpi,infl,debt,growth,g12});
@@ -1084,6 +1124,9 @@ function drawB(g,t,mx,my,i){
     {const p=I.P(-.01,-.01,21);g.fillStyle='#e04848';g.fillRect(p[0]-2.5,p[1]-8,5,16);g.fillRect(p[0]-8,p[1]-2.5,16,5)}break;
   case'police':I.box(-.34,-.3,.32,.3,0,15,'#cfd8e6');I.winL(.3,-.34,.32,5,3,6,'#35507a');I.flat(-.34,-.3,.32,.3,15.2,'#3d5a8a');
     I.box(-.08,-.08,.08,.08,15,19,'#3d5a8a');{const p=I.P(0,0,21),on=Math.sin(performance.now()/250)>0;g.fillStyle=on?'#ff5b5b':'#5b8bff';g.beginPath();g.arc(p[0],p[1],2.6,0,6.3);g.fill()}break;
+  case'barracks':I.flat(-.47,-.47,.47,.47,0,'#b7a77c');I.box(-.42,-.36,.1,.3,0,11,'#7d8a5a');I.winL(.1,-.42,.3,4,4,5,'#3c4630');I.gable(-.44,-.38,.12,.32,11,6,'#4f5a38','#7d8a5a');
+    I.box(.18,-.36,.42,-.12,0,8,'#8e9a6a');I.flat(.18,-.36,.42,-.12,8.2,'#5d6844');
+    {const b=I.P(.3,.28,0),tp=I.P(.3,.28,30);g.strokeStyle='#3a3a3a';g.lineWidth=1.2;I.line(b,tp);I.F([[tp[0],tp[1]],[tp[0]+10,tp[1]+3],[tp[0],tp[1]+6]],'#c44f3a')}break;
   default:drawBase(g,t,mx,my,i);
   }
 }
@@ -1120,7 +1163,7 @@ function buildMenu(){
     b.innerHTML=`<canvas width="176" height="176"></canvas><h3>${m.n}</h3><p>${m.d}</p><div class="tags">${m.tags.map(t=>`<span class="tag">${t}</span>`).join('')}<span class="tag">Тёплых областей: ${W.regions.filter(g=>g.warm).length}</span><span class="tag">Золото: ${cnt.gold}</span></div>`;
     drawPreview(b.querySelector('canvas'),W);b.onclick=()=>{PICK=k;box.querySelectorAll('.map').forEach((el,j)=>el.setAttribute('aria-pressed',j===k))};box.appendChild(b)});
   const sv=store(SAVE_KEY),bc=$('#b-cont');bc.hidden=true;
-  if(sv){try{const o=JSON.parse(sv);if(o.v===3&&!o.over){bc.hidden=false;bc.textContent=`Продолжить: ${MAPS[o.mi].n}, ${GOVS[o.gov].n.toLowerCase()}, ${MONTHS[o.month%12].toLowerCase()} года ${1+(o.month/12|0)}`}}catch(e){}}
+  if(sv){try{const o=JSON.parse(sv);if(o.v>=3&&!o.over){bc.hidden=false;bc.textContent=`Продолжить: ${MAPS[o.mi].n}, ${GOVS[o.gov].n.toLowerCase()}, ${MONTHS[o.month%12].toLowerCase()} года ${1+(o.month/12|0)}`}}catch(e){}}
 }
 function showMenu(){if(S)store(SAVE_KEY,saveStr());$('#game').hidden=true;$('#menu').hidden=false;sheet(null);buildMenu()}
 function enterGame(){
@@ -1132,7 +1175,7 @@ function enterGame(){
 /* ---------- tools ---------- */
 const CTIP={base:'Осмотр клеток, дороги, мосты и снос.',home:'Жильё разного класса: от дешёвых бараков до особняков богачей.',farm:'Еда и сельхозсырьё. Урожай зависит от плодородия и климата области.',
   mine:'Лес и полезные ископаемые. Шахты ставятся только на свои залежи в холмах.',ind:'Переработка сырья в дорогие товары для жителей и экспорта.',pow:'Электричество для зданий в ореоле.',
-  svc:'Городские службы с ореолами: рынки, парки, школы, больницы, полиция.',com:'Склады и порт: хранение, логистика и внешняя торговля.'};
+  svc:'Городские службы с ореолами: рынки, парки, школы, больницы, полиция.',com:'Склады и порт: хранение, логистика и внешняя торговля.',mil:'Казармы: солдаты, фракция военных и опора трона.'};
 function toolTip(t){if(t==='inspect')return'Коснитесь клетки или здания: покажет, что там, как работает и что мешает.';
   if(t==='road')return'Дорога 5 кр, в лесу 15, мост по мелководью 40, по глубине 120. Два касания: начало и конец. Здания работают, только если дорога ведёт к ратуше.';
   if(t==='bull')return'Снести здание или дорогу за 5 кр. Деньги за постройку не возвращаются.';
@@ -1256,7 +1299,7 @@ function bInfo(i,b,c){
     f.push(fbar('Дорога до работы',P.commute,'До 6 клеток от жилья без потерь, дальше −2,5% за клетку.'));
     if(c.prodN>4)f.push(fbar('Склад рядом',P.log,'Без склада в ореоле предприятие работает на 75%.'));
     if(P.tax<1)f.push(fbar('Налог на бизнес',P.tax,'Налог выше 15% снижает выработку.'));
-    if(P.fert)f.push(fbar('Плодородие',P.fert));if(P.forest)f.push(fbar('Лес вокруг',P.forest,'Лесопилке нужен нетронутый лес в 2 клетках.'));
+    if(P.fac!==undefined&&P.fac!==1)f.push(fbar('Настрой фракции',P.fac,'Злая фракция саботирует свою отрасль (−10%), довольная работает с рвением (+5%).'));if(P.fert)f.push(fbar('Плодородие',P.fert));if(P.forest)f.push(fbar('Лес вокруг',P.forest,'Лесопилке нужен нетронутый лес в 2 клетках.'));
     if(P.mount)f.push(fbar('Горы',P.mount,'В горах залежи богаче.'));if(P.warm)f.push(fbar('Тёплый климат',P.warm));
     H.push('<h5>Что влияет на выработку</h5>'+f.join(''))}
   // industry inputs
@@ -1325,7 +1368,7 @@ function refreshGov(c){
   const ap=$('#s-appr');ap.textContent=Math.round(S.appr)+'%';ap.style.color=S.appr>=DIFF[S.diff].th+5?'var(--good)':S.appr>=DIFF[S.diff].th?'var(--paper)':'var(--bad)';
   const pc=$('#polit');pc.hidden=false;const left=S.nextEl-S.month;
   if(S.unrest>=40){pc.className='chip warn';pc.textContent=`Протесты ${Math.round(S.unrest)}%: на 100% вас свергнут`;pc.dataset.tip='Протесты растут, когда настроение ниже 30%, не хватает еды или казна пуста. Министр внутренних дел замедляет рост.'}
-  else if(S.gov==='mon'){pc.className='chip'+(S.coup>.02?' warn':'');pc.textContent=`Армия ${Math.round(S.army)} · угроза переворота ${(S.coup*100).toFixed(1)}% в мес.`;pc.dataset.tip='Лояльность армии растёт от полной казны, гвардии и подарков знати. Ниже 45 появляется риск переворота.'}
+  else if(S.gov==='mon'){pc.className='chip'+(S.coup>.02?' warn':'');pc.textContent=`Армия ${Math.round(S.army)} · угроза переворота ${(S.coup*100).toFixed(1)}% в мес.`;pc.dataset.tip='Лояльность армии тянется к довольству военных (казармы, казна, гвардия). Ниже 45 — риск переворота; злые торговцы, промышленники и аграрии его повышают.'}
   else{const v=S.gov==='demo'?S.appr:S.parl,th=DIFF[S.diff].th;pc.className='chip'+(left<=24&&v<th?' warn':'');
     pc.innerHTML=left<=24?`Выборы через ${yrs(left)} · опрос <b>${Math.round(v)}%</b>, нужно ${th}%`:`Выборы через ${yrs(left)}`;pc.dataset.tip=S.gov==='demo'?'Голосует народ: результат равен рейтингу одобрения.':'Голосует парламент: фракции поддерживают вас, если довольны своей сферой.'}
   if(S.over&&$('#over').hidden)showOver();
@@ -1357,14 +1400,14 @@ function statHTML(k){const r=S.rep,c=r?r.cen:census(),h=S.hist[S.hist.length-1]|
       ['Дома заселены не полностью',c.poor?pill(c.poor,'bad'):pill('нет')],['Естественный рост за месяц',r?(r.dp>=0?'+':'')+r.dp.toFixed(1):'—'],['Миграция',mig.map(([id,m])=>`${nm(id)} ${m>0?'+':''}${m}`).join(', ')||'нет'],['Граница',{open:'открыта',allies:'только союзникам',closed:'закрыта'}[S.mig]]])+
       '<p class="log" style="font-size:12.5px">Люди приезжают, когда есть свободное жильё и настроение от 40%. Дом без электричества заселён на 50%, без рынка на 60%.</p>'}
   if(k==='job'){t='Работа';const G=[['Ратуша',0],['Еда',1],['Энергия',2],['Службы и логистика',3],['Добыча',4],['Заводы',5]],agg=G.map(()=>[0,0]);
-    for(const i of c.list){const d=B[S.bld[i].t];if(!d.jobs)continue;const p=PRI(S.bld[i].t);agg[p][0]+=d.jobs;agg[p][1]+=d.jobs*(c.st[i]||0)}
+    for(const i of c.list){if(!S.bld[i])continue;const d=B[S.bld[i].t];if(!d.jobs)continue;const p=PRI(S.bld[i].t);agg[p][0]+=d.jobs;agg[p][1]+=d.jobs*(c.st[i]||0)}
     b=chart([{v:H_('unemp').map(v=>v*100),col:'#ff7d68',n:'Безработица, %',area:1}],{label:'Безработица',f:v=>v.toFixed(0)+'%',min:0})+
       kv([['Занято / мест',`${fmt(c.emp)} / ${fmt(c.jobs)}`],['Безработица',pct(r?r.unemp:0)]])+'<h3 style="margin:6px 0 0;font:600 12px var(--f-body);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Укомплектованность по очереди найма</h3>'+
       G.map(([n],p)=>agg[p][0]?fbar(`${p}. ${n} · ${fmt(agg[p][1])}/${fmt(agg[p][0])}`,agg[p][1]/agg[p][0]):'').join('')+'<p class="log" style="font-size:12.5px">Рабочие идут сначала в верхние группы, внутри группы — ближе к дому.</p>'}
   if(k==='mood'){t='Настроение';const maxF=r?Math.max(20,...r.F.map(f=>Math.abs(f[1]))):1;
     b=chart([{v:H_('happy'),col:'#f4b63f',n:'Настроение',area:1}],{label:'Настроение',f:v=>v.toFixed(0)+'%',min:0,max:100,th:30})+
       `<div class="mood">${r?r.F.filter(f=>Math.abs(f[1])>=.5).map(f=>{const w=Math.min(50,Math.abs(f[1])/maxF*50);return`<div class="mrow"><span>${f[0]}</span><span class="mbar"><i style="left:${f[1]>=0?50:50-w}%;width:${w}%;background:${f[1]>=0?'var(--good)':'var(--bad)'}"></i></span><span class="${f[1]>=0?'up':'dn'}">${f[1]>=0?'+':'−'}${Math.abs(f[1]).toFixed(0)}</span></div>`}).join(''):''}</div><p class="log" style="font-size:12.5px">Пунктир — 30%: ниже растут протесты.</p>`}
-  if(k==='pow'){t='Энергия';const src={};let dark=0;for(const i of c.list){const bb=S.bld[i],d=B[bb.t];if(d.pow>0)src[bb.t]=(src[bb.t]||0)+1;if(d.pow<0&&!PW[i])dark++}
+  if(k==='pow'){t='Энергия';const src={};let dark=0;for(const i of c.list){const bb=S.bld[i];if(!bb)continue;const d=B[bb.t];if(d.pow>0)src[bb.t]=(src[bb.t]||0)+1;if(d.pow<0&&!PW[i])dark++}
     b=kv([['Потребление / выработка',`${fmt(c.use)} / ${fmt(c.sup)}`],['Покрытие спроса',pct(c.pr)],...Object.entries(src).map(([t,n])=>[B[t].n,`${n} шт.`]),['Уголь для ТЭС',r&&c.coalPl?pct(r.fuel):'не нужен'],['Зданий без электричества',dark?pill(dark,'bad'):pill('нет')]])+
       '<p class="log" style="font-size:12.5px">Энергия доходит только до зданий в ореолах ратуши, ветряков, ТЭС и подстанций. Подстанция передаёт ток дальше, если сама стоит в зоне.</p>'}
   if(k==='gdp'){t='ВВП';const rows=r?RK.filter(k=>r.prod[k]>.05).map(k=>[`${rd(k)}${RES[k].n}`,`${fmt(r.prod[k]*S.dom[k])} кр`]):[];
@@ -1382,12 +1425,16 @@ function statHTML(k){const r=S.rep,c=r?r.cen:census(),h=S.hist[S.hist.length-1]|
   return`<div class="sheet-in">${sheetTop(t)}<div class="sec">${b}</div></div>`}
 function govHTML(){const D=DIFF[S.diff],left=S.nextEl-S.month,mon=S.gov==='mon';
   const meter=(v,col)=>`<div class="meter"><i style="width:${Math.max(0,Math.min(100,v))}%;background:${col}"></i></div>`;
-  const facW={agr:'Высокие цены на еду, низкий налог на бизнес, мало импорта еды.',ind:'Загруженные заводы, энергия, склады, налог на бизнес до 12%.',trd:'Экспорт, низкие пошлины, торговые договоры.',peo:'Хорошее настроение и работа для всех.'};
+  const facW=f=>FAC[f].w;
+  const natLine=f=>{const a=S.fatt&&S.fatt[f]||{},lk=[],dl=[];for(const n of S.nat){const v=a[n.id]||0;if(v>=.25)lk.push(ND(n).n);else if(v<=-.25)dl.push(ND(n).n)}
+    return(lk.length?`Любят: ${lk.join(', ')}. `:'')+(dl.length?`Не любят: ${dl.join(', ')}. `:'')};
+  const sabTxt=f=>{const v=S.fac[f].sat;return v<FACK.lo?`<b style="color:var(--bad)">Саботаж: ${FAC[f].sab.toLowerCase()} −10%.</b> `:v>FACK.hi?`<b style="color:var(--good)">Рвение: ${FAC[f].sab.toLowerCase()} +5%.</b> `:''};
+  const sabTip=f=>f==='peo'?'Ниже 25% народ подогревает протесты.':f==='mil'?'При монархии лояльность армии тянется к довольству военных.':`Ниже 25% — ${FAC[f].sab.toLowerCase()} работают на 10% хуже, выше 75% — на 5% лучше.`;
   let st=mon?kv([['Лояльность армии',`${Math.round(S.army)}`],['Угроза переворота',`${(S.coup*100).toFixed(1)}% в месяц`]])+meter(S.army,S.army>=50?'var(--good)':'var(--bad)')+
       `<div class="acts"><button class="ibtn txt" type="button" id="g-bribe" data-tip="2 000 кр знати: довольство всех сословий +12 (постепенно спадает), армия +3.">Подарки знати · 2 000</button><button class="ibtn txt" type="button" id="g-guard" aria-pressed="${!!S.guard}" data-tip="80 кр в месяц: лояльность армии постепенно растёт на 12.">${S.guard?'Распустить гвардию':'Содержать гвардию · 80/мес'}</button></div>`
     :kv([['Следующие выборы',`через ${yrs(left)}`],['Кто голосует',S.gov==='demo'?'народ, по рейтингу':'парламент, по фракциям'],[left<=24?'Опрос':'Сейчас бы получили',`${Math.round(S.gov==='demo'?S.appr:S.parl)}% при пороге ${D.th}%`]]);
   const seats=`<div class="seats" aria-label="Места в парламенте">${Object.keys(FAC).map(f=>`<i style="width:${S.seats[f]}%;background:${FAC[f].c}" data-tip="${FAC[f].n}: ${S.seats[f]} мест"></i>`).join('')}</div>`;
-  const facs=`<div class="facs">${Object.keys(FAC).map(f=>`<div class="fac" data-tip="Хотят: ${facW[f]}"><b><i style="background:${FAC[f].c}"></i>${mon?FAC[f].m:FAC[f].n} · ${S.seats[f]}</b>${meter(S.fac[f].sat,S.fac[f].sat>=50?'var(--good)':S.fac[f].sat>=30?'var(--sun)':'var(--bad)')}<span class="log" style="font-size:12px">Довольство ${Math.round(S.fac[f].sat)}%. ${facW[f]}</span></div>`).join('')}</div>`;
+  const facs=`<div class="facs">${Object.keys(FAC).map(f=>`<div class="fac" data-tip="Хотят: ${facW(f)} ${sabTip(f)}"><b><i style="background:${FAC[f].c}"></i>${mon?FAC[f].m:FAC[f].n} · ${S.seats[f]}</b>${meter(S.fac[f].sat,S.fac[f].sat>=50?'var(--good)':S.fac[f].sat>=30?'var(--sun)':'var(--bad)')}<span class="log" style="font-size:12px">Довольство ${Math.round(S.fac[f].sat)}%. ${sabTxt(f)}${natLine(f)}${f==='mil'&&!S.seats.mil?'Без казарм военных в парламенте нет.':''}</span></div>`).join('')}</div>`;
   const stars=n=>'★'.repeat(n)+'☆'.repeat(5-n);
   const tr=c=>`${pill(c.loy?'лоялен':'амбициозен',c.loy?'':'mid')}${pill(c.risk?'рисковый':'осторожный')}${c.caught?pill('вор','bad'):pill('честность ?','mid')}`;
   const posts=Object.keys(POSTS).map(p=>{const P=POSTS[p],m=S.min[p];
@@ -1401,7 +1448,7 @@ function govHTML(){const D=DIFF[S.diff],left=S.nextEl-S.month,mon=S.gov==='mon';
   return`<div class="sheet-in">${sheetTop('Власть')}
   <div class="sec"><h3>${GOVS[S.gov].n} · ${D.n.toLowerCase()} сложность</h3><p class="log">${GOVS[S.gov].d}</p>${st}
     <div data-tip="На 100% вас свергнут. Растут при настроении ниже 30%, голоде, пустой казне и низком рейтинге."><div class="kv"><div><span>Протесты</span><span>${Math.round(S.unrest)}%</span></div></div>${meter(S.unrest,S.unrest>=50?'var(--bad)':'var(--sun)')}</div></div>
-  <div class="sec"><h3>${mon?'Сословия':'Парламент'}${mon?'':` · поддержка ${Math.round(S.parl)}%`}</h3>${seats}${facs}<p class="log" style="font-size:12.5px">Места делятся по тому, где работают люди: больше ферм — больше аграриев. Фракция голосует за вас, если довольна своей сферой.</p></div>
+  <div class="sec"><h3>${mon?'Сословия':'Парламент'}${mon?'':` · поддержка ${Math.round(S.parl)}%`}</h3>${seats}${facs}<p class="log" style="font-size:12.5px">Места делятся по тому, где работают люди: больше ферм — больше аграриев, казармы дают военных, школы и больницы — интеллигенцию. Отношение к соседям складывается из торговли: ссора со страной, которую фракция любит, её злит.</p></div>
   <div class="sec"><h3>Кабинет министров</h3><p class="log" style="font-size:12.5px">Как в футбольном менеджере: доверьте сферу министру или ведите её сами. Честность кандидата видна только после скандала.</p><div class="mins">${posts}</div></div>
   <div class="sec"><h3>Реформа строя</h3><p class="log" style="font-size:12.5px">Стоит 3 000 кр, возможна раз в 5 лет. ${mon?'Нужны лояльность армии от 60 и рейтинг от 50.':'Нужна поддержка парламента от 60%.'} Солмар ценит республики, Авалис — монархию.</p>
     <div class="acts">${others.map(g=>`<button class="ibtn txt" type="button" data-reform="${g}" data-tip="${GOVS[g].d}">Сделать: ${GOVS[g].n.toLowerCase()}</button>`).join('')}</div></div></div>`}
@@ -1477,7 +1524,8 @@ function worldHTML(){
     const my=S.loans.filter(l=>l.nid===n.id).reduce((a,l)=>a+l.left,0),their=S.lent.filter(l=>l.nid===n.id).reduce((a,l)=>a+l.left,0);
     return`<div class="nat"><div class="nat-h"><span class="flag" style="background:${d.col}"></span><h4>${d.full}</h4>${pill(n.emb?'Эмбарго':lab,n.emb?'bad':cls)}</div>
     <div class="relbar" aria-label="Отношения ${Math.round(n.rel)}"><i style="left:${(n.rel+100)/2}%"></i></div>
-    <p>${d.trait}${n.cr?` <b style="color:var(--bad)">Сейчас: ${CRISES[n.cr.t].n}, ещё ${n.cr.m} мес.</b>`:''}</p>
+    <p>${d.trait}${n.cr?` <b style="color:var(--bad)">Сейчас: ${CRISES[n.cr.t].n}, ещё ${n.cr.m} мес.</b>`:''}</p>${(()=>{const q=natFans(n.id),nm=f=>(S.gov==='mon'?FAC[f].m:FAC[f].n).toLowerCase();
+      return q.fan.length||q.foe.length?`<p data-tip="Фракции следят за отношениями: ссора с любимой страной их злит, дружба с нелюбимой — тоже.">${q.fan.length?'За дружбу: '+q.fan.map(nm).join(', ')+'. ':''}${q.foe.length?'Против: '+q.foe.map(nm).join(', ')+'.':''}</p>`:''})()}
     <div class="mini"><div><span>Отношения</span><span>${Math.round(n.rel)}</span></div><div><span>Население</span><span>${fmt(n.pop)}</span></div>
       <div><span>Настроение</span><span>${Math.round(n.happy)}%</span></div><div><span>Казна</span><span>${fmt(n.money)}</span></div>
       <div><span>Пошлина на вас</span><span>${Math.round(tar*100)}%</span></div><div><span>Торговля в мес.</span><span>${fmt(r&&r.dest[n.id]||0)}</span></div>
@@ -1634,7 +1682,7 @@ function start(data){
   cv.addEventListener('pointerdown',()=>{if(!$('#lmenu').hidden)toggleLayerMenu(false)});
   document.querySelectorAll('[data-spd]').forEach(b=>b.onclick=()=>setSpeed(+b.dataset.spd));
   buildOpts();buildMenu();
-  if(data&&data.s){try{S=loadStr(data.s);if(S.v===3)enterGame();else S=null}catch(e){S=null}}
+  if(data&&data.s){try{S=loadStr(data.s);if(S.v===4)enterGame();else S=null}catch(e){S=null}}
   requestAnimationFrame(loop);
 }
 window.claude?.hot?.snapshot?.(()=>S?{s:saveStr()}:{});

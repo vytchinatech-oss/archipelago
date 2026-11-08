@@ -67,4 +67,4 @@ const regOf=i=>S.regions[S.reg[i]];
 const fert=i=>regOf(i).fert*(.85+.3*h2(i,4,4));
 const depAt=i=>(S.type[i]===HILL||S.type[i]===MOUNT)?regOf(i).min:null;
 function saveStr(){return JSON.stringify(Object.assign({},S,{type:Array.from(S.type),elev:Array.from(S.elev),reg:Array.from(S.reg),road:Array.from(S.road),rep:null}))}
-function loadStr(str){const o=JSON.parse(str);o.type=Uint8Array.from(o.type);o.elev=Uint8Array.from(o.elev);o.reg=Int8Array.from(o.reg);o.road=Uint8Array.from(o.road);return o}
+function loadStr(str){const o=JSON.parse(str);o.type=Uint8Array.from(o.type);o.elev=Uint8Array.from(o.elev);o.reg=Int8Array.from(o.reg);o.road=Uint8Array.from(o.road);return migrateSave(o)}

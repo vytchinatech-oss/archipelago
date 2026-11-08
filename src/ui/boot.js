@@ -9,7 +9,7 @@ function start(data){
   cv.addEventListener('pointerdown',()=>{if(!$('#lmenu').hidden)toggleLayerMenu(false)});
   document.querySelectorAll('[data-spd]').forEach(b=>b.onclick=()=>setSpeed(+b.dataset.spd));
   buildOpts();buildMenu();
-  if(data&&data.s){try{S=loadStr(data.s);if(S.v===3)enterGame();else S=null}catch(e){S=null}}
+  if(data&&data.s){try{S=loadStr(data.s);if(S.v===4)enterGame();else S=null}catch(e){S=null}}
   requestAnimationFrame(loop);
 }
 window.claude?.hot?.snapshot?.(()=>S?{s:saveStr()}:{});

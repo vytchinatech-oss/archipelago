@@ -41,6 +41,9 @@ function drawB(g,t,mx,my,i){
     {const p=I.P(-.01,-.01,21);g.fillStyle='#e04848';g.fillRect(p[0]-2.5,p[1]-8,5,16);g.fillRect(p[0]-8,p[1]-2.5,16,5)}break;
   case'police':I.box(-.34,-.3,.32,.3,0,15,'#cfd8e6');I.winL(.3,-.34,.32,5,3,6,'#35507a');I.flat(-.34,-.3,.32,.3,15.2,'#3d5a8a');
     I.box(-.08,-.08,.08,.08,15,19,'#3d5a8a');{const p=I.P(0,0,21),on=Math.sin(performance.now()/250)>0;g.fillStyle=on?'#ff5b5b':'#5b8bff';g.beginPath();g.arc(p[0],p[1],2.6,0,6.3);g.fill()}break;
+  case'barracks':I.flat(-.47,-.47,.47,.47,0,'#b7a77c');I.box(-.42,-.36,.1,.3,0,11,'#7d8a5a');I.winL(.1,-.42,.3,4,4,5,'#3c4630');I.gable(-.44,-.38,.12,.32,11,6,'#4f5a38','#7d8a5a');
+    I.box(.18,-.36,.42,-.12,0,8,'#8e9a6a');I.flat(.18,-.36,.42,-.12,8.2,'#5d6844');
+    {const b=I.P(.3,.28,0),tp=I.P(.3,.28,30);g.strokeStyle='#3a3a3a';g.lineWidth=1.2;I.line(b,tp);I.F([[tp[0],tp[1]],[tp[0]+10,tp[1]+3],[tp[0],tp[1]+6]],'#c44f3a')}break;
   default:drawBase(g,t,mx,my,i);
   }
 }

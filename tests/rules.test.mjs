@@ -66,3 +66,44 @@ test('выборы: проигрыш при низком рейтинге', () =
   const r = load()(`setup();S.nextEl=S.month;S.appr=10;S.happy=20;tick();S.over&&S.over.reason`);
   assert.match(r, /выборы/);
 });
+
+// ---------- Фракции 2.0 ----------
+test('казармы дают места военным, без них у военных 0 мест; всего мест 100', () => {
+  const r = load()(`setup();grid();for(let k=0;k<6;k++)near('house',S.hall);S.pop=60;tick();const a=S.seats.mil;
+    S.pop=60;near('barracks',S.hall);computeCov();tick();({a,b:S.seats.mil,sum:Object.values(S.seats).reduce((x,y)=>x+y,0)})`);
+  assert.equal(r.a, 0); assert.ok(r.b > 0); assert.equal(r.sum, 100);
+});
+
+test('экспорт еды в страну делает её любимой у аграриев', () => {
+  const r = load()(`setup();grid();portUp();for(let k=0;k<6;k++)near('house',S.hall);near('wind',S.hall);computeCov();
+    for(let m=0;m<20;m++){S.stock.food=600;S.pop=50;tick();computeCov()}const best=S.nat.slice().sort((a,b)=>S.fatt.agr[b.id]-S.fatt.agr[a.id])[0];
+    ({att:S.fatt.agr[best.id]})`);
+  assert.ok(r.att > .3);
+});
+
+test('ссора с главным покупателем еды злит аграриев', () => {
+  const r = load()(`const sat=rel=>{setup();for(const n of S.nat){S.fatt.agr[n.id]=n.id==='kar'?1:0;n.rel=n.id==='kar'?rel:0}for(let m=0;m<6;m++){natById('kar').rel=rel;tick()}return S.fac.agr.sat};
+    ({good:sat(60),bad:sat(-80)})`);
+  assert.ok(r.good - r.bad > 5, JSON.stringify(r));
+});
+
+test('военные против договора с враждебным Кардоном', () => {
+  const r = load()(`setup();const k=natById('kar');for(let m=0;m<12;m++)tick();const a=natEff('mil');k.deal=1;k.rel=30;const b=natEff('mil');({a,b})`);
+  assert.ok(r.b < r.a);
+});
+
+test('злые аграрии саботируют поля: −10% урожая', () => {
+  const r = load()(`setup();grid();const f=near('farm',S.hall);S.pop=30;S.fac.agr.sat=60;const a=tick().bs[f].out.food;S.pop=30;S.fac.agr.sat=10;const b=tick().bs[f].out.food;({a,b})`);
+  assert.ok(Math.abs(r.b / r.a - .9) < .03, JSON.stringify(r));
+});
+
+test('монархия: недовольные военные снижают лояльность армии', () => {
+  const r = load()(`const army=sat=>{setup(0,'mon');for(let m=0;m<12;m++){S.fac.mil.sat=sat;tick()}return S.army};({hi:army(90),lo:army(10)})`);
+  assert.ok(r.hi - r.lo > 15, JSON.stringify(r));
+});
+
+test('сохранение v3 загружается с новыми фракциями', () => {
+  const r = load()(`setup();const o=JSON.parse(saveStr());o.v=3;delete o.fac.mil;delete o.fac.int;delete o.seats.mil;delete o.seats.int;delete o.fatt;
+    S=loadStr(JSON.stringify(o));computeConn();computeCov();tick();({v:S.v,mil:S.fac.mil.sat>=0,att:typeof S.fatt.int.kar})`);
+  assert.equal(r.v, 4); assert.ok(r.mil); assert.equal(r.att, 'number');
+});

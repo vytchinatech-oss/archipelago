@@ -1,12 +1,12 @@
 /* Соседние страны и типы кризисов. */
 const NATDEF=[
-  {id:'sol',n:'Солмар',full:'Республика Солмар',col:'#e07a3f',rel:35,pop:4200,happy:60,money:30000,rate:.05,tar:.05,brel:30,hb:58,
+  {id:'sol',n:'Солмар',full:'Республика Солмар',col:'#e07a3f',rel:35,pop:4200,happy:60,money:30000,rate:.05,tar:.05,brel:30,hb:58,reg:'rep',
    sup:{food:140,cotton:70,coffee:25,wood:30},dem:{goods:45,iron:35,cloth:20,coal:25},
    trait:'Аграрная республика. Много еды и хлопка, не хватает товаров и железа. Дружелюбна, но бедна.'},
-  {id:'kar',n:'Кардон',full:'Железный союз Кардон',col:'#8a96a3',rel:-20,pop:9500,happy:47,money:60000,rate:.11,tar:.25,brel:-15,hb:46,aggr:1,
+  {id:'kar',n:'Кардон',full:'Железный союз Кардон',col:'#8a96a3',rel:-20,pop:9500,happy:47,money:60000,rate:.11,tar:.25,brel:-15,hb:46,aggr:1,reg:'auth',
    sup:{coal:130,iron:110,goods:60,wood:40},dem:{food:100,coffee:25,cans:35,cloth:25},
    trait:'Индустриальная держава. Уголь и железо в избытке, вечно не хватает еды. Высокие пошлины и жёсткая политика.'},
-  {id:'ava',n:'Авалис',full:'Королевство Авалис',col:'#c9a227',rel:10,pop:6000,happy:68,money:150000,rate:.07,tar:.12,brel:5,hb:66,
+  {id:'ava',n:'Авалис',full:'Королевство Авалис',col:'#c9a227',rel:10,pop:6000,happy:68,money:150000,rate:.07,tar:.12,brel:5,hb:66,reg:'mon',
    sup:{goods:40,cloth:40,cans:15},dem:{gold:20,coffee:45,cans:25,cotton:30},
    trait:'Богатая торговая монархия. Скупает золото и кофе, охотно даёт займы, но считает каждую монету.'},
 ];

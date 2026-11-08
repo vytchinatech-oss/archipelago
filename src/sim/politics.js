@@ -2,8 +2,8 @@
 function mkCand(post){const R=Math.random;const sk=1+Math.floor(R()*5),f=FN[Math.floor(R()*FN.length)],l=LN[Math.floor(R()*LN.length)];
   const fem=/а$|я$/.test(f)&&f!=='Захар',ln=fem&&!/а$/.test(l)?l+'а':(!fem&&/а$/.test(l)?l.slice(0,-1):l);
   return{id:Math.random().toString(36).slice(2,8),name:`${f} ${ln}`,sk,hon:R()<.72,loy:R()<.65,risk:R()<.5,sal:5+sk*sk*2+(R()*4|0)}}
-function govInit(s,gov,diff){s.v=3;s.gov=gov;s.diff=diff;s.nextEl=120;s.unrest=0;s.appr=55;s.army=60;s.guard=0;s.bribe=0;s.hist=[];s.over=null;s.reformAt=0;
-  s.fac={agr:{sat:55},ind:{sat:55},trd:{sat:55},peo:{sat:60}};s.seats={agr:22,ind:18,trd:18,peo:42};
+function govInit(s,gov,diff){s.v=4;s.gov=gov;s.diff=diff;s.nextEl=120;s.unrest=0;s.appr=55;s.army=60;s.guard=0;s.bribe=0;s.hist=[];s.over=null;s.reformAt=0;
+  s.fac={agr:{sat:55},ind:{sat:55},trd:{sat:55},peo:{sat:60},mil:{sat:50},int:{sat:50}};s.seats={agr:22,ind:18,trd:14,peo:42,mil:0,int:4};s.fatt=fattInit(s);
   s.min={};s.cand={};for(const p in POSTS)s.cand[p]=[mkCand(p),mkCand(p),mkCand(p)];s.warned={}}
 const M=p=>S&&S.min&&S.min[p]?S.min[p].sk:0;
 function hire(p,id){const c=S.cand[p].find(x=>x.id===id);if(!c)return'Кандидат уже ушёл';if(S.min[p])fire(p,true);
@@ -45,6 +45,32 @@ function ministerTurn(p,c,r,doIt){
     if(S.pop>=60&&c.cv.school<.5)return act('school',homeT('school'),'Детям нужны школы.');if(S.pop>=80&&c.cv.clinic<.5)return act('clinic',homeT('clinic'),'Нужна больница.');return'Социальная сфера в порядке.'}
   if(p==='mvd'){if(S.pop>=120&&c.cv.police<.7)return act('police',i=>hasB(i,(d,j)=>d.home&&!COV.police[j]),'Растёт преступность.');if(S.unrest>40)return'Протесты растут: улучшайте жизнь людей, полиция их только сдерживает.';return'Порядок под контролем.'}
 }
+/* Фракции 2.0: сфера здания, саботаж, отношение к соседям из реальной торговли. */
+const TRADE_F=['agr','ind','trd','peo'],AGR_K=['food','coffee','cotton'],CONS_K=['food','goods','cloth','coffee'];
+function sphereOf(t){const d=B[t];if(d.out&&(d.out.food||d.out.coffee||d.out.cotton))return'agr';if(d.cat==='mine'||d.cat==='ind'||d.cat==='pow')return'ind';
+  if(d.cat==='mil')return'mil';if(t==='school'||t==='clinic')return'int';if(t==='shop'||t==='store'||t==='port')return'trd';return'peo'}
+function facM(f){if(!S||!S.fac||!S.fac[f])return 1;const v=S.fac[f].sat;return v<FACK.lo?FACK.loM:v>FACK.hi?FACK.hiM:1}
+function fattInit(s){const o={};for(const f in FAC){o[f]={};for(const n of s.nat)o[f][n.id]=0}return o}
+const clamp1=v=>Math.max(-1,Math.min(1,v));
+function facAttRaw(r){const out={},xn=r.xn||{},mn=r.mn||{},sum=(o,ks)=>o?ks.reduce((a,k)=>a+(o[k]||0),0):0,
+    ownK=ks=>ks.filter(k=>r.prod[k]>.5),SPH={agr:AGR_K,ind:RK.filter(k=>!AGR_K.includes(k))};
+  for(const f in FAC)out[f]={};
+  for(const f of['agr','ind']){const ks=SPH[f],kc=ownK(ks),tot=S.nat.reduce((a,n)=>a+sum(xn[n.id],ks)+sum(mn[n.id],kc),0)+60;
+    for(const n of S.nat)out[f][n.id]=clamp1((sum(xn[n.id],ks)-sum(mn[n.id],kc))/tot*2)}
+  const tv=n=>sum(xn[n.id],RK)+sum(mn[n.id],RK),tt=S.nat.reduce((a,n)=>a+tv(n),0)+60,cv=n=>sum(mn[n.id],CONS_K),ct=S.nat.reduce((a,n)=>a+cv(n),0)+60;
+  for(const n of S.nat){const d=ND(n);
+    out.trd[n.id]=clamp1(.2+tv(n)/tt*2);out.peo[n.id]=clamp1(cv(n)/ct*1.5);
+    out.mil[n.id]=clamp1((d.aggr?-.8:0)+(n.rel<-15?-.4:0)+(n.rel>=50?.3:0));
+    out.int[n.id]={rep:.6,mon:0,auth:-.6}[d.reg]||0}
+  return out}
+function facAttTick(r){if(!S.fatt)S.fatt=fattInit(S);const raw=facAttRaw(r);
+  for(const f in FAC){const a=S.fatt[f]||(S.fatt[f]={});for(const n of S.nat){if(n.emb&&TRADE_F.includes(f))continue;const v=a[n.id]||0;a[n.id]=v+(raw[f][n.id]-v)*FACK.smooth}}}
+const relTerm=n=>Math.max(-1.2,Math.min(1.2,clamp1(n.rel/50)+(n.deal?.4:0)-(n.emb?.8:0)));
+function natEff(f){const a=S.fatt&&S.fatt[f];if(!a)return 0;let s=0,w=0;for(const n of S.nat){const v=a[n.id]||0;s+=v*relTerm(n);w+=Math.abs(v)}return FACK.natW*s/Math.max(1,w)}
+/* кто из фракций любит и не любит страну: [[f,att],...] */
+function natFans(id,th=.25){const fan=[],foe=[];for(const f in FAC){const v=S.fatt&&S.fatt[f]?S.fatt[f][id]||0:0;if(f==='mil'&&!S.seats.mil)continue;if(v>=th)fan.push(f);else if(v<=-th)foe.push(f)}return{fan,foe}}
+/* старые сохранения v3 → v4: две новые фракции и отношения к соседям */
+function migrateSave(o){if(o.v===3){o.fac.mil={sat:50};o.fac.int={sat:50};o.seats.mil=0;o.seats.int=4;o.fatt=fattInit(o);o.v=4}return o}
 /* indicators and politics, called after the month is computed */
 function govTick(r,c){
   const D=DIFF[S.diff],T=S.tax,L=t=>S.log.unshift({m:S.month,t});
@@ -61,15 +87,19 @@ function govTick(r,c){
   const cpi=100*Object.keys(W).reduce((a,k)=>a+W[k]*S.dom[k]/RES[k].base,0);
   const debt=debtTotal()+Math.max(0,-S.money),h=S.hist,y=h.length>=12?h[h.length-12]:h[0];
   const infl=h.length>=12?cpi/y.cpi-1:0,g12=h.length>=12?h.slice(-12).reduce((a,x)=>a+x.gdp,0):gdp*12,growth=y&&y.gdp>0?gdp/y.gdp-1:0;
-  // factions
-  const jobsBy={agr:0,ind:0,trd:0};for(const i of c.list){const d=B[S.bld[i].t];if(!d.jobs||S.bld[i].t==='hall')continue;const w=d.jobs*(c.st[i]||0);
-    if(d.out&&(d.out.food||d.out.coffee||d.out.cotton))jobsBy.agr+=w;else if(d.cat==='mine'||d.cat==='ind'||d.cat==='pow')jobsBy.ind+=w;else jobsBy.trd+=w}
-  const tj=jobsBy.agr+jobsBy.ind+jobsBy.trd||1;for(const f of['agr','ind','trd'])S.seats[f]=Math.round(10+45*jobsBy[f]/tj);S.seats.peo=100-S.seats.agr-S.seats.ind-S.seats.trd;
+  // factions 2.0: seats by employment, satisfaction by sphere + attitude to neighbours
+  const jobsBy={agr:0,ind:0,trd:c.richPop*2,mil:0,int:0};for(const i of c.list){const d=B[S.bld[i].t];if(!d.jobs)continue;const f=sphereOf(S.bld[i].t);if(f in jobsBy)jobsBy[f]+=d.jobs*(c.st[i]||0)}
+  const WF=Math.max(1,c.work+c.richPop*2,Object.values(jobsBy).reduce((a,b)=>a+b,0));let tot=0;
+  for(const f in jobsBy){S.seats[f]=Math.round((f==='mil'?0:FACK.floor)+FACK.share*jobsBy[f]/WF);tot+=S.seats[f]}S.seats.peo=100-tot;
+  facAttTick(r);const ne=f=>natEff(f);
   const runs=Object.values(r.run),avgRun=runs.length?runs.reduce((a,b)=>a+b,0)/runs.length:.8,deals=S.nat.filter(n=>n.deal).length,impF=r.need.food?r.imp.food/r.need.food:0;
-  const tgt={agr:58+(S.dom.food/RES.food.base-1)*25-(T.biz-.12)*120-impF*30+M('agr')*3,
-    ind:55+(avgRun-.8)*40-(1-c.pr)*40-(T.biz-.12)*150-(1-c.log)*40+M('ind')*3,
-    trd:50+Math.min(20,r.expV/40)-(T.imp-.1)*100-(T.exp-.05)*150+deals*5+M('trd')*3,
-    peo:S.happy*.9+(1-r.unemp)*10};
+  const sold=jobsBy.mil/Math.max(1,S.pop);r.soldiers=Math.round(jobsBy.mil);
+  const tgt={agr:58+(S.dom.food/RES.food.base-1)*25-(T.biz-.12)*120-impF*30+M('agr')*3+ne('agr'),
+    ind:55+(avgRun-.8)*40-(1-c.pr)*40-(T.biz-.12)*150-(1-c.log)*40+M('ind')*3+ne('ind'),
+    trd:50+Math.min(20,r.expV/40)-(T.imp-.1)*100-(T.exp-.05)*150+deals*5+M('trd')*3+ne('trd'),
+    peo:S.happy*.9+(1-r.unemp)*10+ne('peo'),
+    mil:42+Math.min(25,sold/FACK.soldierPct*20)+(S.money<0?-10:5)+S.guard*8+ne('mil'),
+    int:40+15*c.cv.school+12*c.cv.clinic+({demo:8,parl:5,mon:-10}[S.gov]||0)+M('soc')*2+ne('int')};
   for(const f in tgt){const s=S.fac[f];s.sat+=(Math.max(0,Math.min(100,tgt[f]+S.bribe))-s.sat)*.3}
   S.bribe*=.85;
   const parl=Object.keys(FAC).reduce((a,f)=>a+S.seats[f]*Math.max(0,Math.min(1,(S.fac[f].sat-30)/40)),0);
@@ -77,11 +107,11 @@ function govTick(r,c){
   const ap=S.happy*.55+(1-r.unemp)*15+Math.max(-10,Math.min(10,growth*50))-(infl>.08?Math.min(15,(infl-.08)*100):0)-(S.money<0?10:0)-(g12>0&&debt/g12>.6?10:0)+10+M('soc')*.5;
   S.appr+=(Math.max(0,Math.min(100,ap))-S.appr)*.3;
   // unrest
-  let du=(S.happy<30?(30-S.happy)*.6:-3)+(S.money<-2000?3:0)+(r.short.food>.3?5:0)+(S.appr<30?2:0);du*=du>0?D.un*(1-.1*M('mvd')):1;
+  let du=(S.happy<30?(30-S.happy)*.6:-3)+(S.fac.peo.sat<FACK.lo?FACK.peoUnrest:0)+(S.money<-2000?3:0)+(r.short.food>.3?5:0)+(S.appr<30?2:0);du*=du>0?D.un*(1-.1*M('mvd')):1;
   S.unrest=Math.max(0,Math.min(100,S.unrest+du));
-  if(S.gov==='mon'){S.army+=((55+S.guard*12+(S.money>0?5:-15)+(S.happy-50)*.3+(S.appr-50)*.2)-S.army)*.25;
+  if(S.gov==='mon'){S.army+=((30+S.fac.mil.sat*.4+S.guard*12+(S.money>0?5:-15)+(S.happy-50)*.3+(S.appr-50)*.2)-S.army)*.25;
     if(S.guard)S.money-=80,r.net-=80}
-  const coup=S.gov==='mon'?Math.max(0,(45-S.army)/100*.12+(S.unrest/100)*.04+Object.values(S.min).filter(m=>!m.loy).length*(S.appr<40?.01:0)):0;
+  const coup=S.gov==='mon'?Math.max(0,(45-S.army)/100*.12+(S.unrest/100)*.04+Object.values(S.min).filter(m=>!m.loy).length*(S.appr<40?.01:0)+['agr','ind','trd'].filter(f=>S.fac[f].sat<FACK.lo).length*FACK.coupAngry):0;
   S.coup=coup;S.parl=parl;
   h.push({m:S.month,gdp,cpi,infl,debt,pop:S.pop,happy:S.happy,unemp:r.unemp,money:S.money,appr:S.appr,trade:r.expV-r.impV,net:r.net,parl,unrest:S.unrest});if(h.length>240)h.shift();
   Object.assign(r,{gdp,cpi,infl,debt,growth,g12});
