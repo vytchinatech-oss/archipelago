@@ -63,7 +63,7 @@ const ARMY={base:30,mil:.4,guard:12,rich:5,broke:-15,mood:.3,appr:.2,speed:RATE.
 const REFORM={cost:3000*CAP,gap:60,army:60,appr:50,parl:60,toMon:-10,fromMon:5,monAva:10,monSol:-10,repSol:10,repAva:-5};
 const BRIBE={cost:2000*CAP,sat:12,army:3,decay:.85};
 /* Соседи: цены и внутренняя жизнь. */
-const NATK={buyNeed:1.3,buyOther:.9,buyCrisis:1.25,sellHave:.85,sellNone:1.3,sellCrisis:1.5,sellDeal:.92,demOther:8,
+const NATK={buyNeed:1.3,buyOther:1.15,buyCrisis:1.25,sellHave:.85,sellNone:1.3,sellCrisis:1.5,sellDeal:.92,demOther:8,
   balHappy:42,balDiv:60,balCrisis:.05,crisis:.03,crisisMin:4,crisisRand:5,brokeHappy:-8,happySpeed:RATE.normal,happyNoise:2,popMin:500,popMid:50,popDiv:2500,
   pvMin:.8,pvMax:1.25,pvSpeed:RATE.fast,pvNoise:.08,relSpeed:RATE.vslow,dealRel:.4,embRel:1.5,money:CAP};
 /* Обращения к соседям. Эффект договора и займа один при любом способе (кнопка, событие, министр). */

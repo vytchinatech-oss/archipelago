@@ -339,3 +339,12 @@ test('сохранение v4 переходит в новый масштаб д
   assert.equal(r.v, 5); assert.equal(r.price, 1400 * r.cap); assert.ok(r.nat); assert.ok(r.hh); assert.ok(r.wage);
   assert.ok(Math.abs(r.inc - .15) < 1e-9); assert.equal(r.biz, .2); assert.ok(r.loan > 100);
 });
+
+test('лестница выработки: по базовой цене рабочий окупает зарплату везде, переработка выгоднее сырья, глубокая — выгоднее всего', () => {
+  const r = load()(`const va=t=>{const d=B[t];let v=-d.up;for(const k in d.out)v+=d.out[k]*RES[k].base;if(d.in)for(const k in d.in)v-=d.in[k]*RES[k].base;return v/d.jobs};
+    const ts=Object.keys(B).filter(t=>B[t].out&&B[t].jobs),raw=ts.filter(t=>!B[t].in),one=ts.filter(t=>B[t].in&&Object.keys(B[t].in).length===1),deep=ts.filter(t=>B[t].in&&Object.keys(B[t].in).length>1);
+    ({minAll:Math.min(...ts.map(va)),maxRaw:Math.max(...raw.map(va)),minOne:Math.min(...one.map(va)),maxOne:Math.max(...one.map(va)),minDeep:Math.min(...deep.map(va)),wage:WAGE.start})`);
+  assert.ok(r.minAll > r.wage * 1.5, JSON.stringify(r));
+  assert.ok(r.minOne > r.maxRaw, JSON.stringify(r));
+  assert.ok(r.minDeep > r.maxOne, JSON.stringify(r));
+});
