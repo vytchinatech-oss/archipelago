@@ -1061,7 +1061,7 @@ function canBuild(tool,i){
 }
 function place(tool,i){
   const q=canBuild(tool,i);if(!q.ok)return q;spend(q.cost);
-  if(tool==='bull'){if(S.bld[i])S.bld[i]=null;else S.road[i]=0}
+  if(tool==='bull'){if(S.bld[i]){S.bld[i]=null;if(S.rep&&S.rep.fin)delete S.rep.fin[i]}else S.road[i]=0}
   else if(tool==='road'){S.road[i]=S.type[i]<=SHAL?2:1;if(S.type[i]===FOREST)S.type[i]=GRASS}
   else{S.bld[i]={t:tool};if(S.type[i]===FOREST)S.type[i]=GRASS}
   computeConn();computeCov();return q;
@@ -1090,7 +1090,7 @@ function advisor(c){
   if(c.log<ADV.log)return`Логистика ${Math.round(c.log*100)}%: поставьте склад рядом с предприятиями.`;
   if(r&&r.short.inputs>ADV.inputs)return'Заводам не хватает сырья. Добывайте или закупайте через порт.';
   if(r&&r.sat.goods<ADV.goods&&c.serve>0)return'На рынках мало товаров. Нужен завод или импорт.';
-  if(r&&r.firmMinus>r.firmPlus&&r.firmMinus>ADV.firmLoss){const lose=Object.keys(r.fin).filter(i=>r.fin[i].net<0),n=lose.length,worst=lose.sort((a,b)=>r.fin[a].net-r.fin[b].net)[0];
+  if(r&&r.firmMinus>r.firmPlus&&r.firmMinus>ADV.firmLoss){const lose=Object.keys(r.fin).filter(i=>r.fin[i].net<0&&S.bld[i]&&S.bld[i].t===r.fin[i].t),n=lose.length,worst=lose.sort((a,b)=>r.fin[a].net-r.fin[b].net)[0];
     return`Госпредприятия в убытке: ${n} ${plural(n,'предприятие','предприятия','предприятий')} теряют ${fmt(r.firmMinus)} кр в месяц. Больше всех теряет ${B[r.fin[worst].t].n.toLowerCase()}. ${firmWhy(+worst,r,c)}`}
   if(glut&&r.firmMinus>ADV.firmLoss)return`${RES[glut].n} в избытке, цена внутри упала до ${COMMA(S.dom[glut].toFixed(1))} кр. ${outlet(glut,c,r)}.`;
   if(r&&r.sal&&r.sal+r.theft>taxIncome(r)*ADV.cabinet)return`Кабинет министров обходится в ${Math.round((r.sal+r.theft)/Math.max(1,taxIncome(r))*100)}% доходов казны. Для такого города это дорого.`;

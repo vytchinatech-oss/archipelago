@@ -23,8 +23,10 @@ test('торговый договор обнуляет нашу пошлину �
 });
 
 test('импорт стоит денег жителям даже без пошлины', () => {
-  const v = load()(`setup();grid();portUp();S.tax.imp=0;S.pop=100;S.stock.food=0;tick().F.find(x=>x[0]==='Траты на импорт')[1]`);
-  assert.ok(v < 0);
+  const r = load()(`setup();grid();portUp();S.tax.imp=0;S.pop=100;S.stock.food=0;const x=tick();({v:x.F.find(f=>f[0]==='Траты на импорт')[1],share:x.impH/Math.max(MOODK.importMinBuy,x.hhBuy),k:MOODK.importK})`);
+  assert.ok(r.v < 0);
+  assert.ok(Math.abs(r.v + r.k * Math.min(1, r.share)) < 1e-9, 'штраф = −importK × доля привозного: ' + JSON.stringify(r));
+  assert.ok(r.v >= -r.k);
 });
 
 test('разорённые страны не покупают экспорт', () => {
@@ -406,6 +408,7 @@ test('советник и карточка объясняют убыток: ли
 
 test('счёт предприятия помнит вид здания: после сноса новое здание чужой счёт не показывает', () => {
   const r = load()(`setup();grid();for(let k=0;k<4;k++)near('house',S.hall);const f=near('farm',S.hall);S.pop=30;computeCov();const x=tick();const t=x.fin[f].t;place('bull',f);place('park',f);
-    ({t,now:S.bld[f].t,stale:!!(S.rep.fin[f]&&S.rep.fin[f].t===S.bld[f].t)})`);
-  assert.equal(r.t, 'farm'); assert.equal(r.now, 'park'); assert.equal(r.stale, false);
+    const park=!!(S.rep.fin[f]&&S.rep.fin[f].t===S.bld[f].t);place('bull',f);place('farm',f);
+    ({t,now:S.bld[f].t,stale:park,same:!!S.rep.fin[f]})`);
+  assert.equal(r.t, 'farm'); assert.equal(r.now, 'farm'); assert.equal(r.stale, false); assert.equal(r.same, false, 'новое поле на месте снесённого не показывает старый счёт');
 });
