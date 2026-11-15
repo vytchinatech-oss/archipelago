@@ -60,15 +60,15 @@ const DIPA={dealRel:5,dealCancel:-8,embargo:-25,aidCost:1000,aidMax:10,aidStep:2
 /* Четыре сообщения с особыми правилами (остальные — EVN в nations.js) и общие числа сообщений. */
 const EVX={loan:{from:RELK.tense,months:4,round:500,min:1500,max:5000,no:-5},deal:{from:RELK.friend},tariff:{imp:.05,to:.05,hike:.35,term:12,yes:6,no:-10},ref:{min:20,rand:40,yes:6,no:-4,riskRoom:.3}};
 const EVG={firstMonth:3,answerMonths:6,wiseRisk:1.5,wiseSafe:3};
-/* Цели игры. */
+/* Цели игры. ok — выполнена ли, pr — пройденная доля пути 0..1 (стратегии считают по ней скуку; при ok доля обязана быть 1 — тест). */
 const GOALS=[
-  {t:'Поселите 60 жителей',ok:()=>S.pop>=60,rw:300},
-  {t:'Дайте работу 40 жителям',ok:c=>c.emp>=40,rw:400},
-  {t:'Постройте порт и продайте груз за границу',ok:(c,r)=>r&&r.expV>0,rw:600},
-  {t:'Выпустите товары, ткани или консервы',ok:(c,r)=>r&&(r.prod.goods+r.prod.cloth+r.prod.cans)>0,rw:600},
-  {t:'Купите вторую область',ok:()=>S.regions.filter(g=>g.own).length>=2,rw:500},
-  {t:'Подпишите торговый договор',ok:()=>S.nat.some(n=>n.deal),rw:800},
-  {t:'Население 300',ok:()=>S.pop>=300,rw:1000},
-  {t:'Профицит бюджета 400 кр за месяц',ok:(c,r)=>r&&r.net>=400,rw:1000},
-  {t:'Население 1000',ok:()=>S.pop>=1000,rw:3000},
+  {t:'Поселите 60 жителей',ok:()=>S.pop>=60,pr:()=>S.pop/60,rw:300},
+  {t:'Дайте работу 40 жителям',ok:c=>c.emp>=40,pr:c=>c.emp/40,rw:400},
+  {t:'Постройте порт и продайте груз за границу',ok:(c,r)=>r&&r.expV>0,pr:(c,r)=>(c.cnt.port?.5:0)+(r&&r.expV>0?.5:0),rw:600},
+  {t:'Выпустите товары, ткани или консервы',ok:(c,r)=>r&&(r.prod.goods+r.prod.cloth+r.prod.cans)>0,pr:(c,r)=>r&&(r.prod.goods+r.prod.cloth+r.prod.cans)>0?1:0,rw:600},
+  {t:'Купите вторую область',ok:()=>S.regions.filter(g=>g.own).length>=2,pr:()=>S.regions.filter(g=>g.own).length/2,rw:500},
+  {t:'Подпишите торговый договор',ok:()=>S.nat.some(n=>n.deal),pr:()=>S.nat.some(n=>n.deal)?1:0,rw:800},
+  {t:'Население 300',ok:()=>S.pop>=300,pr:()=>S.pop/300,rw:1000},
+  {t:'Профицит бюджета 400 кр за месяц',ok:(c,r)=>r&&r.net>=400,pr:(c,r)=>r?Math.max(0,r.net)/400:0,rw:1000},
+  {t:'Население 1000',ok:()=>S.pop>=1000,pr:()=>S.pop/1000,rw:3000},
 ];

@@ -2,7 +2,7 @@
 function mkCand(post,s){const R=()=>rnd(s);const sk=1+Math.floor(R()*CAND.skill),f=FN[Math.floor(R()*FN.length)],l=LN[Math.floor(R()*LN.length)];
   const fem=/а$|я$/.test(f)&&f!=='Захар',ln=fem&&!/а$/.test(l)?l+'а':(!fem&&/а$/.test(l)?l.slice(0,-1):l);
   return{id:Math.floor(R()*2176782336).toString(36).padStart(6,'0'),name:`${f} ${ln}`,sk,hon:R()<CAND.hon,loy:R()<CAND.loy,risk:R()<CAND.risk,sal:CAND.salBase+sk*sk*CAND.salK+(R()*CAND.salRand|0)}}
-function govInit(s,gov,diff){s.v=4;s.gov=gov;s.diff=diff;s.nextEl=GOVK.term;s.unrest=0;s.appr=GOVK.appr0;s.army=GOVK.army0;s.guard=0;s.bribe=0;s.hist=[];s.over=null;s.reformAt=0;
+function govInit(s,gov,diff){s.v=SAVE_V;s.gov=gov;s.diff=diff;s.nextEl=GOVK.term;s.unrest=0;s.appr=GOVK.appr0;s.army=GOVK.army0;s.guard=0;s.bribe=0;s.hist=[];s.over=null;s.reformAt=0;
   s.fac=Object.fromEntries(Object.entries(GOVK.sat0).map(([f,sat])=>[f,{sat}]));s.seats=Object.assign({},GOVK.seats0);s.fatt=fattInit(s);
   s.min={};s.cand={};for(const p in POSTS)s.cand[p]=[mkCand(p,s),mkCand(p,s),mkCand(p,s)];s.warned={}}
 const M=p=>S&&S.min&&S.min[p]?S.min[p].sk:0;
@@ -75,7 +75,7 @@ function natEff(f){const a=S.fatt&&S.fatt[f];if(!a)return 0;let s=0,w=0;for(cons
 /* кто из фракций любит и не любит страну: [[f,att],...] */
 function natFans(id,th=FACK.fanFrom){const fan=[],foe=[];for(const f in FAC){const v=S.fatt&&S.fatt[f]?S.fatt[f][id]||0:0;if(f==='mil'&&!S.seats.mil)continue;if(v>=th)fan.push(f);else if(v<=-th)foe.push(f)}return{fan,foe}}
 /* старые сохранения v3 → v4: две новые фракции и отношения к соседям */
-function migrateSave(o){if(o.v===3){o.fac.mil={sat:50};o.fac.int={sat:50};o.seats.mil=0;o.seats.int=4;o.fatt=fattInit(o);o.v=4}
+function migrateSave(o){if(typeof o.v!=='number')throw new Error('в сохранении нет версии');if(o.v>SAVE_V)throw new Error('сохранение новее игры: v'+o.v);if(o.v<SAVE_MIN)throw new Error('сохранение слишком старое: v'+o.v);if(o.v===3){o.fac.mil={sat:50};o.fac.int={sat:50};o.seats.mil=0;o.seats.int=4;o.fatt=fattInit(o);o.v=4}
   /* поля редких сообщений и обращений раз в год: версия та же, просто дополняем */
   if(o.evAt===undefined){o.evAt=-99;o.evHist=[];o.evNid=null;o.nat.forEach(n=>{n.actAt=-99})}
   /* торговля за год для обоснованных сообщений; сообщение старого вида без причины снимаем */

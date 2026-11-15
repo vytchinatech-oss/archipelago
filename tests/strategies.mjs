@@ -108,9 +108,8 @@ var BOTS={
         if(r&&r.sat.food<1)tryList(['farm','fish','ranch']);else if(r&&r.short.inputs>0)tryList(rw);else tryList(['textile','cannery','factory',...rw])}}},
 };
 
-/* Показатели пути к каждой цели, 0..1 (повторяют GOALS из src/data/rules.js; тест сверяет число целей). */
-var goalProg=(c,r)=>{const f=[()=>S.pop/60,()=>c.emp/40,()=>(c.cnt.port?.5:0)+(r&&r.expV>0?.5:0),()=>r&&(r.prod.goods+r.prod.cloth+r.prod.cans)>0?1:0,
-  ()=>S.regions.filter(x=>x.own).length/2,()=>S.nat.some(n=>n.deal)?1:0,()=>S.pop/300,()=>r?Math.max(0,r.net)/400:0,()=>S.pop/1000];return f.map(x=>Math.min(1,x()||0))};
+/* Пройденная доля пути к каждой цели, 0..1 — из самих целей (GOALS[k].pr в src/data/rules.js), не своим списком. */
+var goalProg=(c,r)=>GOALS.map(g=>Math.min(1,g.pr(c,r)||0));
 
 /* Отпечаток состояния: одинаковое зерно обязано давать одинаковый отпечаток. */
 var fingerprint=()=>{const parts=[S.mi,S.gov,S.month,S.money,S.pop,S.happy,S.appr,S.unrest,S.goal,S.rs,RK.map(k=>S.stock[k]+':'+S.dom[k]).join(','),

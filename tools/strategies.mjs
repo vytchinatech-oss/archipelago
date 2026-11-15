@@ -1,11 +1,12 @@
 // Прогон стратегий игрока: стратегии × карты × строи, одно зерно.
 //   node tools/strategies.mjs                 — таблица, 30 лет
 //   node tools/strategies.mjs --months 60     — короче
-//   node tools/strategies.mjs --write         — переснять эталон tests/baseline.json
+//   node tools/strategies.mjs --write         — переснять эталон tests/baseline.json (на Node из .nvmrc; другая основная версия — только с --node-change)
 //   node tools/strategies.mjs --compare [файл] — сравнить с эталоном (по умолчанию tests/baseline.json;
 //                                               эталон правил 0.5.3 навсегда лежит в tests/baseline-0.5.3.json)
 // tests/baseline.json сверяется в npm test всегда: правила или бот поменялись — тест красный, пока эталон не переснят;
-// в коммит — итог --compare против 0.5.3. Отпечатки зависят от дробной арифметики Node: на другой Node эталон может разойтись.
+// в коммит — итог --compare против 0.5.3. Отпечатки зависят от дробной арифметики Node (Math.pow, Math.hypot): эталон помнит
+// версию Node, на которой снят (поле node); при расхождении на другой основной версии тест сначала называет её.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { sweep, NAMES, SEED, SHORT } from '../tests/strategies.mjs';
 
@@ -21,7 +22,7 @@ const line = r => [NAMES[r.strat].padEnd(16), `карта ${r.mi}`, GOV[r.gov].p
 
 if (args.includes('--compare')) {
   const base = JSON.parse(readFileSync(CMP, 'utf8')), key = r => `${r.strat}/${r.mi}/${r.gov}`, old = new Map(base.runs.map(r => [key(r), r]));
-  console.log(`Эталон: версия ${base.version}, ${base.months} мес., зерно ${base.seed}. Сейчас: ${pkg.version}, ${months} мес.`);
+  console.log(`Эталон: версия ${base.version}, ${base.months} мес., зерно ${base.seed}, Node ${base.node ?? '?'}. Сейчас: ${pkg.version}, ${months} мес., Node ${process.versions.node}.`);
   let same = 0;
   for (const r of rows) { const o = old.get(key(r)); if (o && o.fp === r.fp) { same++; continue; }
     console.log('было  ' + (o ? line(o) : '—')); console.log('стало ' + line(r)); }
@@ -29,8 +30,13 @@ if (args.includes('--compare')) {
 } else {
   for (const r of rows) console.log(line(r));
   if (args.includes('--write')) {
+    const was = JSON.parse(readFileSync(FILE, 'utf8')).node, maj = v => String(v).split('.')[0];
+    if (was && maj(was) !== maj(process.versions.node) && !args.includes('--node-change')) {
+      console.error(`Эталон снят на Node ${was}, сейчас ${process.versions.node}: не переснимаю. Смена Node — решение ведущего по совету техдиректора: --node-change, и поменять engines и .nvmrc.`);
+      process.exit(1);
+    }
     const short = Object.fromEntries(sweep({ months: SHORT, seed: SEED }).map(r => [`${r.strat}/${r.mi}/${r.gov}`, r.fp]));
-    writeFileSync(FILE, JSON.stringify({ version: pkg.version, months, seed: SEED, date: new Date().toISOString().slice(0, 10),
+    writeFileSync(FILE, JSON.stringify({ version: pkg.version, months, seed: SEED, date: new Date().toISOString().slice(0, 10), node: process.versions.node,
       short: { months: SHORT, fp: short }, runs: rows }, null, 1) + '\n');
     console.log('Эталон записан: tests/baseline.json');
   }

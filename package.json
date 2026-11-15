@@ -1,13 +1,13 @@
 {
   "name": "archipelago",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "private": true,
   "description": "Градостроительный и экономический симулятор на островах",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
-    "test": "node build.mjs && node --test tests/*.test.mjs",
+    "test": "node build.mjs && node --test --test-reporter=tap --test-reporter-destination=stdout --test-reporter=./tools/count-reporter.mjs --test-reporter-destination=.test-count.json tests/*.test.mjs && node tools/test-count.mjs",
     "check": "node tools/check-state.mjs"
   },
-  "engines": { "node": ">=20" }
+  "engines": { "node": "22.x" }
 }

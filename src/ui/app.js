@@ -30,7 +30,7 @@ function buildMenu(){
     b.innerHTML=`<canvas width="176" height="176"></canvas><h3>${m.n}</h3><p>${m.d}</p><div class="tags">${m.tags.map(t=>`<span class="tag">${t}</span>`).join('')}<span class="tag">Тёплых областей: ${W.regions.filter(g=>g.warm).length}</span><span class="tag">Золото: ${cnt.gold}</span></div>`;
     drawPreview(b.querySelector('canvas'),W);b.onclick=()=>{PICK=k;box.querySelectorAll('.map').forEach((el,j)=>el.setAttribute('aria-pressed',j===k))};box.appendChild(b)});
   const sv=store(SAVE_KEY),bc=$('#b-cont');bc.hidden=true;
-  if(sv){try{const o=JSON.parse(sv);if(o.v>=3&&!o.over){bc.hidden=false;bc.textContent=`Продолжить: ${MAPS[o.mi].n}, ${GOVS[o.gov].n.toLowerCase()}, ${MONTHS[o.month%12].toLowerCase()} года ${1+(o.month/12|0)}`}}catch(e){}}
+  if(sv){try{const o=JSON.parse(sv);if(o.v>=SAVE_MIN&&o.v<=SAVE_V&&!o.over){bc.hidden=false;bc.textContent=`Продолжить: ${MAPS[o.mi].n}, ${GOVS[o.gov].n.toLowerCase()}, ${MONTHS[o.month%12].toLowerCase()} года ${1+(o.month/12|0)}`}}catch(e){}}
 }
 function showMenu(){if(S)store(SAVE_KEY,saveStr());$('#game').hidden=true;$('#menu').hidden=false;sheet(null);buildMenu()}
 function enterGame(){

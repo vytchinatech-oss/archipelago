@@ -53,5 +53,8 @@ test(`эталон: ${STRATS.length} стратегий × ${MAPS.length} кар
   // Сверка идёт всегда, при любой версии: правила или бот поменялись — отпечатки разошлись, тест красный, пока эталон
   // не переснят (node tools/strategies.mjs --write); в коммит — итог --compare tests/baseline-0.5.3.json.
   const diff = rows.filter(r => base.short.fp[`${r.strat}/${r.mi}/${r.gov}`] !== r.fp).map(r => `${r.strat}/${r.mi}/${r.gov}`);
-  assert.deepEqual(diff, [], `партии разошлись с эталоном ${base.version}: переснимите эталон и запишите разницу с 0.5.3`);
+  // Отпечатки зависят от дробной арифметики Node: на другой основной версии расхождение — сначала проверить на версии эталона.
+  const nodeNote = base.node && base.node.split('.')[0] !== process.versions.node.split('.')[0]
+    ? `эталон снят на Node ${base.node}, сейчас ${process.versions.node}: эталон НЕ переснимать — прогоните на Node ${base.node.split('.')[0]} (.nvmrc). ` : '';
+  assert.deepEqual(diff, [], nodeNote || `партии разошлись с эталоном ${base.version}: переснимите эталон и запишите разницу с 0.5.3`);
 });

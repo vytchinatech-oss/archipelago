@@ -177,7 +177,8 @@ function check(argv) {
     const out = (r.stdout || '') + (r.stderr || '');
     const pass = Number((out.match(/^# pass (\d+)/m) || [])[1] ?? NaN);
     const fail = Number((out.match(/^# fail (\d+)/m) || [])[1] ?? NaN);
-    if (r.status !== 0 || fail > 0) add('find', 3, `npm test красный: прошло ${pass}, упало ${fail}`);
+    const cnt = (out.match(/Число тестов разошлось[^\n]*\n((?:\s+[^\n]+\n?)*)/) || [])[1];
+    if (r.status !== 0 || fail > 0) add('find', 3, `npm test красный: прошло ${pass}, упало ${fail}` + (cnt ? `; число тестов разошлось с эталоном: ${cnt.trim().split(/\n\s*/).join('; ')}` : ''));
     else if (st.tests != null && pass !== st.tests) add('find', 3, `npm test зелёный, тестов ${pass}, а в STATUS.md ${st.tests}`);
     else add('ok', 3, `npm test зелёный, тестов ${pass} = STATUS.md`);
   } else add('info', 3, `тесты не запускались (ключ --tests); в STATUS.md — ${st.tests ?? '—'}`);
