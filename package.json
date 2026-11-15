@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
-    "test": "node build.mjs && node --test tests/*.test.mjs"
+    "test": "node build.mjs && node --test tests/*.test.mjs",
+    "check": "node tools/check-state.mjs"
   },
   "engines": { "node": ">=20" }
 }
