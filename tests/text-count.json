@@ -1,0 +1,16 @@
+{
+ "core/constants.js": { "lines": 3, "texts": 19 },
+ "shell.html": { "lines": 30, "texts": 47 },
+ "sim/economy.js": { "lines": 54, "texts": 90 },
+ "sim/nations.js": { "lines": 50, "texts": 119 },
+ "sim/politics.js": { "lines": 42, "texts": 88 },
+ "sim/world.js": { "lines": 1, "texts": 1 },
+ "ui/app.js": { "lines": 43, "texts": 113 },
+ "ui/boot.js": { "lines": 3, "texts": 3 },
+ "ui/building-card.js": { "lines": 36, "texts": 118 },
+ "ui/map.js": { "lines": 7, "texts": 12 },
+ "ui/power.js": { "lines": 69, "texts": 185 },
+ "ui/sheets.js": { "lines": 40, "texts": 50 },
+ "ui/tooltips.js": { "lines": 1, "texts": 1 },
+ "ui/tutorial.js": { "lines": 6, "texts": 10 }
+}
