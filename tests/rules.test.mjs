@@ -256,14 +256,14 @@ test('Н17: советник не трогает выключатели, дов�
 });
 
 test('Н17: пойманного вора снимают с поста, описания не обещают лишнего', () => {
-  const r = load()(`setup();hire('ind',S.cand.ind[0].id);S.min.ind.hon=false;S.min.ind.loy=true;const a0=S.appr;Math.random=()=>0;tick();({left:!!S.min.ind,caught:S.log.some(l=>/снят с поста/.test(l.t)),a:POSTS.mvd.a,agr:POSTS.agr.a})`);
+  const r = load()(`setup();hire('ind',S.cand.ind[0].id);S.min.ind.hon=false;S.min.ind.loy=true;const a0=S.appr;CABK.caught=1;tick();({left:!!S.min.ind,caught:S.log.some(l=>/снят с поста/.test(l.t)),a:POSTS.mvd.a,agr:POSTS.agr.a})`);
   assert.equal(r.left, false); assert.ok(r.caught); assert.doesNotMatch(r.a, /гасит/);
 });
 
 test('Н18: в логике нет дробных коэффициентов', () => {
   const r = load()(`1`);
   const src = ['economy', 'nations', 'politics'].map(f => readFileSync(new URL(`../src/sim/${f}.js`, import.meta.url), 'utf8')).join('\n');
-  const found = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*/g, '').replace(/Math\.random\(\)-\.5/g, '').match(/(?<![\w.'"`])\d*\.\d+/g) || [];
+  const found = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*/g, '').replace(/rnd\(\)-\.5/g, '').match(/(?<![\w.'"`])\d*\.\d+/g) || [];
   assert.equal(r, 1); assert.deepEqual(found, []);
 });
 

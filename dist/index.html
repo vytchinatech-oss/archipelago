@@ -307,7 +307,7 @@ button.stat:focus-visible{outline:2px solid var(--sun)}
 </section>
 <script>
 'use strict';
-const GAME_VERSION="0.5.3",BUILD_DATE="15 ноября 2026";
+const GAME_VERSION="0.5.4",BUILD_DATE="15 ноября 2026";
 /* ===== core/constants.js ===== */
 /* Размеры карты, тайлы, типы рельефа, месяцы. Подключается первым. */
 const N=44,TW=64,TH=32,EH=9;
@@ -321,6 +321,10 @@ const MONTHS=['Январь','Февраль','Март','Апрель','Май'
 /* ===== core/util.js ===== */
 /* Случайные числа, шум для рельефа, форматирование чисел и склонения. */
 function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+/* Случайность партии: один поток на игру, его состояние — S.rs (целое без знака). Одно зерно — одна и та же партия;
+   поток сохраняется вместе с игрой. В src/sim только rnd(), Math.random — лишь в newSeed() для новой игры без зерна. */
+function newSeed(){return Math.floor(Math.random()*4294967296)>>>0}
+function rnd(s){s=s||S;if(!(s.rs>=0))s.rs=newSeed();s.rs=(s.rs+0x6D2B79F5)>>>0;let t=s.rs;t=Math.imul(t^t>>>15,1|t);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}
 function h2(x,y,s){let h=(Math.imul(x,374761393)+Math.imul(y,668265263)+Math.imul(s,982451653))|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return(h>>>0)/4294967296}
 function vnoise(x,y,s){const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);
   const a=h2(ix,iy,s),b=h2(ix+1,iy,s),c=h2(ix,iy+1,s),d=h2(ix+1,iy+1,s);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
@@ -629,14 +633,14 @@ function genWorld(mi){
   return{type,elev,reg,regions,hall,start:st};
 }
 
-function newGame(mi){
+function newGame(mi,seed){
   const W=genWorld(mi),z=v=>Object.fromEntries(RK.map(k=>[k,v]));
   const s={v:2,mi,type:W.type,elev:W.elev,reg:W.reg,regions:W.regions,hall:W.hall,
     bld:Array(N*N).fill(null),road:new Uint8Array(N*N),
     money:START.money,pop:START.pop,happy:START.happy,month:0,tax:Object.assign({},START.tax),
     stock:Object.assign(z(0),START.stock),dom:Object.fromEntries(RK.map(k=>[k,RES[k].base])),
     trade:Object.fromEntries(RK.map(k=>[k,{e:1,i:1}])),goal:0,log:[],rep:null,
-    nat:initNations(),loans:[],lent:[],mig:'open',ev:null,evAt:-99,evHist:[],evNid:null,tut:null};
+    nat:initNations(),loans:[],lent:[],mig:'open',ev:null,evAt:-99,evHist:[],evNid:null,tut:null,rs:typeof seed==='number'&&seed>=0?seed>>>0:newSeed()};
   const h=W.hall,clr=j=>{if(s.type[j]===FOREST)s.type[j]=GRASS};
   s.bld[h]={t:'hall'};clr(h);
   for(const j of[h+1,h+2,h+3])if(s.type[j]>=SAND&&s.type[j]<=HILL){s.road[j]=1;clr(j)}
@@ -679,19 +683,19 @@ function natTick(r){
   for(const n of S.nat){const d=ND(n);
     tradeYear(n.xy,r.xn[n.id]);tradeYear(n.my,r.mn[n.id]);
     if(n.cr){if(--n.cr.m<=0){L(`${d.n}: ${CRISES[n.cr.t].end}.`);n.cr=null}}
-    else if(Math.random()<NATK.crisis*(S.diff?DIFF[S.diff].cr:1)){const ks=Object.keys(CRISES),t=ks[Math.floor(Math.random()*ks.length)];n.cr={t,m:NATK.crisisMin+Math.floor(Math.random()*NATK.crisisRand)};L(`${d.n}: ${CRISES[t].start}.`)}
+    else if(rnd()<NATK.crisis*(S.diff?DIFF[S.diff].cr:1)){const ks=Object.keys(CRISES),t=ks[Math.floor(rnd()*ks.length)];n.cr={t,m:NATK.crisisMin+Math.floor(rnd()*NATK.crisisRand)};L(`${d.n}: ${CRISES[t].start}.`)}
     const c=n.cr?CRISES[n.cr.t]:null;
-    n.happy+=((d.hb+(c?c.h:0)+(n.money<0?NATK.brokeHappy:0))-n.happy)*NATK.happySpeed+(Math.random()-.5)*NATK.happyNoise;
+    n.happy+=((d.hb+(c?c.h:0)+(n.money<0?NATK.brokeHappy:0))-n.happy)*NATK.happySpeed+(rnd()-.5)*NATK.happyNoise;
     n.pop=Math.max(NATK.popMin,Math.round(n.pop*(1+(n.happy-NATK.popMid)/NATK.popDiv)));
     n.money+=natBal(n);
-    for(const k of RK)n.pv[k]=Math.max(NATK.pvMin,Math.min(NATK.pvMax,n.pv[k]+(1-n.pv[k])*NATK.pvSpeed+(Math.random()-.5)*NATK.pvNoise));
+    for(const k of RK)n.pv[k]=Math.max(NATK.pvMin,Math.min(NATK.pvMax,n.pv[k]+(1-n.pv[k])*NATK.pvSpeed+(rnd()-.5)*NATK.pvNoise));
     n.rel+=(d.brel-n.rel)*NATK.relSpeed+(n.deal?NATK.dealRel:0)-(n.emb?NATK.embRel:0)+MINK.dipRel*M('dip')-(d.aggr&&!n.deal?DIPL.aggrDrift:0);
     n.rel=Math.max(-RELK.max,Math.min(RELK.max,n.rel));
     if(n.deal&&n.rel<RELK.dealBreak){n.deal=0;L(`${d.n} разорвал торговый договор: отношения испортились.`)}
   }
   refreshMarkets();
   if(S.ev&&S.month>=S.ev.exp){evAnswer(false,true)}
-  if(!S.ev&&S.month>EVG.firstMonth&&S.month-S.evAt>=DIPL.evGap&&Math.random()<DIPL.evChance)makeEvent();
+  if(!S.ev&&S.month>EVG.firstMonth&&S.month-S.evAt>=DIPL.evGap&&rnd()<DIPL.evChance)makeEvent();
 }
 /* Каждое сообщение появляется только при настоящей причине и несёт в себе цифры этой причины. */
 function makeEvent(){
@@ -702,7 +706,7 @@ function makeEvent(){
     if(natHard(n)&&n.rel>=EVX.loan.from)add('loan',{amt:Math.max(EVX.loan.min,Math.min(EVX.loan.max,Math.round(Math.abs(Math.min(bal,0))*EVX.loan.months/EVX.loan.round)*EVX.loan.round)),rate:DIPA.lendRate,cn,bal:Math.round(bal),cash:Math.round(n.money)});
     if(n.rel>=EVX.deal.from&&!n.deal&&xv+mv>=MT)add('deal',{xv,mv,paid:Math.round(xv*natTariff(n)/(1-natTariff(n)))});
     if(d.aggr&&!n.deal&&S.tax.imp>EVX.tariff.imp&&n.tarUntil<=S.month&&mv>=MT&&xv>=MT)add('tariff',{xv,mv,duty:Math.round(mv*S.tax.imp),pct:Math.round(S.tax.imp*100),mw:topNames(n.my),xw:topNames(n.xy)});
-    if(C&&C.ref&&S.happy>n.happy)add('ref',{amt:EVX.ref.min+Math.floor(Math.random()*EVX.ref.rand),cn});
+    if(C&&C.ref&&S.happy>n.happy)add('ref',{amt:EVX.ref.min+Math.floor(rnd()*EVX.ref.rand),cn});
     if(port&&n.rel>EVN.order.from)for(const k of Object.keys(d.dem)){const amt=Math.floor(Math.min(S.stock[k],EVN.order.cap)/EVN.order.round)*EVN.order.round,price=Math.round(natBuy(n,k)*EVN.order.mul);
       if(amt>=EVN.order.min&&n.money>amt*price)add('order',{k,amt,price,why:crMul(n,k,'dem')>1?`Причина: ${C.n}, спрос подскочил.`:n.xy[k]?`Они уже берут это у вас, но им не хватает.`:`Своего у них нет, а на рынке дефицит.`})}
     if(port&&n.rel>EVN.bargain.from)for(const k of Object.keys(d.sup)){const amt=EVN.bargain.amt,price=Math.max(1,Math.round(natSell(n,k)*EVN.bargain.mul)),use=rep?rep.cons[k]||0:0,low=use>0&&S.stock[k]<use*EVN.bargain.lowMonths;
@@ -720,8 +724,8 @@ function makeEvent(){
   const all=[...new Set(opts.map(o=>o.t))],H=S.evHist;
   /* Если нового сказать нечего, лучше промолчать, чем повториться: самый старый вид снова станет доступен. */
   const ts=all.filter(t=>!H.includes(t));if(!ts.length){H.shift();return}
-  const t=ts[Math.floor(Math.random()*ts.length)],same=opts.filter(o=>o.t===t),fresh=same.filter(o=>o.nid!==S.evNid),pool=fresh.length?fresh:same;
-  const e=pool[Math.floor(Math.random()*pool.length)];e.exp=S.month+EVG.answerMonths;S.ev=e;if(e.t==='envoy')natById(e.nid).met=1;if(e.t==='summit')natById(e.nid).sumAt=S.month;
+  const t=ts[Math.floor(rnd()*ts.length)],same=opts.filter(o=>o.t===t),fresh=same.filter(o=>o.nid!==S.evNid),pool=fresh.length?fresh:same;
+  const e=pool[Math.floor(rnd()*pool.length)];e.exp=S.month+EVG.answerMonths;S.ev=e;if(e.t==='envoy')natById(e.nid).met=1;if(e.t==='summit')natById(e.nid).sumAt=S.month;
   S.evAt=S.month;S.evNid=e.nid;H.push(t);while(H.length>DIPL.noRepeat)H.shift();
 }
 /* Чего не хватает, чтобы согласиться; пустая строка — хватает всего. */
@@ -933,7 +937,7 @@ function tick(){
   const sold=RK.reduce((a,k)=>a+r.cons[k]*S.dom[k],0)+r.expV;
   r.wages=c.emp*ECO.wage*(1+ECO.schoolWage*c.cv.school)+richPop*ECO.richIncome;r.inc=r.wages*T.inc;r.biz=Math.max(0,sold-r.impB)*T.biz*(1+MINK.fin*M('fin'));r.inc*=1+MINK.fin*M('fin');r.up=upkeep();r.int=S.money<0?-S.money*ECO.interest:0;
   for(const L of S.loans){const p=Math.min(L.left,L.pay);L.left-=p;r.loanOut+=p;natById(L.nid).money+=p}S.loans=S.loans.filter(L=>L.left>ECO.loanDust);
-  for(const L of S.lent){const n=natById(L.nid);if(n.money<0&&Math.random()<ECO.lateChance){r.ev.push(`${ND(n).n} задерживает выплату по вашему займу.`);continue}const p=Math.min(L.left,L.pay);L.left-=p;n.money-=p;r.loanIn+=p}
+  for(const L of S.lent){const n=natById(L.nid);if(n.money<0&&rnd()<ECO.lateChance){r.ev.push(`${ND(n).n} задерживает выплату по вашему займу.`);continue}const p=Math.min(L.left,L.pay);L.left-=p;n.money-=p;r.loanIn+=p}
   S.lent=S.lent.filter(L=>L.left>ECO.loanDust);
   r.net=r.inc+r.biz+r.dImp+r.dExp+r.loanIn-r.up-r.int-r.loanOut;S.money+=r.net;
   // mood
@@ -950,11 +954,11 @@ function tick(){
   if(S.happy<POPK.leaveBelow)dp-=S.pop*POPK.leaveShare*(POPK.leaveBelow-S.happy)/POPK.leaveBelow;
   if(r.short.food>POPK.famine)dp-=S.pop*POPK.famineShare*r.short.food;
   if(room<0)dp+=room*POPK.overcrowd;
-  S.pop=Math.max(0,Math.floor(S.pop+dp+Math.random()));if(dp>0)S.pop=Math.min(S.pop,Math.max(c.home,0));
+  S.pop=Math.max(0,Math.floor(S.pop+dp+rnd()));if(dp>0)S.pop=Math.min(S.pop,Math.max(c.home,0));
   r.dp=dp;room=c.home-S.pop;
   for(const n of S.nat){if(n.emb)continue;const diff=S.happy-n.happy,okIn=S.mig==='open'||(S.mig==='allies'&&n.rel>=RELK.friend);
     let m=0;if(okIn&&diff>MIGK.inDiff&&room>0){m=Math.floor(Math.min(room,n.pop*MIGK.inRate*diff/MIGK.per*(n.cr&&CRISES[n.cr.t].ref?MIGK.crisisMul:1)));room-=m}
-    else if(diff<-MIGK.outDiff&&S.pop>MIGK.outMinPop)m=-Math.floor(S.pop*MIGK.outRate*(-diff/MIGK.per)+Math.random());
+    else if(diff<-MIGK.outDiff&&S.pop>MIGK.outMinPop)m=-Math.floor(S.pop*MIGK.outRate*(-diff/MIGK.per)+rnd());
     if(m){S.pop+=m;n.pop-=m;r.mig[n.id]=m}}
   S.pop=Math.max(0,S.pop);
   S.month++;
@@ -1039,12 +1043,12 @@ function advisor(c){
 
 /* ===== sim/politics.js ===== */
 /* Министры, автопилот, показатели страны, выборы, протесты, перевороты, реформа. */
-function mkCand(post){const R=Math.random;const sk=1+Math.floor(R()*CAND.skill),f=FN[Math.floor(R()*FN.length)],l=LN[Math.floor(R()*LN.length)];
+function mkCand(post,s){const R=()=>rnd(s);const sk=1+Math.floor(R()*CAND.skill),f=FN[Math.floor(R()*FN.length)],l=LN[Math.floor(R()*LN.length)];
   const fem=/а$|я$/.test(f)&&f!=='Захар',ln=fem&&!/а$/.test(l)?l+'а':(!fem&&/а$/.test(l)?l.slice(0,-1):l);
-  return{id:Math.random().toString(36).slice(2,8),name:`${f} ${ln}`,sk,hon:R()<CAND.hon,loy:R()<CAND.loy,risk:R()<CAND.risk,sal:CAND.salBase+sk*sk*CAND.salK+(R()*CAND.salRand|0)}}
+  return{id:Math.floor(R()*2176782336).toString(36).padStart(6,'0'),name:`${f} ${ln}`,sk,hon:R()<CAND.hon,loy:R()<CAND.loy,risk:R()<CAND.risk,sal:CAND.salBase+sk*sk*CAND.salK+(R()*CAND.salRand|0)}}
 function govInit(s,gov,diff){s.v=4;s.gov=gov;s.diff=diff;s.nextEl=GOVK.term;s.unrest=0;s.appr=GOVK.appr0;s.army=GOVK.army0;s.guard=0;s.bribe=0;s.hist=[];s.over=null;s.reformAt=0;
   s.fac=Object.fromEntries(Object.entries(GOVK.sat0).map(([f,sat])=>[f,{sat}]));s.seats=Object.assign({},GOVK.seats0);s.fatt=fattInit(s);
-  s.min={};s.cand={};for(const p in POSTS)s.cand[p]=[mkCand(p),mkCand(p),mkCand(p)];s.warned={}}
+  s.min={};s.cand={};for(const p in POSTS)s.cand[p]=[mkCand(p,s),mkCand(p,s),mkCand(p,s)];s.warned={}}
 const M=p=>S&&S.min&&S.min[p]?S.min[p].sk:0;
 function hire(p,id){const c=S.cand[p].find(x=>x.id===id);if(!c)return'Кандидат уже ушёл';if(S.min[p])fire(p,true);
   S.min[p]=Object.assign({auto:0,since:S.month},c);S.cand[p]=S.cand[p].filter(x=>x.id!==id);S.log.unshift({m:S.month,t:`Назначен министр ${POSTS[p].n.toLowerCase()}: ${c.name}.`});return`${c.name} назначен`}
@@ -1130,11 +1134,11 @@ function govTick(r,c){
   r.sal=sal;r.theft=theft;S.money-=sal+theft;r.net-=sal+theft;
   const cash0=S.money;
   for(const p in S.min){const m=S.min[p];m.tip=ministerTurn(p,c,r,!!m.auto);
-    if(!m.hon&&Math.random()<CABK.caught){S.appr-=CABK.caughtAppr;L(`Скандал: министр ${m.name} уличён в хищениях и снят с поста. Рейтинг падает.`);fire(p,true);continue}
-    if(!m.loy&&S.appr<CABK.plotAppr&&Math.random()<CABK.plot){S.unrest=Math.min(100,S.unrest+CABK.plotUnrest);if(S.gov==='mon')S.army-=CABK.plotArmy;L(`Министр ${m.name} плетёт интриги против вас.`)}}
+    if(!m.hon&&rnd()<CABK.caught){S.appr-=CABK.caughtAppr;L(`Скандал: министр ${m.name} уличён в хищениях и снят с поста. Рейтинг падает.`);fire(p,true);continue}
+    if(!m.loy&&S.appr<CABK.plotAppr&&rnd()<CABK.plot){S.unrest=Math.min(100,S.unrest+CABK.plotUnrest);if(S.gov==='mon')S.army-=CABK.plotArmy;L(`Министр ${m.name} плетёт интриги против вас.`)}}
   r.auto=S.money-cash0;
   for(const p in POSTS)if(!S.min[p])S.adv=S.adv||{},S.adv[p]=ministerTurn(p,c,r,false);
-  if(S.month%12===0)for(const p in POSTS)S.cand[p]=[mkCand(p),mkCand(p),mkCand(p)];
+  if(S.month%12===0)for(const p in POSTS)S.cand[p]=[mkCand(p,S),mkCand(p,S),mkCand(p,S)];
   // indicators
   const gdp=RK.reduce((a,k)=>a+r.prod[k]*S.dom[k],0),W=GOVK.inflW;
   const cpi=100*Object.keys(W).reduce((a,k)=>a+W[k]*S.dom[k]/RES[k].base,0);
@@ -1174,8 +1178,8 @@ function govTick(r,c){
   // overthrow
   const why={demo:'Импичмент: массовые протесты вынудили парламент отстранить вас.',parl:'Вотум недоверия: парламент отправил правительство в отставку на волне протестов.',mon:'Восстание: толпа взяла дворец, династия низложена.'};
   if(S.unrest>=100)return endGame(why[S.gov]);
-  if(S.gov==='mon'&&Math.random()<coup)return endGame('Дворцовый переворот: армия и знать возвели на трон другого.');
-  if(S.gov!=='mon'&&S.month>=S.nextEl){const v=S.gov==='demo'?Math.max(0,Math.min(100,S.appr+(Math.random()-.5)*GOVK.pollNoise)):parl;
+  if(S.gov==='mon'&&rnd()<coup)return endGame('Дворцовый переворот: армия и знать возвели на трон другого.');
+  if(S.gov!=='mon'&&S.month>=S.nextEl){const v=S.gov==='demo'?Math.max(0,Math.min(100,S.appr+(rnd()-.5)*GOVK.pollNoise)):parl;
     if(v>=D.th){S.nextEl+=GOVK.term;L(`Выборы: вы победили с результатом ${Math.round(v)}%. Следующие через 10 лет.`);r.alert=`Вы переизбраны: ${Math.round(v)}%`;S.elWon=(S.elWon||0)+1}
     else return endGame(`${S.gov==='demo'?'Народ':'Парламент'} отдал вам ${Math.round(v)}% при нужных ${D.th}%. Вы проиграли выборы.`)}
 }

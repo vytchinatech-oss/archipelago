@@ -121,7 +121,7 @@ function tick(){
   const sold=RK.reduce((a,k)=>a+r.cons[k]*S.dom[k],0)+r.expV;
   r.wages=c.emp*ECO.wage*(1+ECO.schoolWage*c.cv.school)+richPop*ECO.richIncome;r.inc=r.wages*T.inc;r.biz=Math.max(0,sold-r.impB)*T.biz*(1+MINK.fin*M('fin'));r.inc*=1+MINK.fin*M('fin');r.up=upkeep();r.int=S.money<0?-S.money*ECO.interest:0;
   for(const L of S.loans){const p=Math.min(L.left,L.pay);L.left-=p;r.loanOut+=p;natById(L.nid).money+=p}S.loans=S.loans.filter(L=>L.left>ECO.loanDust);
-  for(const L of S.lent){const n=natById(L.nid);if(n.money<0&&Math.random()<ECO.lateChance){r.ev.push(`${ND(n).n} задерживает выплату по вашему займу.`);continue}const p=Math.min(L.left,L.pay);L.left-=p;n.money-=p;r.loanIn+=p}
+  for(const L of S.lent){const n=natById(L.nid);if(n.money<0&&rnd()<ECO.lateChance){r.ev.push(`${ND(n).n} задерживает выплату по вашему займу.`);continue}const p=Math.min(L.left,L.pay);L.left-=p;n.money-=p;r.loanIn+=p}
   S.lent=S.lent.filter(L=>L.left>ECO.loanDust);
   r.net=r.inc+r.biz+r.dImp+r.dExp+r.loanIn-r.up-r.int-r.loanOut;S.money+=r.net;
   // mood
@@ -138,11 +138,11 @@ function tick(){
   if(S.happy<POPK.leaveBelow)dp-=S.pop*POPK.leaveShare*(POPK.leaveBelow-S.happy)/POPK.leaveBelow;
   if(r.short.food>POPK.famine)dp-=S.pop*POPK.famineShare*r.short.food;
   if(room<0)dp+=room*POPK.overcrowd;
-  S.pop=Math.max(0,Math.floor(S.pop+dp+Math.random()));if(dp>0)S.pop=Math.min(S.pop,Math.max(c.home,0));
+  S.pop=Math.max(0,Math.floor(S.pop+dp+rnd()));if(dp>0)S.pop=Math.min(S.pop,Math.max(c.home,0));
   r.dp=dp;room=c.home-S.pop;
   for(const n of S.nat){if(n.emb)continue;const diff=S.happy-n.happy,okIn=S.mig==='open'||(S.mig==='allies'&&n.rel>=RELK.friend);
     let m=0;if(okIn&&diff>MIGK.inDiff&&room>0){m=Math.floor(Math.min(room,n.pop*MIGK.inRate*diff/MIGK.per*(n.cr&&CRISES[n.cr.t].ref?MIGK.crisisMul:1)));room-=m}
-    else if(diff<-MIGK.outDiff&&S.pop>MIGK.outMinPop)m=-Math.floor(S.pop*MIGK.outRate*(-diff/MIGK.per)+Math.random());
+    else if(diff<-MIGK.outDiff&&S.pop>MIGK.outMinPop)m=-Math.floor(S.pop*MIGK.outRate*(-diff/MIGK.per)+rnd());
     if(m){S.pop+=m;n.pop-=m;r.mig[n.id]=m}}
   S.pop=Math.max(0,S.pop);
   S.month++;

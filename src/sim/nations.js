@@ -26,19 +26,19 @@ function natTick(r){
   for(const n of S.nat){const d=ND(n);
     tradeYear(n.xy,r.xn[n.id]);tradeYear(n.my,r.mn[n.id]);
     if(n.cr){if(--n.cr.m<=0){L(`${d.n}: ${CRISES[n.cr.t].end}.`);n.cr=null}}
-    else if(Math.random()<NATK.crisis*(S.diff?DIFF[S.diff].cr:1)){const ks=Object.keys(CRISES),t=ks[Math.floor(Math.random()*ks.length)];n.cr={t,m:NATK.crisisMin+Math.floor(Math.random()*NATK.crisisRand)};L(`${d.n}: ${CRISES[t].start}.`)}
+    else if(rnd()<NATK.crisis*(S.diff?DIFF[S.diff].cr:1)){const ks=Object.keys(CRISES),t=ks[Math.floor(rnd()*ks.length)];n.cr={t,m:NATK.crisisMin+Math.floor(rnd()*NATK.crisisRand)};L(`${d.n}: ${CRISES[t].start}.`)}
     const c=n.cr?CRISES[n.cr.t]:null;
-    n.happy+=((d.hb+(c?c.h:0)+(n.money<0?NATK.brokeHappy:0))-n.happy)*NATK.happySpeed+(Math.random()-.5)*NATK.happyNoise;
+    n.happy+=((d.hb+(c?c.h:0)+(n.money<0?NATK.brokeHappy:0))-n.happy)*NATK.happySpeed+(rnd()-.5)*NATK.happyNoise;
     n.pop=Math.max(NATK.popMin,Math.round(n.pop*(1+(n.happy-NATK.popMid)/NATK.popDiv)));
     n.money+=natBal(n);
-    for(const k of RK)n.pv[k]=Math.max(NATK.pvMin,Math.min(NATK.pvMax,n.pv[k]+(1-n.pv[k])*NATK.pvSpeed+(Math.random()-.5)*NATK.pvNoise));
+    for(const k of RK)n.pv[k]=Math.max(NATK.pvMin,Math.min(NATK.pvMax,n.pv[k]+(1-n.pv[k])*NATK.pvSpeed+(rnd()-.5)*NATK.pvNoise));
     n.rel+=(d.brel-n.rel)*NATK.relSpeed+(n.deal?NATK.dealRel:0)-(n.emb?NATK.embRel:0)+MINK.dipRel*M('dip')-(d.aggr&&!n.deal?DIPL.aggrDrift:0);
     n.rel=Math.max(-RELK.max,Math.min(RELK.max,n.rel));
     if(n.deal&&n.rel<RELK.dealBreak){n.deal=0;L(`${d.n} разорвал торговый договор: отношения испортились.`)}
   }
   refreshMarkets();
   if(S.ev&&S.month>=S.ev.exp){evAnswer(false,true)}
-  if(!S.ev&&S.month>EVG.firstMonth&&S.month-S.evAt>=DIPL.evGap&&Math.random()<DIPL.evChance)makeEvent();
+  if(!S.ev&&S.month>EVG.firstMonth&&S.month-S.evAt>=DIPL.evGap&&rnd()<DIPL.evChance)makeEvent();
 }
 /* Каждое сообщение появляется только при настоящей причине и несёт в себе цифры этой причины. */
 function makeEvent(){
@@ -49,7 +49,7 @@ function makeEvent(){
     if(natHard(n)&&n.rel>=EVX.loan.from)add('loan',{amt:Math.max(EVX.loan.min,Math.min(EVX.loan.max,Math.round(Math.abs(Math.min(bal,0))*EVX.loan.months/EVX.loan.round)*EVX.loan.round)),rate:DIPA.lendRate,cn,bal:Math.round(bal),cash:Math.round(n.money)});
     if(n.rel>=EVX.deal.from&&!n.deal&&xv+mv>=MT)add('deal',{xv,mv,paid:Math.round(xv*natTariff(n)/(1-natTariff(n)))});
     if(d.aggr&&!n.deal&&S.tax.imp>EVX.tariff.imp&&n.tarUntil<=S.month&&mv>=MT&&xv>=MT)add('tariff',{xv,mv,duty:Math.round(mv*S.tax.imp),pct:Math.round(S.tax.imp*100),mw:topNames(n.my),xw:topNames(n.xy)});
-    if(C&&C.ref&&S.happy>n.happy)add('ref',{amt:EVX.ref.min+Math.floor(Math.random()*EVX.ref.rand),cn});
+    if(C&&C.ref&&S.happy>n.happy)add('ref',{amt:EVX.ref.min+Math.floor(rnd()*EVX.ref.rand),cn});
     if(port&&n.rel>EVN.order.from)for(const k of Object.keys(d.dem)){const amt=Math.floor(Math.min(S.stock[k],EVN.order.cap)/EVN.order.round)*EVN.order.round,price=Math.round(natBuy(n,k)*EVN.order.mul);
       if(amt>=EVN.order.min&&n.money>amt*price)add('order',{k,amt,price,why:crMul(n,k,'dem')>1?`Причина: ${C.n}, спрос подскочил.`:n.xy[k]?`Они уже берут это у вас, но им не хватает.`:`Своего у них нет, а на рынке дефицит.`})}
     if(port&&n.rel>EVN.bargain.from)for(const k of Object.keys(d.sup)){const amt=EVN.bargain.amt,price=Math.max(1,Math.round(natSell(n,k)*EVN.bargain.mul)),use=rep?rep.cons[k]||0:0,low=use>0&&S.stock[k]<use*EVN.bargain.lowMonths;
@@ -67,8 +67,8 @@ function makeEvent(){
   const all=[...new Set(opts.map(o=>o.t))],H=S.evHist;
   /* Если нового сказать нечего, лучше промолчать, чем повториться: самый старый вид снова станет доступен. */
   const ts=all.filter(t=>!H.includes(t));if(!ts.length){H.shift();return}
-  const t=ts[Math.floor(Math.random()*ts.length)],same=opts.filter(o=>o.t===t),fresh=same.filter(o=>o.nid!==S.evNid),pool=fresh.length?fresh:same;
-  const e=pool[Math.floor(Math.random()*pool.length)];e.exp=S.month+EVG.answerMonths;S.ev=e;if(e.t==='envoy')natById(e.nid).met=1;if(e.t==='summit')natById(e.nid).sumAt=S.month;
+  const t=ts[Math.floor(rnd()*ts.length)],same=opts.filter(o=>o.t===t),fresh=same.filter(o=>o.nid!==S.evNid),pool=fresh.length?fresh:same;
+  const e=pool[Math.floor(rnd()*pool.length)];e.exp=S.month+EVG.answerMonths;S.ev=e;if(e.t==='envoy')natById(e.nid).met=1;if(e.t==='summit')natById(e.nid).sumAt=S.month;
   S.evAt=S.month;S.evNid=e.nid;H.push(t);while(H.length>DIPL.noRepeat)H.shift();
 }
 /* Чего не хватает, чтобы согласиться; пустая строка — хватает всего. */

@@ -50,14 +50,14 @@ function genWorld(mi){
   return{type,elev,reg,regions,hall,start:st};
 }
 
-function newGame(mi){
+function newGame(mi,seed){
   const W=genWorld(mi),z=v=>Object.fromEntries(RK.map(k=>[k,v]));
   const s={v:2,mi,type:W.type,elev:W.elev,reg:W.reg,regions:W.regions,hall:W.hall,
     bld:Array(N*N).fill(null),road:new Uint8Array(N*N),
     money:START.money,pop:START.pop,happy:START.happy,month:0,tax:Object.assign({},START.tax),
     stock:Object.assign(z(0),START.stock),dom:Object.fromEntries(RK.map(k=>[k,RES[k].base])),
     trade:Object.fromEntries(RK.map(k=>[k,{e:1,i:1}])),goal:0,log:[],rep:null,
-    nat:initNations(),loans:[],lent:[],mig:'open',ev:null,evAt:-99,evHist:[],evNid:null,tut:null};
+    nat:initNations(),loans:[],lent:[],mig:'open',ev:null,evAt:-99,evHist:[],evNid:null,tut:null,rs:typeof seed==='number'&&seed>=0?seed>>>0:newSeed()};
   const h=W.hall,clr=j=>{if(s.type[j]===FOREST)s.type[j]=GRASS};
   s.bld[h]={t:'hall'};clr(h);
   for(const j of[h+1,h+2,h+3])if(s.type[j]>=SAND&&s.type[j]<=HILL){s.road[j]=1;clr(j)}

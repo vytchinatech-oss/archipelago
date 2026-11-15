@@ -2,6 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './harness.mjs';
+import { play } from './strategies.mjs';
 
 for (const mi of [0, 1, 2]) {
   test(`карта ${mi}: 7 областей, ратуша в своей области, есть тёплые, старт без золота`, () => {
@@ -30,3 +31,20 @@ test('20 лет на всех картах с полным набором зда
     for(let m=0;m<240&&!S.over;m++){if(m%2==0)near(ts2[m/2%ts2.length],S.hall);const r=tick();computeCov();
       if(!isFinite(S.money)||!isFinite(S.happy))throw new Error('карта ${mi} месяц '+m)}`);
 });
+
+// Честный старт (казна START, одна область) и самый сильный бот — «умный + договор» (tests/strategies.mjs).
+// Урок экономиста (заместитель № 11): не одна карта, а все три × три строя.
+// Демократия при быстром росте может проиграть выборы — это находка для геймдизайнера (OFFICE.md, «Входящие» 15.11), не сбой:
+// у власти проверяем республику и монархию. Карта 0 — острова, земля к 20-му году кончается: неудачи там не меряем.
+for (const mi of [0, 1, 2]) {
+  test(`карта ${mi}: умный бот 30 лет на трёх строях, казна не уходит в минус`, () => {
+    for (const gov of ['demo', 'parl', 'mon']) {
+      const r = play('smart', mi, gov, { months: 360 });
+      if (gov !== 'demo') assert.equal(r.over, null, `${gov}: ${r.over}`);
+      assert.equal(r.negMonths, 0, `${gov}: казна в минусе ${r.negMonths} мес.`);
+      assert.ok(r.goals >= 6, `${gov}: целей ${r.goals}`);
+      // Урок испытателя (У19): бот, который годами не может построить задуманное, даёт ложные выводы об игре.
+      if (mi > 0) assert.ok(r.fails <= r.acts * 0.1, `${gov}: неудачных действий ${r.fails} при ${r.acts} удачных`);
+    }
+  });
+}

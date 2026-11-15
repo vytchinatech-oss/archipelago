@@ -1,10 +1,10 @@
 /* Министры, автопилот, показатели страны, выборы, протесты, перевороты, реформа. */
-function mkCand(post){const R=Math.random;const sk=1+Math.floor(R()*CAND.skill),f=FN[Math.floor(R()*FN.length)],l=LN[Math.floor(R()*LN.length)];
+function mkCand(post,s){const R=()=>rnd(s);const sk=1+Math.floor(R()*CAND.skill),f=FN[Math.floor(R()*FN.length)],l=LN[Math.floor(R()*LN.length)];
   const fem=/а$|я$/.test(f)&&f!=='Захар',ln=fem&&!/а$/.test(l)?l+'а':(!fem&&/а$/.test(l)?l.slice(0,-1):l);
-  return{id:Math.random().toString(36).slice(2,8),name:`${f} ${ln}`,sk,hon:R()<CAND.hon,loy:R()<CAND.loy,risk:R()<CAND.risk,sal:CAND.salBase+sk*sk*CAND.salK+(R()*CAND.salRand|0)}}
+  return{id:Math.floor(R()*2176782336).toString(36).padStart(6,'0'),name:`${f} ${ln}`,sk,hon:R()<CAND.hon,loy:R()<CAND.loy,risk:R()<CAND.risk,sal:CAND.salBase+sk*sk*CAND.salK+(R()*CAND.salRand|0)}}
 function govInit(s,gov,diff){s.v=4;s.gov=gov;s.diff=diff;s.nextEl=GOVK.term;s.unrest=0;s.appr=GOVK.appr0;s.army=GOVK.army0;s.guard=0;s.bribe=0;s.hist=[];s.over=null;s.reformAt=0;
   s.fac=Object.fromEntries(Object.entries(GOVK.sat0).map(([f,sat])=>[f,{sat}]));s.seats=Object.assign({},GOVK.seats0);s.fatt=fattInit(s);
-  s.min={};s.cand={};for(const p in POSTS)s.cand[p]=[mkCand(p),mkCand(p),mkCand(p)];s.warned={}}
+  s.min={};s.cand={};for(const p in POSTS)s.cand[p]=[mkCand(p,s),mkCand(p,s),mkCand(p,s)];s.warned={}}
 const M=p=>S&&S.min&&S.min[p]?S.min[p].sk:0;
 function hire(p,id){const c=S.cand[p].find(x=>x.id===id);if(!c)return'Кандидат уже ушёл';if(S.min[p])fire(p,true);
   S.min[p]=Object.assign({auto:0,since:S.month},c);S.cand[p]=S.cand[p].filter(x=>x.id!==id);S.log.unshift({m:S.month,t:`Назначен министр ${POSTS[p].n.toLowerCase()}: ${c.name}.`});return`${c.name} назначен`}
@@ -90,11 +90,11 @@ function govTick(r,c){
   r.sal=sal;r.theft=theft;S.money-=sal+theft;r.net-=sal+theft;
   const cash0=S.money;
   for(const p in S.min){const m=S.min[p];m.tip=ministerTurn(p,c,r,!!m.auto);
-    if(!m.hon&&Math.random()<CABK.caught){S.appr-=CABK.caughtAppr;L(`Скандал: министр ${m.name} уличён в хищениях и снят с поста. Рейтинг падает.`);fire(p,true);continue}
-    if(!m.loy&&S.appr<CABK.plotAppr&&Math.random()<CABK.plot){S.unrest=Math.min(100,S.unrest+CABK.plotUnrest);if(S.gov==='mon')S.army-=CABK.plotArmy;L(`Министр ${m.name} плетёт интриги против вас.`)}}
+    if(!m.hon&&rnd()<CABK.caught){S.appr-=CABK.caughtAppr;L(`Скандал: министр ${m.name} уличён в хищениях и снят с поста. Рейтинг падает.`);fire(p,true);continue}
+    if(!m.loy&&S.appr<CABK.plotAppr&&rnd()<CABK.plot){S.unrest=Math.min(100,S.unrest+CABK.plotUnrest);if(S.gov==='mon')S.army-=CABK.plotArmy;L(`Министр ${m.name} плетёт интриги против вас.`)}}
   r.auto=S.money-cash0;
   for(const p in POSTS)if(!S.min[p])S.adv=S.adv||{},S.adv[p]=ministerTurn(p,c,r,false);
-  if(S.month%12===0)for(const p in POSTS)S.cand[p]=[mkCand(p),mkCand(p),mkCand(p)];
+  if(S.month%12===0)for(const p in POSTS)S.cand[p]=[mkCand(p,S),mkCand(p,S),mkCand(p,S)];
   // indicators
   const gdp=RK.reduce((a,k)=>a+r.prod[k]*S.dom[k],0),W=GOVK.inflW;
   const cpi=100*Object.keys(W).reduce((a,k)=>a+W[k]*S.dom[k]/RES[k].base,0);
@@ -134,8 +134,8 @@ function govTick(r,c){
   // overthrow
   const why={demo:'Импичмент: массовые протесты вынудили парламент отстранить вас.',parl:'Вотум недоверия: парламент отправил правительство в отставку на волне протестов.',mon:'Восстание: толпа взяла дворец, династия низложена.'};
   if(S.unrest>=100)return endGame(why[S.gov]);
-  if(S.gov==='mon'&&Math.random()<coup)return endGame('Дворцовый переворот: армия и знать возвели на трон другого.');
-  if(S.gov!=='mon'&&S.month>=S.nextEl){const v=S.gov==='demo'?Math.max(0,Math.min(100,S.appr+(Math.random()-.5)*GOVK.pollNoise)):parl;
+  if(S.gov==='mon'&&rnd()<coup)return endGame('Дворцовый переворот: армия и знать возвели на трон другого.');
+  if(S.gov!=='mon'&&S.month>=S.nextEl){const v=S.gov==='demo'?Math.max(0,Math.min(100,S.appr+(rnd()-.5)*GOVK.pollNoise)):parl;
     if(v>=D.th){S.nextEl+=GOVK.term;L(`Выборы: вы победили с результатом ${Math.round(v)}%. Следующие через 10 лет.`);r.alert=`Вы переизбраны: ${Math.round(v)}%`;S.elWon=(S.elWon||0)+1}
     else return endGame(`${S.gov==='demo'?'Народ':'Парламент'} отдал вам ${Math.round(v)}% при нужных ${D.th}%. Вы проиграли выборы.`)}
 }
