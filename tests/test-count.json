@@ -1,6 +1,6 @@
 {
  "build.test.mjs": 3,
- "check-state.test.mjs": 4,
+ "check-state.test.mjs": 5,
  "guards.test.mjs": 7,
  "rules.test.mjs": 41,
  "strategies.test.mjs": 7,

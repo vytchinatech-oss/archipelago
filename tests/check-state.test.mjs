@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
-import { parseStatus, lockFree, latestAudit, branchMentioned, checkLessons, notDoneTasks, falseDone, stageKey } from '../tools/check-state.mjs';
+import { parseStatus, lockFree, latestAudit, branchMentioned, checkLessons, notDoneTasks, falseDone, stageKey, uncheckLessonsInStatus } from '../tools/check-state.mjs';
 
 const status = readFileSync(new URL('../docs/STATUS.md', import.meta.url), 'utf8');
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
@@ -65,4 +65,16 @@ test('сверка: STATUS.md не называет сделанной зада�
   // настоящие файлы сходятся
   const real = new Map([[stageKey('0a'), notDoneTasks(readFileSync(new URL('../docs/stages/0a.md', import.meta.url), 'utf8'))]]);
   assert.deepEqual(falseDone(status, real, '0а'), [], 'STATUS.md не опережает docs/stages/0a.md');
+});
+
+test('сверка: уроки «не проверено скриптом» в STATUS.md совпадают с выдачей checkLessons (У25)', () => {
+  const lessons = readFileSync(new URL('../docs/LESSONS.md', import.meta.url), 'utf8');
+  const prefixes = ['', 'docs/', '.claude/agents/'];
+  const unchFromScript = new Set(
+    checkLessons(lessons, (f) => prefixes.some((d) => existsSync(new URL('../' + d + f, import.meta.url))))
+      .filter((b) => b.unchecked.length)
+      .map((b) => b.id),
+  );
+  const unchInStatus = uncheckLessonsInStatus(status);
+  assert.deepEqual(unchFromScript, unchInStatus, 'список «не проверено скриптом» в STATUS.md актуален');
 });

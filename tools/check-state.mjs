@@ -97,6 +97,14 @@ export function latestAudit(names) {
   return dates.length ? dates[dates.length - 1] : null;
 }
 
+// У25: извлекает номера уроков «не проверено скриптом» из STATUS.md («Входящие»).
+// Возвращает Set<string> — например Set { 'У4', 'У12', 'У20' }.
+export function uncheckLessonsInStatus(text) {
+  const m = text.match(/«не проверено скриптом» по ((?:У\d+(?:,\s*)?)+)/);
+  if (!m) return new Set();
+  return new Set([...m[1].matchAll(/У\d+/g)].map((x) => x[0]));
+}
+
 // ---------- обращения к git и файлам ----------
 
 const git = (...args) => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
